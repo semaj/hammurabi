@@ -1,10 +1,10 @@
 use openssl::x509::X509;
 use std::fs;
 use serde::Deserialize;
+use docopt::Docopt;
 
 use acclib;
 
-use docopt::Docopt;
 
 const USAGE: &'static str = "
 Verifies certificate at <path> for host <hostname>.
