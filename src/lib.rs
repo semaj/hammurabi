@@ -1,0 +1,261 @@
+#![deny(warnings)]
+
+use hex;
+use openssl::hash::MessageDigest;
+use openssl::stack::Stack;
+use openssl::x509::store::X509StoreBuilder;
+use openssl::x509::{X509VerifyResult, X509};
+use std::{fs, env};
+use std::io::Write;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::process::Command;
+use x509_parser::pem::pem_to_der;
+
+mod cert;
+mod revocation;
+
+mod errors;
+use errors::Error;
+
+
+fn verify_prolog(
+    raw: &[u8], intermediate_certs: &[&[u8]], dns_name: &str,
+    stapled_ocsp_response: Option<&[u8]>,
+    check_ocsp: bool,
+) -> Result<(), Error> {
+    let prolog_dir = "prolog";
+    let mut counter = 0;
+    let cert = cert::PrologCert::from_der(raw);
+    let mut repr: String = cert.emit_all(&format!("cert_{}", counter));
+    let mut fingerprints: Vec<String> = Vec::new();
+
+    let mut stack = Stack::new().unwrap();
+
+    for cert_der in intermediate_certs.iter() {
+        counter += 1;
+        let intermediate = cert::PrologCert::from_der(cert_der);
+        repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
+        let intermediate_x509 = match X509::from_der(cert_der) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Parsing intermediate error! {:?}", e);
+                panic!(e);
+            }
+        };
+        repr.push_str(&format!(
+            "fingerprint(cert_{}, \"{}\").\n",
+            counter,
+            hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
+        ));
+        stack.push(intermediate_x509).unwrap();
+        // We just assume (for now) that intermediates
+        // do not have stapled ocsp responses.
+        repr.push_str(&format!("no_stapled_ocsp_response(cert_{}).\n", counter));
+    }
+
+    let mut store_builder = X509StoreBuilder::new().unwrap();
+
+    // get root certs
+    let separator = "-----END CERTIFICATE-----";
+    let chain = fs::read_to_string("roots.pem").unwrap();
+    for part in chain.split(separator) {
+        if part.trim().is_empty() {
+            continue;
+        }
+
+        counter += 1;
+        let cert_pem = [part, separator].join("");
+        let temp = pem_to_der(cert_pem.as_bytes()).unwrap().1.contents;
+        let root_x509 = X509::from_der(&temp).unwrap();
+        for int_der in intermediate_certs.iter() {
+            let intermediate = X509::from_der(int_der).unwrap();
+            fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
+            if root_x509.issued(&intermediate) == X509VerifyResult::OK {
+                let root_x509_for_stack = X509::from_der(&temp).unwrap();
+                stack.push(root_x509_for_stack).unwrap();
+                repr.push_str(&format!(
+                        "fingerprint(cert_{}, \"{}\").\n",
+                        counter,
+                        hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
+                ));
+                let v = cert::PrologCert::from_der(&temp);
+                repr.push_str(&v.emit_all(&format!("cert_{}", counter)));
+            }
+        }
+
+        store_builder.add_cert(root_x509).unwrap();
+    }
+    // Get raw byte representations for OCSP requests.
+    let issuer_der: &[u8] = intermediate_certs[0];
+    let issuer_x509 = X509::from_der(issuer_der).unwrap();
+    let subject_x509 = X509::from_der(raw).unwrap();
+    let sha256 = hex::encode(subject_x509.digest(MessageDigest::sha256()).unwrap());
+    repr.push_str(&format!(
+        "fingerprint(cert_0, \"{}\").\n",
+        sha256.to_uppercase()
+    ));
+
+    let store = store_builder.build();
+    repr.push_str(
+        &revocation::ocsp_stapling(
+            stapled_ocsp_response,
+            &store,
+            &subject_x509,
+            &issuer_x509,
+            &stack,
+        )
+        .join("\n"),
+    );
+    repr.push_str("\n\n");
+
+    let mut subject_ref = subject_x509.as_ref();
+    let mut cert_index = 0;
+    for intermediate_ref in stack.iter() {
+        repr.push_str(
+            &revocation::check_ocsp(cert_index, &store, subject_ref, intermediate_ref, &stack, check_ocsp)
+                .join("\n"),
+        );
+        repr.push_str("\n\n");
+        subject_ref = intermediate_ref;
+        cert_index += 1;
+    }
+
+
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let in_ms = since_the_epoch.as_millis();
+    println!("BEFORE GENERATION: {}", in_ms);
+
+    let key = "JOBINDEX";
+    let jobindex = env::var(key).unwrap_or("".to_string());
+    let roots: String = fingerprints
+        .iter()
+        .map(|name| format!("\ntrusted_roots(\"{}\").", name))
+        .collect::<String>()
+        .to_string();
+    let name = format!("{}/env.pl", prolog_dir);
+    let mut kb_env = fs::File::create(name).expect("failed to create file"); kb_env
+        .write_all(emit_env_preamble().as_bytes())
+        .expect("failed to write message");
+    kb_env.write_all(roots.as_bytes()).expect("failed to write message");
+    kb_env.sync_all().unwrap();
+
+    let name = format!("{}/certs{}.pl", prolog_dir, jobindex);
+    let mut kb_cert = fs::File::create(name).expect("failed to create file");
+    kb_cert
+        .write_all(emit_kb_cert_preamble().as_bytes())
+        .expect("failed to write message");
+    kb_cert
+        .write_all(repr.as_bytes())
+        .expect("failed to write message");
+    kb_cert.sync_all().unwrap();
+
+    let before = Instant::now();
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(format!("{}/query.sh cert_0 {}", prolog_dir, dns_name))
+        .output()
+        .expect("failed to execute process");
+    let elapsed = before.elapsed().as_millis();
+    eprintln!("{} Datalog elapsed {}ms", sha256, elapsed);
+
+    match output.status.code().unwrap() {
+        0 => Ok(()),
+        10 => Err(Error::CertNotTimeValid),
+        20 => Err(Error::NameConstraintViolation),
+        30 => Err(Error::CertNotValidForName),
+        40 => Err(Error::CertRevoked),
+        50 => Err(Error::PathLenConstraintViolated),
+        60 => Err(Error::UnknownIssuer),
+        70 => Err(Error::ACCFailure),
+        80 => Err(Error::LeafValidForTooLong),
+        _ => Err(Error::UnknownError)
+    }
+}
+
+fn emit_kb_cert_preamble() -> String {
+    format!(
+        ":- module(certs, [
+        issuer/6,
+        validity/3,
+        subject/6,
+        extensionExists/3,
+        extensionCritic/3,
+        extensionValues/3,
+        extensionValues/4,
+        serialNumber/2,
+        version/2,
+        keyAlgorithm/2,
+        keyLen/2,
+        signatureAlgorithm/2,
+        no_stapled_ocsp_response/1,
+        stapled_ocsp_response/1,
+        stapled_ocsp_response_verified/1,
+        stapled_ocsp_response_valid/1,
+        stapled_ocsp_response_not_expired/1,
+        stapled_ocsp_response_not_verified/1,
+        stapled_ocsp_response_invalid/1,
+        stapled_ocsp_response_expired/1,
+        stapled_ocsp_status_revoked/1,
+        stapled_ocsp_status_unknown/1,
+        stapled_ocsp_status_good/1,
+        ocsp_responder/2,
+        no_ocsp_responders/1,
+        ocsp_response_verified/2,
+        ocsp_response_valid/2,
+        ocsp_response_not_expired/2,
+        ocsp_response_not_verified/2,
+        ocsp_response_invalid/2,
+        ocsp_response_expired/2,
+        ocsp_status_revoked/2,
+        ocsp_status_unknown/2,
+        ocsp_status_good/2,
+        fingerprint/2
+    ]).
+:-style_check(-discontiguous).
+no_stapled_ocsp_response(hack).
+stapled_ocsp_response(hack).
+stapled_ocsp_response_verified(hack).
+stapled_ocsp_response_valid(hack).
+stapled_ocsp_response_not_expired(hack).
+stapled_ocsp_response_not_verified(hack).
+stapled_ocsp_response_invalid(hack).
+stapled_ocsp_response_verified(hack).
+stapled_ocsp_response_expired(hack).
+stapled_ocsp_status_revoked(hack).
+stapled_ocsp_status_unknown(hack).
+stapled_ocsp_status_good(hack).
+ocsp_responder(hack, hack).
+no_ocsp_responders(hack).
+ocsp_response_verified(hack, hack).
+ocsp_response_valid(hack, hack).
+ocsp_response_not_expired(hack, hack).
+ocsp_response_not_verified(hack, hack).
+ocsp_response_invalid(hack, hack).
+ocsp_response_expired(hack, hack).
+ocsp_status_revoked(hack, hack).
+ocsp_status_unknown(hack, hack).
+ocsp_status_good(hack, hack).\n\n"
+    )
+}
+
+fn emit_env_preamble() -> String {
+    format!(
+        ":- module(env, [
+        tlsVersion/1,
+        max_intermediates/1,
+        hostIp/1
+    ]).
+
+:- use_module(std, [ipToNumber/6]).
+:- style_check(-discontiguous).
+
+tlsVersion(2).
+max_intermediates(5).
+hostIp(H):-
+    ipToNumber(192,168,1,1,0,H).\n",
+    )
+}
+

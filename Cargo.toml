@@ -1,0 +1,21 @@
+[package]
+name = "acc-engine"
+version = "0.1.0"
+authors = ["James Larisch <5074906+semaj@users.noreply.github.com>"]
+edition = "2018"
+
+[lib]
+name = "acclib"
+path = "src/lib.rs"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hex = "0.4.2"
+x509-parser = "0.6.5"
+der-parser = "3.0.4"
+openssl = { version = "0.10", features = ["vendored"] }
+reqwest = { version = "0.10.6", features = ["blocking"] }
+
+
