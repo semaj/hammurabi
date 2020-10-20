@@ -1,4 +1,3 @@
-#![deny(warnings)]
 
 use hex;
 use openssl::hash::MessageDigest;
@@ -18,36 +17,33 @@ mod errors;
 use errors::Error;
 
 
-fn verify_prolog(
-    raw: &[u8], intermediate_certs: &[&[u8]], dns_name: &str,
+pub fn verify_prolog(
+    chain: &mut Vec<X509>,
+    dns_name: &str,
     stapled_ocsp_response: Option<&[u8]>,
     check_ocsp: bool,
 ) -> Result<(), Error> {
     let prolog_dir = "prolog";
     let mut counter = 0;
-    let cert = cert::PrologCert::from_der(raw);
+    let leaf = chain.remove(0);
+    let leaf_der = leaf.to_der().unwrap();
+    let cert = cert::PrologCert::from_der(&leaf_der);
     let mut repr: String = cert.emit_all(&format!("cert_{}", counter));
     let mut fingerprints: Vec<String> = Vec::new();
 
     let mut stack = Stack::new().unwrap();
 
-    for cert_der in intermediate_certs.iter() {
+    for intermediate_x509 in chain.iter() {
         counter += 1;
-        let intermediate = cert::PrologCert::from_der(cert_der);
+        let intermediate_der = intermediate_x509.to_der().unwrap();
+        let intermediate = cert::PrologCert::from_der(&intermediate_der);
         repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
-        let intermediate_x509 = match X509::from_der(cert_der) {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("Parsing intermediate error! {:?}", e);
-                panic!(e);
-            }
-        };
         repr.push_str(&format!(
             "fingerprint(cert_{}, \"{}\").\n",
             counter,
             hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
         ));
-        stack.push(intermediate_x509).unwrap();
+        stack.push(intermediate_x509.clone()).unwrap();
         // We just assume (for now) that intermediates
         // do not have stapled ocsp responses.
         repr.push_str(&format!("no_stapled_ocsp_response(cert_{}).\n", counter));
@@ -57,8 +53,8 @@ fn verify_prolog(
 
     // get root certs
     let separator = "-----END CERTIFICATE-----";
-    let chain = fs::read_to_string("roots.pem").unwrap();
-    for part in chain.split(separator) {
+    let root_chain = fs::read_to_string("roots.pem").unwrap();
+    for part in root_chain.split(separator) {
         if part.trim().is_empty() {
             continue;
         }
@@ -67,10 +63,9 @@ fn verify_prolog(
         let cert_pem = [part, separator].join("");
         let temp = pem_to_der(cert_pem.as_bytes()).unwrap().1.contents;
         let root_x509 = X509::from_der(&temp).unwrap();
-        for int_der in intermediate_certs.iter() {
-            let intermediate = X509::from_der(int_der).unwrap();
+        for intermediate_x509 in chain.iter() {
             fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
-            if root_x509.issued(&intermediate) == X509VerifyResult::OK {
+            if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
                 let root_x509_for_stack = X509::from_der(&temp).unwrap();
                 stack.push(root_x509_for_stack).unwrap();
                 repr.push_str(&format!(
@@ -85,10 +80,8 @@ fn verify_prolog(
 
         store_builder.add_cert(root_x509).unwrap();
     }
-    // Get raw byte representations for OCSP requests.
-    let issuer_der: &[u8] = intermediate_certs[0];
-    let issuer_x509 = X509::from_der(issuer_der).unwrap();
-    let subject_x509 = X509::from_der(raw).unwrap();
+    let issuer_x509 = &chain[0];
+    let subject_x509 = leaf;
     let sha256 = hex::encode(subject_x509.digest(MessageDigest::sha256()).unwrap());
     repr.push_str(&format!(
         "fingerprint(cert_0, \"{}\").\n",
@@ -101,7 +94,7 @@ fn verify_prolog(
             stapled_ocsp_response,
             &store,
             &subject_x509,
-            &issuer_x509,
+            issuer_x509,
             &stack,
         )
         .join("\n"),
