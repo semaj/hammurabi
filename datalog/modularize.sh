@@ -9,7 +9,8 @@ SPACE="[[:blank:]]"
 ATOM="[A-Za-z0-9\_]+"
 STRING="\".*\""
 
-TERM="$SPACE*([A-Za-z0-9\_\-\.]+|$STRING)"
+# term = space + number or atom or string
+TERM="$SPACE*(\-?[0-9\.]+|$ATOM|$STRING)"
 
 
 # sed -E replace " some_atom(term1, term2, ...)" with " module:some_atom(term1, term2, ...)"

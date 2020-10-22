@@ -12,8 +12,8 @@ CERTS=certs$JOBINDEX.pl
 
 if [ $CLIENT = "chrome" ]; then
   BROWSER=chrome.pl
-  $MODULARIZE static/env_chrome.pl > gen/env_chrome.pl
-  BROWSER_ENV=gen/env_chrome.pl
+  $MODULARIZE static/chrome_env.pl > gen/chrome_env.pl
+  BROWSER_ENV=gen/chrome_env.pl
 else
   BROWSER=firefox.pl
   BROWSER_ENV=""
@@ -33,18 +33,7 @@ done
 
 echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > gen/query.pl
 
-$DATALOG -l $LUA_EXTS gen/$CHECKS gen/env.pl gen/std.pl gen/$BROWSER gen/$CERTS gen/query.pl
+$DATALOG -l $LUA_EXTS gen/$CHECKS gen/env.pl gen/std.pl gen/$BROWSER gen/$CERTS $BROWSER_ENV gen/query.pl
 E=$?
 echo $E
 exit $E
-
-#RAW="${RAW:-/tmp/raw.log}"
-#ts=$(date +%s%N)
-
-#$DTLG -l $LUA_EXTS $OUT
-#E=$?
-
-#if [ $3 = "writetime" ]; then
-  #echo "DATALOG ELAPSED: $((($(date +%s%N) - $ts)/1000000))" >> $RAW
-#fi
-#exit $E
