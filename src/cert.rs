@@ -163,18 +163,6 @@ impl PrologCert<'_> {
         format!("{}\n", exts.join("\n"))
     }
 
-    pub fn emit_acc_code(&self, _hash: &String) -> String {
-        self.inner
-            .extensions
-            .iter()
-            .filter_map(|ext| match ext.oid.to_string().as_str() {
-                "2.5.29.70" => Some(extensions::emit_acc(&ext)),
-                _ => None,
-            })
-            .collect::<Vec<String>>()
-            .join(",\n\t")
-    }
-
     pub fn emit_subject_public_key_algorithm(&self, hash: &String) -> String {
         let algorithm = self.inner.subject_pki.algorithm.algorithm.to_string();
         format!("keyAlgorithm({}, {:?}).", hash, algorithm)

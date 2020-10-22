@@ -173,28 +173,6 @@ extensionCritic({}, \"SubjectKeyAlternativeNames\", {}).", hash, hash, extension
     }
 }
 
-pub fn emit_acc(extension: &X509Extension) -> String {
-    match parse_der(extension.value) {
-        Ok(v) => {
-            let constraints: String = match v.1.content {
-                BerObjectContent::UTF8String(x) => {
-                    let v = match str::from_utf8(x) {
-                        Ok(x) => format!("{}", x),
-                        Err(x) => format!("{:?}", x),
-                    };
-                    v
-                }
-                _ => String::from(""),
-            };
-            format!("{}", constraints)
-        }
-        Err(e) => {
-            println!("{:?}", e);
-            format!("")
-        }
-    }
-}
-
 pub fn emit_certificate_policies(hash: &String, extension: &X509Extension) -> String {
     match parse_der(extension.value) {
         Ok(v) => {
