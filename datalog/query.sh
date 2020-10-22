@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SCRIPT="${SCRIPT:-firefox}"
 DOMAIN=$2
@@ -27,7 +27,7 @@ function verify {
         i < 0 {print $1"CheckEnabled(false)."}
         i > 0  && NR != i {print $1"CheckEnabled(false)."}' >> $CHECKS_PL
 
-    ./run.sh $SCRIPT $DOMAIN $WRITETIME > /dev/null
+    ./run.sh $SCRIPT $DOMAIN $WRITETIME
     return $?
 }
 
@@ -42,7 +42,7 @@ fi
 
 verify -1 $1
 if [ $? -ne 0 ]; then
-    echo "unkown failure"
+    echo "unknown failure"
     exit 200
 fi
 

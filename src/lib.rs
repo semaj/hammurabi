@@ -23,7 +23,7 @@ pub fn verify_prolog(
     stapled_ocsp_response: Option<&[u8]>,
     check_ocsp: bool,
 ) -> Result<(), Error> {
-    let prolog_dir = "prolog";
+    let datalog_gen_dir = "datalog/gen";
     let mut counter = 0;
     let leaf = chain.remove(0);
     let leaf_der = leaf.to_der().unwrap();
@@ -53,7 +53,7 @@ pub fn verify_prolog(
 
     // get root certs
     let separator = "-----END CERTIFICATE-----";
-    let root_chain = fs::read_to_string("roots.pem").unwrap();
+    let root_chain = fs::read_to_string("assets/roots.pem").unwrap();
     for part in root_chain.split(separator) {
         if part.trim().is_empty() {
             continue;
@@ -128,14 +128,14 @@ pub fn verify_prolog(
         .map(|name| format!("\ntrusted_roots(\"{}\").", name))
         .collect::<String>()
         .to_string();
-    let name = format!("{}/env.pl", prolog_dir);
+    let name = format!("{}/env.pl", datalog_gen_dir);
     let mut kb_env = fs::File::create(name).expect("failed to create file"); kb_env
         .write_all(emit_env_preamble().as_bytes())
         .expect("failed to write message");
     kb_env.write_all(roots.as_bytes()).expect("failed to write message");
     kb_env.sync_all().unwrap();
 
-    let name = format!("{}/certs{}.pl", prolog_dir, jobindex);
+    let name = format!("{}/certs{}.pl", datalog_gen_dir, jobindex);
     let mut kb_cert = fs::File::create(name).expect("failed to create file");
     kb_cert
         .write_all(emit_kb_cert_preamble().as_bytes())
@@ -146,15 +146,15 @@ pub fn verify_prolog(
     kb_cert.sync_all().unwrap();
 
     let before = Instant::now();
-    let output = Command::new("sh")
+    let status = Command::new("sh")
         .arg("-c")
-        .arg(format!("{}/query.sh cert_0 {}", prolog_dir, dns_name))
-        .output()
+        .arg(format!("datalog/query.sh cert_0 {}", dns_name))
+        .status()
         .expect("failed to execute process");
     let elapsed = before.elapsed().as_millis();
     eprintln!("{} Datalog elapsed {}ms", sha256, elapsed);
 
-    match output.status.code().unwrap() {
+    match status.code().unwrap() {
         0 => Ok(()),
         10 => Err(Error::CertNotTimeValid),
         20 => Err(Error::NameConstraintViolation),

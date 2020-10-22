@@ -1,34 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-MODULARIZE=./modularize.sh
-FILES="checks$JOBINDEX.pl certs$JOBINDEX.pl"
 CLIENT=$1
-OUT=gen/all$JOBINDEX.pl
+DOMAIN=$2
 
 LUA_EXTS=static/ext.lua
-DTLG=datalog # must be on path
+DATALOG=../lib/datalog/datalog
+MODULARIZE=./modularize.sh
 
-rm -f $OUT
+CHECKS=checks$JOBINDEX.pl
+CERTS=certs$JOBINDEX.pl
 
 if [ $CLIENT = "chrome" ]; then
-    cp template_chrome.pl $OUT
+  BROWSER=chrome.pl
+  $MODULARIZE static/env_chrome.pl > gen/env_chrome.pl
+  BROWSER_ENV=gen/env_chrome.pl
 else
-    cp template_firefox.pl $OUT
+  BROWSER=firefox.pl
+  BROWSER_ENV=""
 fi
 
-for f in $FILES; do
-    $MODULARIZE static/$f >> $OUT
+GEN_FILES="$CHECKS $CERTS"
+for f in $GEN_FILES; do
+    $MODULARIZE gen/$f > gen/tmp
+    mv gen/tmp gen/$f
 done
 
-echo -e "\nenv:domain(\"$2\").\n$1:verified(cert_0)?" >> $OUT
+STATIC_FILES="$BROWSER env.pl std.pl"
+for f in $STATIC_FILES; do
+    $MODULARIZE static/$f > gen/$f
+done
 
-RAW="${RAW:-/tmp/raw.log}"
-ts=$(date +%s%N)
 
-$DTLG -l $LUA_EXTS $OUT
+echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > gen/query.pl
+
+$DATALOG -l $LUA_EXTS gen/$CHECKS gen/env.pl gen/std.pl gen/$BROWSER gen/$CERTS gen/query.pl
 E=$?
-
-if [ $3 = "writetime" ]; then
-  echo "DATALOG ELAPSED: $((($(date +%s%N) - $ts)/1000000))" >> $RAW
-fi
+echo $E
 exit $E
+
+#RAW="${RAW:-/tmp/raw.log}"
+#ts=$(date +%s%N)
+
+#$DTLG -l $LUA_EXTS $OUT
+#E=$?
+
+#if [ $3 = "writetime" ]; then
+  #echo "DATALOG ELAPSED: $((($(date +%s%N) - $ts)/1000000))" >> $RAW
+#fi
+#exit $E

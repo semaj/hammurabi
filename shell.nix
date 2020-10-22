@@ -5,6 +5,5 @@ let
 in
 { nixpkgs ? import <nixpkgs> {} }:
 with nixpkgs; mkShell {
-  #buildInputs = [ hello unstable.elmPackages.elm ];
   buildInputs = with pkgs; [ cargo rustc carnix autoconf libtool texinfo automake115x ];
 }
