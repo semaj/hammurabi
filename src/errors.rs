@@ -11,6 +11,9 @@ pub enum Error {
     PathLenConstraintViolated,
     /// A valid issuer for the certificate could not be found.
     UnknownIssuer,
+    /// OpenSSL Errors
+    OpenSSLInvalid,
+    OpenSSLFailed,
     /// Certificate either expired or not yet valid
     CertNotTimeValid,
     /// ACC Checks included in one or more certs failed

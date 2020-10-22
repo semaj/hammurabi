@@ -3,7 +3,7 @@ use hex;
 use openssl::hash::MessageDigest;
 use openssl::stack::Stack;
 use openssl::x509::store::X509StoreBuilder;
-use openssl::x509::{X509VerifyResult, X509};
+use openssl::x509::{X509VerifyResult, X509, X509StoreContext};
 use std::{fs, env};
 use std::io::Write;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -32,9 +32,15 @@ pub fn verify_prolog(
     let mut fingerprints: Vec<String> = Vec::new();
 
     let mut stack = Stack::new().unwrap();
+    let mut recursive_subject = leaf.clone();
 
     for intermediate_x509 in chain.iter() {
         counter += 1;
+        if intermediate_x509.issued(&recursive_subject) != X509VerifyResult::OK {
+            return Err(Error::UnknownIssuer);
+        } else {
+            recursive_subject = intermediate_x509.clone();
+        }
         let intermediate_der = intermediate_x509.to_der().unwrap();
         let intermediate = cert::PrologCert::from_der(&intermediate_der);
         repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
@@ -89,6 +95,22 @@ pub fn verify_prolog(
     ));
 
     let store = store_builder.build();
+    let mut store_context = X509StoreContext::new().unwrap();
+    match store_context.init(&store, &subject_x509, &stack, |sc| {
+        sc.verify_cert()
+    }) {
+        Ok(false) => {
+            return Err(Error::OpenSSLInvalid);
+        },
+        Err(e) => {
+            eprintln!("OpenSSL validation failed: {}", e);
+            return Err(Error::OpenSSLFailed);
+        },
+        _ => {},
+    }
+
+
+
     repr.push_str(
         &revocation::ocsp_stapling(
             stapled_ocsp_response,
