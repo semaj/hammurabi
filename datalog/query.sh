@@ -36,13 +36,12 @@ cd datalog
 # Verify with all checks enabled
 verify 0 $1 writetime
 if [ $? -eq 0 ]; then
-    echo "passed"
     exit $?
 fi
 
 verify -1 $1
 if [ $? -ne 0 ]; then
-    echo "unknown failure"
+    echo "Unknown failure"
     exit 200
 fi
 
@@ -58,5 +57,5 @@ for i in `seq 1 $N_CHECKS`; do
 done
 
 # All known checks pass individiually, some unknown failure
->&2 echo "unknown failure"
+>&2 echo "Unknown failure after all checks"
 exit 2

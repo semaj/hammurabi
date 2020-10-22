@@ -6,7 +6,7 @@ use openssl::x509::store::X509StoreBuilder;
 use openssl::x509::{X509VerifyResult, X509, X509StoreContext};
 use std::{fs, env};
 use std::io::Write;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 use std::process::Command;
 use x509_parser::pem::pem_to_der;
 
@@ -16,6 +16,7 @@ mod revocation;
 mod errors;
 use errors::Error;
 
+const DATALOG_GEN_DIR: &'static str = "datalog/gen";
 
 pub fn verify_prolog(
     chain: &mut Vec<X509>,
@@ -23,7 +24,8 @@ pub fn verify_prolog(
     stapled_ocsp_response: Option<&[u8]>,
     check_ocsp: bool,
 ) -> Result<(), Error> {
-    let datalog_gen_dir = "datalog/gen";
+    let start = Instant::now();
+
     let mut counter = 0;
     let leaf = chain.remove(0);
     let leaf_der = leaf.to_der().unwrap();
@@ -135,13 +137,8 @@ pub fn verify_prolog(
         cert_index += 1;
     }
 
-
-    let start = SystemTime::now();
-    let since_the_epoch = start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    let in_ms = since_the_epoch.as_millis();
-    println!("BEFORE GENERATION: {}", in_ms);
+    let elapsed = start.elapsed().as_millis();
+    println!("Rust/OpenSSL execution time (ms): {}", elapsed);
 
     let key = "JOBINDEX";
     let jobindex = env::var(key).unwrap_or("".to_string());
@@ -150,14 +147,14 @@ pub fn verify_prolog(
         .map(|name| format!("\ntrusted_roots(\"{}\").", name))
         .collect::<String>()
         .to_string();
-    let name = format!("{}/env.pl", datalog_gen_dir);
+    let name = format!("{}/env.pl", DATALOG_GEN_DIR);
     let mut kb_env = fs::File::create(name).expect("failed to create file"); kb_env
         .write_all(emit_env_preamble().as_bytes())
         .expect("failed to write message");
     kb_env.write_all(roots.as_bytes()).expect("failed to write message");
     kb_env.sync_all().unwrap();
 
-    let name = format!("{}/certs{}.pl", datalog_gen_dir, jobindex);
+    let name = format!("{}/certs{}.pl", DATALOG_GEN_DIR, jobindex);
     let mut kb_cert = fs::File::create(name).expect("failed to create file");
     kb_cert
         .write_all(emit_kb_cert_preamble().as_bytes())
@@ -167,14 +164,11 @@ pub fn verify_prolog(
         .expect("failed to write message");
     kb_cert.sync_all().unwrap();
 
-    let before = Instant::now();
     let status = Command::new("sh")
         .arg("-c")
         .arg(format!("datalog/query.sh cert_0 {}", dns_name))
         .status()
         .expect("failed to execute process");
-    let elapsed = before.elapsed().as_millis();
-    eprintln!("{} Datalog elapsed {}ms", sha256, elapsed);
 
     match status.code().unwrap() {
         0 => Ok(()),
