@@ -1,0 +1,3 @@
+[submodule "lib/datalog"]
+	path = lib/datalog
+	url = https://github.com/waqaraqeel/datalog.git
