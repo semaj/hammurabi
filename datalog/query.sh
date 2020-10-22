@@ -6,10 +6,7 @@ DOMAIN=$2
 CHECKS="timeValid nssNameConstraint revoked chainLength parentNotCA domainMatch aCC leafValidity"
 ERR_CODES="10 20 40 50 60 30 70 80"
 N_CHECKS=$(echo $CHECKS | wc -w | cut -f1)
-# Disabling for james
-# TEST=`openssl rand -base64 12`
-# CHECKS_PL=${TEST}-checks.pl
-CHECKS_PL=../prolog/checks$JOBINDEX.pl
+CHECKS_PL=gen/checks$JOBINDEX.pl
 
 function verify {
     # Which check should be enabled

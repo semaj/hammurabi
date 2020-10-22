@@ -1,24 +1,23 @@
 #!/bin/bash
 
 MODULARIZE=./modularize.sh
-SRC_DIR=../prolog
 FILES="checks$JOBINDEX.pl certs$JOBINDEX.pl"
 CLIENT=$1
-OUT=all$JOBINDEX.pl
+OUT=gen/all$JOBINDEX.pl
 
-LUA_EXTS=ext.lua
+LUA_EXTS=static/ext.lua
 DTLG=datalog # must be on path
 
 rm -f $OUT
 
-if [ $1 = "chrome" ]; then
+if [ $CLIENT = "chrome" ]; then
     cp template_chrome.pl $OUT
 else
-    cp template.pl $OUT
+    cp template_firefox.pl $OUT
 fi
 
 for f in $FILES; do
-    $MODULARIZE $SRC_DIR/$f >> $OUT
+    $MODULARIZE static/$f >> $OUT
 done
 
 echo -e "\nenv:domain(\"$2\").\n$1:verified(cert_0)?" >> $OUT
