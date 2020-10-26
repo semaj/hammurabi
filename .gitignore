@@ -6,3 +6,6 @@
 
 datalog/gen/*
 !datalog/gen/.gitkeep
+
+tmp/*
+!tmp/.gitkeep

@@ -11,7 +11,7 @@ CHECKS=checks$JOBINDEX.pl
 CERTS=certs$JOBINDEX.pl
 
 rm gen/chrome_env.pl 2> /dev/null
-if [ $CLIENT = "chrome" ]; then
+if [[ $CLIENT == "chrome" ]]; then
   BROWSER=chrome.pl
   $MODULARIZE static/chrome_env.pl > gen/chrome_env.pl
   BROWSER_ENV=gen/chrome_env.pl
@@ -39,7 +39,7 @@ echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > gen/query.pl
 start_time=$(date +%s%N)
 $DATALOG -l $LUA_EXTS gen/$CHECKS gen/env.pl gen/std.pl gen/$BROWSER gen/$CERTS $BROWSER_ENV gen/query.pl > /dev/null
 E=$?
-if [ $3 = "writetime" ]; then
+if [[ $3 == "writetime" ]]; then
   echo "Datalog execution time (ms): $((($(date +%s%N) - $start_time)/1000000))"
 fi
 exit $E

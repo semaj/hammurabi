@@ -18,6 +18,4 @@ docopt = "1.1"
 openssl = { version = "0.10", features = ["vendored"] }
 reqwest = { version = "0.10.6", features = ["blocking"] }
 serde = "1.0"
-
-
-
+csv = "1.1.3"
