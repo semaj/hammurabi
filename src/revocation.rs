@@ -25,7 +25,7 @@ pub fn check_ocsp(
     let verification_cert_id =
         OcspCertId::from_cert(MessageDigest::sha1(), subject, issuer).unwrap();
     let mut req = OcspRequest::new().unwrap();
-    let sha256 = hex::encode(subject.digest(MessageDigest::sha256()).unwrap());
+    //let sha256 = hex::encode(subject.digest(MessageDigest::sha256()).unwrap());
     req.add_id(cert_id).unwrap();
     let req_der = req.to_der().unwrap();
     let mut headers = reqwest::header::HeaderMap::new();
@@ -77,7 +77,7 @@ pub fn check_ocsp(
                 },
         };
         let elapsed = before.elapsed().as_millis();
-        eprintln!("{} OCSP Check URI elapsed {}ms", sha256, elapsed);
+        eprintln!("OCSP request time: {}ms", elapsed);
         let bytes = res.bytes();
         let bytes = match bytes {
             Ok(b) => b,

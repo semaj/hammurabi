@@ -10,7 +10,7 @@ Verifies certificate at <path> for host <hostname>.
 <path> should be an absolute path, because rustls has some silly behavior regarding paths.
 
 Usage:
-  localcheck [options] <mappingfile> <intpath> <outputfile>
+  localcheck [options] <mappingfile> <intpath> <outputfile> [--ocsp]
   localcheck (--version | -v)
   localcheck (--help | -h)
 
@@ -27,6 +27,7 @@ struct Args {
     arg_intpath: String,
     //arg_workingPath: String, (thread-safety)
     arg_outputfile: String,
+    flag_ocsp: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,7 +76,7 @@ fn main() {
         let chain_raw = form_chain(&row.certificate_bytes, &args.arg_intpath, &row.ints);
         let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
         let domain = row.domain.as_str();
-        let result = acclib::verify_prolog(&mut chain, &domain, None, false);
+        let result = acclib::verify_prolog(&mut chain, &domain, None, args.flag_ocsp);
         let result_str = match result {
             Ok(_) => "OK".to_string(),
             Err(e) => format!("{:?}", e),
