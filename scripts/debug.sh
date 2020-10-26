@@ -5,19 +5,21 @@ LUA_EXTS=datalog/static/ext.lua
 CHECKS=checks$JOBINDEX.pl
 CERTS=certs$JOBINDEX.pl
 
-BROWSER_ENV_FILE=datalog/gen/chrome_env.pl
-if [ -f "$BROWSER_ENV_FILE" ]; then
-  BROWSER_ENV=datalog/gen/chrome_env.pl
+DIR=datalog/gen/job$JOBINDEX
+BROWSER_SPECIFIC=onecrl.pl
+if [ -f "$DIR/chrome_env.pl" ]; then
+  BROWSER_SPECIFIC=chrome_env.pl
 fi
 
-FIREFOX_BROWSER_FILE=datalog/gen/firefox.pl
+FIREFOX_BROWSER_FILE=$DIR/firefox.pl
 if [ -f "$FIREFOX_BROWSER_FILE" ]; then
   BROWSER=firefox.pl
 fi
 
-CHROME_BROWSER_FILE=datalog/gen/chrome.pl
+CHROME_BROWSER_FILE=$DIR/chrome.pl
 if [ -f "$CHROME_BROWSER_FILE" ]; then
   BROWSER=chrome.pl
 fi
 
-$DATALOG -l $LUA_EXTS datalog/gen/$CHECKS datalog/gen/env.pl datalog/gen/std.pl datalog/gen/$BROWSER datalog/gen/$CERTS $BROWSER_ENV datalog/gen/query.pl
+
+$DATALOG -l $LUA_EXTS $DIR/$CHECKS $DIR/env.pl $DIR/std.pl $DIR/$BROWSER $DIR/$CERTS $DIR/$BROWSER_SPECIFIC $DIR/query.pl

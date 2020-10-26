@@ -10,37 +10,33 @@ MODULARIZE=./modularize.sh
 CHECKS=checks$JOBINDEX.pl
 CERTS=certs$JOBINDEX.pl
 
+DIR=gen/job$JOBINDEX
+mkdir -p $DIR
+rm $DIR/* 2> /dev/null
+
 if [[ $CLIENT == "chrome" ]]; then
   BROWSER=chrome.pl
-  #$MODULARIZE static/chrome_env.pl > gen/chrome_env.pl
   BROWSER_SPECIFIC=chrome_env.pl
 else
   BROWSER=firefox.pl
-  #$MODULARIZE static/onecrl.pl > gen/onecrl.pl
   BROWSER_SPECIFIC=onecrl.pl
 fi
 
 GEN_FILES="$CHECKS $CERTS"
 for f in $GEN_FILES; do
-    $MODULARIZE gen/$f > gen/tmp
-    mv gen/tmp gen/$f
+    $MODULARIZE gen/$f > $DIR/$f
 done
-
-rm gen/chrome.pl 2> /dev/null
-rm gen/firefox.pl 2> /dev/null
-rm gen/chrome_env.pl 2> /dev/null
-rm gen/onecrl.pl 2> /dev/null
 
 STATIC_FILES="$BROWSER_SPECIFIC $BROWSER env.pl std.pl"
 for f in $STATIC_FILES; do
-    $MODULARIZE static/$f > gen/$f
+    $MODULARIZE static/$f > $DIR/$f
 done
 
 
-echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > gen/query.pl
+echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > $DIR/query.pl
 
 start_time=$(date +%s%N)
-$DATALOG -l $LUA_EXTS gen/$CHECKS gen/env.pl gen/std.pl gen/$BROWSER gen/$CERTS gen/$BROWSER_SPECIFIC gen/query.pl > /dev/null
+$DATALOG -l $LUA_EXTS $DIR/$CHECKS $DIR/env.pl $DIR/std.pl $DIR/$BROWSER $DIR/$CERTS $DIR/$BROWSER_SPECIFIC $DIR/query.pl > /dev/null
 E=$?
 if [[ $3 == "writetime" ]]; then
   echo "Datalog execution time (ms): $((($(date +%s%N) - $start_time)/1000000))"
