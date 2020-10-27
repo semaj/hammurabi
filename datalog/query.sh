@@ -41,7 +41,6 @@ fi
 
 verify -1 $1
 if [ $? -ne 0 ]; then
-    echo "Unknown failure"
     exit 200
 fi
 
@@ -51,11 +50,11 @@ fi
 for i in `seq 1 $N_CHECKS`; do
     verify $i $1
     if [ $? -ne 0 ]; then
-        >&2 echo `echo $CHECKS | cut -d" " -f$i`" check failed"
+        # >&2 echo `echo $CHECKS | cut -d" " -f$i`" check failed"
         exit `echo $ERR_CODES | cut -d" " -f$i`
     fi
 done
 
 # All known checks pass individiually, some unknown failure
->&2 echo "Unknown failure after all checks"
+# >&2 echo "Unknown failure after all checks"
 exit 2

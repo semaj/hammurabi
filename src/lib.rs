@@ -29,7 +29,12 @@ pub fn verify_prolog(
     let mut counter = 0;
     let leaf = chain.remove(0);
     let leaf_der = leaf.to_der().unwrap();
-    let cert = cert::PrologCert::from_der(&leaf_der);
+    let cert = match cert::PrologCert::from_der(&leaf_der) {
+        Ok(p) => p,
+        Err(_) => {
+            return Err(Error::X509ParsingError);
+        },
+    };
     let mut repr: String = cert.emit_all(&format!("cert_{}", counter));
     let mut fingerprints: Vec<String> = Vec::new();
 
@@ -49,7 +54,12 @@ pub fn verify_prolog(
         recursive_subject = intermediate_x509.clone();
 
         let intermediate_der = intermediate_x509.to_der().unwrap();
-        let intermediate = cert::PrologCert::from_der(&intermediate_der);
+        let intermediate = match cert::PrologCert::from_der(&intermediate_der) {
+            Ok(p) => p,
+            Err(_) => {
+                return Err(Error::X509ParsingError);
+            },
+        };
         repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
         repr.push_str(&format!(
             "fingerprint(cert_{}, \"{}\").\n",
@@ -86,7 +96,12 @@ pub fn verify_prolog(
                         counter,
                         hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
                 ));
-                let v = cert::PrologCert::from_der(&temp);
+                let v = match cert::PrologCert::from_der(&temp) {
+                    Ok(p) => p,
+                    Err(_) => {
+                        return Err(Error::X509ParsingError);
+                    },
+                };
                 repr.push_str(&v.emit_all(&format!("cert_{}", counter)));
             }
         }
