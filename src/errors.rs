@@ -3,6 +3,7 @@ use core::fmt;
 /// An error that occurs during certificate validation or name validation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Error {
+    X509ParsingError,
     /// The certificate is not valid for the name it is being validated for.
     CertNotValidForName,
     /// The certificate violates one or more name constraints.

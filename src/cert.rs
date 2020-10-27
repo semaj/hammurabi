@@ -11,16 +11,19 @@ pub struct PrologCert<'a> {
 }
 
 impl PrologCert<'_> {
-    pub fn from_der(cert_der: &'_ [u8]) -> PrologCert {
+    pub fn from_der(cert_der: &'_ [u8]) -> Result<PrologCert, ()> {
         match parse_x509_der(cert_der) {
             Ok((rem, parsed)) => {
                 assert!(rem.is_empty());
-                PrologCert {
+                Ok(PrologCert {
                     serial: format!("{}", parsed.tbs_certificate.serial),
                     inner: parsed.tbs_certificate,
-                }
+                })
             }
-            _ => panic!("x509 parsing failed"),
+            Err(e) => {
+                eprintln!("X509Parser error: {}", e);
+                return Err(());
+            }
         }
     }
 
