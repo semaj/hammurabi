@@ -25,10 +25,27 @@ To validate a certificate through Datalog Firefox, call `scripts/firefox.sh
 call `scripts/chrome.sh` for Datalog Chrome.
 
 If after running one of those scripts you get an unknown error that you wish to
-debug, you can edit the Datalog files in `datalog/gen/`, then call
+debug, you can edit the Datalog files in `datalog/gen/job`, then call
 `scripts/debug.sh` to rerun _only_ the Datalog. Note that any subsequent calls
-to `chrome.sh` or `firefox.sh` will overwrite the files in `datalog/gen`, which
-are to be treated as ephemeral.
+to `chrome.sh` or `firefox.sh` will overwrite the files in `datalog/gen/job` and
+`datalog/gen`, which are to be treated as ephemeral.
+
+# Scale
+
+Running the experiments "at scale" is slightly more involved. After building,
+you'll execute `./target/debug/scale <mapping-file> <ints-directory> <out-file>`
+where `mapping-file` is in the very unique format, `ints-directory` contains all
+intermediates (in PEM format) that correspond to the intermediates in the
+`mapping-file`, and `out-file` is where you want to write results.
+
+By default this will run Firefox. If you want to run Chrome, preface your
+call with `SCRIPT=chrome`. If you are running multiple instances of engine and
+want to be thread-safe, preface each thread's call with `JOBINDEX=<i>` where
+`i` is the thread ID (or similar). All of that threads generated files will live
+in `datalog/gen/job$JOBINDEX`. If you are running a single thread and omit
+`JOBINDEX` then it defaults to the empty string and your generated files will
+live in `datalog/gen/job`. You can debug using `debug.sh` as described above,
+which also respects the `JOBINDEX` environment variable.
 
 # Convenience
 
