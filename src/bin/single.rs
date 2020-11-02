@@ -36,7 +36,8 @@ fn main() {
         .unwrap_or_else(|e| e.exit());
     let chain_raw = fs::read(&args.arg_path).unwrap();
     let mut chain = X509::stack_from_pem(&chain_raw).unwrap();
-    match acclib::verify_prolog(&mut chain, &args.arg_hostname, None, args.flag_ocsp) {
+    let domain = &args.arg_hostname.to_lowercase();
+    match acclib::verify_prolog(&mut chain, &domain, None, args.flag_ocsp) {
         Ok(_) => println!("OK"),
         Err(e) => println!("Error: {:?}", e),
     }

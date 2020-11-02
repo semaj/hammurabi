@@ -76,7 +76,7 @@ fn main() {
         let chain_raw = form_chain(&row.certificate_bytes, &args.arg_intpath, &row.ints);
         let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
         let domain = row.domain.as_str();
-        let result = acclib::verify_prolog(&mut chain, &domain, None, args.flag_ocsp);
+        let result = acclib::verify_prolog(&mut chain, &domain.to_lowercase(), None, args.flag_ocsp);
         let result_str = match result {
             Ok(_) => "OK".to_string(),
             Err(e) => format!("{:?}", e),
