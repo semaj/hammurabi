@@ -149,7 +149,10 @@ pub fn emit_subject_alternative_names(hash: &String, extension: &X509Extension) 
                     .map(|f: &BerObject<'_>| match f.class {
                         2 => match str::from_utf8(f.content.as_slice().unwrap()) {
                             Ok(t) => format!("{}", t),
-                            Err(_) => format!(""),
+                            Err(e) => {
+                                eprintln!("SAN parsing error: {}", e);
+                                format!("")
+                            },
                         },
                         _ => format!("Should not have gotten this! {}", f.class),
                     })
