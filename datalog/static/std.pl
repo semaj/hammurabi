@@ -141,6 +141,12 @@ pathLengthOkay(Cert, ChainLen, SelfCount):-
     ext:geq(ChainLen, ChainLen),
     ext:geq(SelfCount, SelfCount).
 
+% Path length is okay if the extension doesn't exist
+pathLengthOkay(Cert, ChainLen, SelfCount) :-
+  certs:extensionExists(Cert, "BasicConstraints", false),
+  ext:geq(ChainLen, ChainLen),
+  ext:geq(SelfCount, Selfcount).
+
 % Basic Constraints checks
 % Path length constraint
 pathLengthOkay(Cert, ChainLen, SelfCount):-

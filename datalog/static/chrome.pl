@@ -27,7 +27,6 @@ checkKeyUsage(Cert) :-
   std:usageAllowed(Cert, "keyAgreement").
 
 checkExtendedKeyUsage(Cert):-
-  std:extendedKeyUsageExpected(Cert, "OCSPSigning", false),
   std:extendedKeyUsageExpected(Cert, "serverAuth", true).
 
 checkExtendedKeyUsage(Cert) :-
