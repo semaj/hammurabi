@@ -292,7 +292,7 @@ verified(Leaf, Cert, ChainLen):-
 verified(Leaf, Cert, ChainLen):-
   std:isTimeValid(Cert),
   parent(Cert, P, ChainLen),
-  %checkKeyUsage(P),
+  checkKeyUsage(P),
   checkExtendedKeyUsage(Cert),
   maxIntermediatesOkay(ChainLen),
   % Firefox-specific
