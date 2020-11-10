@@ -206,18 +206,24 @@ notOCSPRevokedCheck(Cert) :-
   certs:ocsp_response_expired(Cert, R).
 
 checkKeyUsage(Cert) :-
+  std:isCA(Cert),
+  certs:extensionExists(Cert, "KeyUsage", true),
+  std:usageAllowed(Cert, "keyCertSign").
+
+checkKeyUsage(Cert) :-
+  std:isNotCA(Cert),
   certs:extensionExists(Cert, "KeyUsage", false).
 
 checkKeyUsage(Cert) :-
-  % Note the ORs
+  std:isNotCA(Cert),
   std:usageAllowed(Cert, "digitalSignature").
 
 checkKeyUsage(Cert) :-
-  % Note the ORs
+  std:isNotCA(Cert),
   std:usageAllowed(Cert, "keyEncipherment").
 
 checkKeyUsage(Cert) :-
-  % Note the ORs
+  std:isNotCA(Cert),
   std:usageAllowed(Cert, "keyAgreement").
 
 
@@ -246,6 +252,10 @@ validSHA1(Cert) :-
   ext:unequal(Algorithm, "1.3.14.3.2.29"),
   % rsa encryption with sha1
   ext:unequal(Algorithm, "1.2.840.113549.1.1.5").
+
+checkExtendedKeyUsage(Cert) :-
+  std:isCA(Cert),
+  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
 
 checkExtendedKeyUsage(Cert):-
   std:isNotCA(Cert),
@@ -282,6 +292,8 @@ verified(Leaf, Cert, ChainLen):-
 verified(Leaf, Cert, ChainLen):-
   std:isTimeValid(Cert),
   parent(Cert, P, ChainLen),
+  %checkKeyUsage(P),
+  checkExtendedKeyUsage(Cert),
   maxIntermediatesOkay(ChainLen),
   % Firefox-specific
   validSHA1(Cert),
