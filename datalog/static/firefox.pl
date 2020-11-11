@@ -263,7 +263,6 @@ checkExtendedKeyUsage(Cert):-
   std:extendedKeyUsageExpected(Cert, "serverAuth", true).
 
 checkExtendedKeyUsage(Cert) :-
-  std:isNotCA(Cert),
   certs:extensionExists(Cert, "ExtendedKeyUsage", false).
 
 % Override kb_env.pl
