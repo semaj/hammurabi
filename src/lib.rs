@@ -77,6 +77,7 @@ pub fn verify_prolog(
     // get root certs
     let separator = "-----END CERTIFICATE-----";
     let root_chain = fs::read_to_string("assets/roots.pem").unwrap();
+    let mut found_issuer = false;
     for part in root_chain.split(separator) {
         if part.trim().is_empty() {
             continue;
@@ -89,6 +90,7 @@ pub fn verify_prolog(
         for intermediate_x509 in chain.iter() {
             fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
+                found_issuer = true;
                 let root_x509_for_stack = X509::from_der(&temp).unwrap();
                 stack.push(root_x509_for_stack).unwrap();
                 repr.push_str(&format!(
@@ -107,6 +109,9 @@ pub fn verify_prolog(
         }
 
         store_builder.add_cert(root_x509).unwrap();
+    }
+    if !found_issuer {
+        eprintln!("NO ISSUER FOUND");
     }
     let issuer_x509 = &chain[0];
     let subject_x509 = leaf;
