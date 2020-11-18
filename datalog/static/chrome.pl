@@ -8,10 +8,12 @@
 :- use_module(chrome_env).
 
 checkKeyUsage(Cert) :-
+  std:isNotCA(Cert),
   certs:extensionExists(Cert, "KeyUsage", false).
 
 checkKeyUsage(Cert) :-
   std:isCA(Cert),
+  certs:extensionExists(Cert, "KeyUsage", true),
   std:usageAllowed(Cert, "keyCertSign").
 
 checkKeyUsage(Cert) :-
