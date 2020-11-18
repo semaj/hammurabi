@@ -26,12 +26,6 @@ checkKeyUsage(Cert) :-
   std:isNotCA(Cert),
   std:usageAllowed(Cert, "keyAgreement").
 
-checkExtendedKeyUsage(Cert):-
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
-
-checkExtendedKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "ExtendedKeyUsage", false).
-
 
 time_2016_06_01(1464739200). % 01 Jun 2016
 time_2017_12_01(1512086400). % 01 Dec 2017
@@ -103,6 +97,7 @@ verified(Cert, ChainLength, Leaf):-
   chrome_env:strong_signature(Cert),
   std:isTimeValid(Cert),
   checkKeyUsage(Cert),
+  checkExtendedKeyUsage(Cert),
   ext:larger(20, ChainLength), % Artificial max chain length -- XXX
   \+bad_symantec(Cert),
   \+inCRLSets(Cert),
@@ -123,6 +118,12 @@ chromeNameMatches(Cert) :-
 chromeNameMatches(Cert) :-
   certs:extensionExists(Cert, "SubjectAlternativeNames", false),
   std:nameMatchesCN(Cert).
+
+checkExtendedKeyUsage(Cert):-
+  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+
+checkExtendedKeyUsage(Cert) :-
+  certs:extensionExists(Cert, "ExtendedKeyUsage", false).
 
 checkExtendedKeyUsage(Cert):-
   std:isNotCA(Cert),
