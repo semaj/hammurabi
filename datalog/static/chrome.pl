@@ -8,7 +8,6 @@
 :- use_module(chrome_env).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
   certs:extensionExists(Cert, "KeyUsage", false).
 
 checkKeyUsage(Cert) :-
@@ -18,14 +17,20 @@ checkKeyUsage(Cert) :-
 
 checkKeyUsage(Cert) :-
   std:isNotCA(Cert),
+  certs:extensionExists(Cert, "KeyUsage", true),
+  \+std:usageAllowed(Cert, "keyCertSign"),
   std:usageAllowed(Cert, "digitalSignature").
 
 checkKeyUsage(Cert) :-
   std:isNotCA(Cert),
+  certs:extensionExists(Cert, "KeyUsage", true),
+  \+std:usageAllowed(Cert, "keyCertSign"),
   std:usageAllowed(Cert, "keyEncipherment").
 
 checkKeyUsage(Cert) :-
   std:isNotCA(Cert),
+  certs:extensionExists(Cert, "KeyUsage", true),
+  \+std:usageAllowed(Cert, "keyCertSign"),
   std:usageAllowed(Cert, "keyAgreement").
 
 
