@@ -211,6 +211,7 @@ checkKeyUsage(Cert) :-
   std:usageAllowed(Cert, "keyCertSign").
 
 checkKeyUsage(Cert) :-
+  std:isNotCA(Cert),
   certs:extensionExists(Cert, "KeyUsage", false).
 
 checkKeyUsage(Cert) :-
