@@ -1,6 +1,7 @@
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 sudo apt-get update
 sudo apt-get install -yy \
+  make \
   autoconf \
   libtool \
   texinfo \
