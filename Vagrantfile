@@ -52,8 +52,6 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
     vb.customize ["modifyvm", :id, "--uartmode1", "file", File::NULL]
 
-    config.vm.provision "shell", path: "scripts/install-dependencies.sh"
-    config.vm.provision "shell", path: "scripts/install-extra.sh"
-    config.vm.provision "shell", path: "scripts/setup.sh"
+    config.vm.provision "shell", privileged: false, path: "scripts/install-dependencies.sh"
   end
 end

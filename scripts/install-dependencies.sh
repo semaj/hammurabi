@@ -7,4 +7,7 @@ sudo apt-get install -yy \
   automake-1.15 \
   ruby2.5
 
+echo 'PATH="$HOME/.cargo/bin:$PATH"' >> ~/.profile
+source ~/.profile
+
 

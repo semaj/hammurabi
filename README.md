@@ -12,11 +12,10 @@ validation logic, respectively.
 The easiest way to get started is to use the Vagrant box. To do so, you'll need
 VirtualBox installed. In this directory, you can then run `vagrant up`, then
 `vagrant ssh`. `vagrant up` creates a new virtual machine, installs necessary
-dependencies, sets up the repository, and builds the code. You can `cd engine`
-and test from there.
+dependencies, `vagrant ssh` connects to the box. Then run `cd engine`, then set
+everything up with `./scripts/setup.sh`.
 
-Note that `vagrant up` might take a few minutes---the first `cargo build` can be
-time-consuming.
+Note that `vagrant up` might take a few minutes.
 
 ## Without Vagrant
 
@@ -30,7 +29,29 @@ and TLS client.
 
 # Usage
 
-<USAGE FOR ./custom.sh HERE>
+Consider the certificate chain in
+`certs/0de156c55d46391bf1081fcb9acb6580ae9f8eb6e79af3206cfe8f9f792c002a.pem`. We
+can "attach" Datalog to the leaf certificate by editing
+`datalog/static/test.pl`. You can add clauses to the `verified(Cert)` predicate.
+
+You can run these assertions over a certificate chain like so:
+
+`./scripts/custom.sh
+0de156c55d46391bf1081fcb9acb6580ae9f8eb6e79af3206cfe8f9f792c002a.pem
+jameslarisch.com`. `jameslarisch.com` is the domain you're validating against.
+
+`OK` means the constraints were satisfied, an error means it didn't.
+
+After running, you can examine `datalog/gen/job/certs.pl` to examine the facts
+you can operate over. You can also look at the other facts and rules in
+`datalog/gen/job/*` (for instance `datalog/gen/job/std.pl` contains some
+convenience rules). Note to use `std.pl`, you need to add `:- use_module(std).`
+to the top of `datalog/static/test.pl`.
+
+For now, the `Cert` in `verified(Cert)` is the leaf certificate. You can also
+operate over the parent of the leaf---to see an example of this (and other
+complex rules) look at Datalog Firefox and Chrome at `datalog/static/firefox.pl`
+and `datalog/static/chrome.pl` respectively.
 
 To validate a certificate through Datalog Firefox, call `scripts/firefox.sh
 <path to chain pem file> <hostname to validate against>`. Similarly, you can
