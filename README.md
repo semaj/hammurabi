@@ -19,7 +19,7 @@ Note that `vagrant up` might take a few minutes.
 
 ## Without Vagrant
 
-If on an Debian-based system, you can run `scripts/install-dependencies.sh` to
+If on a Debian-based system, you can run `scripts/install-dependencies.sh` to
 install the necessary dependencies. Note that this will attempt to install
 Rust---I recommend looking at that file before running it. If not on Debian,
 you'll need to look at that file and install the analogous dependencies.
@@ -45,8 +45,7 @@ jameslarisch.com`. `jameslarisch.com` is the domain you're validating against.
 After running, you can examine `datalog/gen/job/certs.pl` to examine the facts
 you can operate over. You can also look at the other facts and rules in
 `datalog/gen/job/*` (for instance `datalog/gen/job/std.pl` contains some
-convenience rules). Note to use `std.pl`, you need to add `:- use_module(std).`
-to the top of `datalog/static/test.pl`.
+convenience rules).
 
 For now, the `Cert` in `verified(Cert)` is the leaf certificate. You can also
 operate over the parent of the leaf---to see an example of this (and other
@@ -91,7 +90,7 @@ intermediates (in PEM format) that correspond to the intermediates in the
 By default this will run Firefox. If you want to run Chrome, preface your
 call with `SCRIPT=chrome`. If you are running multiple instances of engine and
 want to be thread-safe, preface each thread's call with `JOBINDEX=<i>` where
-`i` is the thread ID (or similar). All of that threads generated files will live
+`i` is the thread ID (or similar). All of that thread's generated files will live
 in `datalog/gen/job$JOBINDEX`. If you are running a single thread and omit
 `JOBINDEX` then it defaults to the empty string and your generated files will
 live in `datalog/gen/job`. You can debug using `debug.sh` as described above,

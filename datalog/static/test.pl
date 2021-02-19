@@ -1,4 +1,5 @@
 :- use_module(std).
 
 verified(Cert):-
-  std:isNotCA(Cert).
+  std:isNotCA(Cert),
+  certs:blah(5).
