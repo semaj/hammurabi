@@ -1,24 +1,36 @@
 This repository contains the prototype ACC engine. The engine is responsible for
 parsing certificates, emitting Datalog facts, aggregating those facts with
-rules, and executing the Datalog interpreter to determine whether the Datalog
-deems the certificate valid.
+rules, and executing additional ACCs (as Datalog) to determine certificate
+validity.
 
 It's designed almost entirely (as of now) for testing chrome.pl and firefox.pl,
 which are Datalog implementations of Chrome and Firefox's TLS certificate
 validation logic, respectively.
 
-# Getting Started
+# Setup
 
-First, run `git submodule init && git submodule update` to ensure the Datalog
-submodule is initialized.
+The easiest way to get started is to use the Vagrant box. To do so, you'll need
+VirtualBox installed. In this directory, you can then run `vagrant up`, then
+`vagrant ssh`. `vagrant up` creates a new virtual machine, installs necessary
+dependencies, sets up the repository, and builds the code. You can `cd engine`
+and test from there.
 
-Then build Datalog. `cd lib/datalog && ./configure && make`. Note that you'll
-need the following dependencies: `libtool autoconf automake-1.15 texinfo`.
+Note that `vagrant up` might take a few minutes---the first `cargo build` can be
+time-consuming.
 
-From this point forward, everything should be executed from the root directory
-of this repository. To build, `cargo build`. This creates two executables:
-`target/debug/single` and `target/debug/scale`. `single` is what you'll probably
-need.
+## Without Vagrant
+
+If on an Debian-based system, you can run `scripts/install-dependencies.sh` to
+install the necessary dependencies. Note that this will attempt to install
+Rust---I recommend looking at that file before running it. If not on Debian,
+you'll need to look at that file and install the analogous dependencies.
+
+You can then run `scripts/setup.sh`, which will build the Datalog interpreter
+and TLS client.
+
+# Usage
+
+<USAGE FOR ./custom.sh HERE>
 
 To validate a certificate through Datalog Firefox, call `scripts/firefox.sh
 <path to chain pem file> <hostname to validate against>`. Similarly, you can
@@ -30,7 +42,24 @@ debug, you can edit the Datalog files in `datalog/gen/job`, then call
 to `chrome.sh` or `firefox.sh` will overwrite the files in `datalog/gen/job` and
 `datalog/gen`, which are to be treated as ephemeral.
 
+# Editing the Source
+
+If you edit the Rust code (which handles certificate parsing, signature
+validation, and Datalog generation/execution), you need to `cargo build` to
+rebuild.
+
+This creates two executables: `target/debug/single` and `target/debug/scale`.
+`single` is what you'll probably need.
+
+If you edit the Datalog interpreter (which you shouldn't need to do) you'll have
+to run `make` in `lib/datalog`.
+
+To add host (Lua) rules to the Datalog interpreter, edit `datalog/static/ext.lua`.
+
 # Scale
+
+This section can (probably) be ignored unless you are running experiments for
+the ACCs paper.
 
 Running the experiments "at scale" is slightly more involved. After building,
 you'll execute `./target/debug/scale <mapping-file> <ints-directory> <out-file>`

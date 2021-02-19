@@ -180,7 +180,8 @@ pub fn verify_prolog(
         .status()
         .expect("failed to execute process");
 
-    match status.code().unwrap() {
+    let status = status.code().unwrap();
+    match status {
         0 => Ok(()),
         10 => Err(Error::CertNotTimeValid),
         20 => Err(Error::NameConstraintViolation),

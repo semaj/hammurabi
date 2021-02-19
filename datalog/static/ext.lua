@@ -358,7 +358,8 @@ local function now(literal)
      if v then
         return nil
      else
-      return {1601603624}
+      -- return {1601603624} USE FOR SCALE TESTING
+      return {os.time()}
      end
   end
 end
