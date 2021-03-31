@@ -143,7 +143,6 @@ impl PrologCert<'_> {
     pub fn emit_extensions(&self, hash: &String) -> String {
         let mut key_usage: bool = false;
         let mut extended_key_usage: bool = false;
-        let mut basic_constraints: bool = false;
         let mut subject_alternative_names: bool = false;
         let mut subject_key_identifier: bool = false;
         let mut certificate_policies: bool = false;
@@ -155,7 +154,6 @@ impl PrologCert<'_> {
             .filter_map(|(oid, ext)| match oid.to_id_string().as_str() {
                 "2.5.29.15" => { key_usage = true; Some(extensions::emit_key_usage(hash, &ext))},
                 "2.5.29.37" => { extended_key_usage = true; Some(extensions::emit_extended_key_usage(hash, &ext)) },
-                "2.5.29.19" => { basic_constraints = true; Some(extensions::emit_basic_constraints(hash, &ext)) },
                 "2.5.29.17" => { subject_alternative_names = true; Some(extensions::emit_subject_alternative_names(hash, &ext)) },
                 "2.5.29.14" => { subject_key_identifier = true; Some(extensions::emit_subject_key_identifier(hash, &ext)) },
                 "2.5.29.32" => { certificate_policies = true; Some(extensions::emit_certificate_policies(hash, &ext)) },
@@ -163,14 +161,36 @@ impl PrologCert<'_> {
             })
             .collect::<Vec<String>>();
 
+        exts.push(self.emit_basic_constraints(hash));
         if !key_usage { exts.push(format!("extensionExists({}, \"KeyUsage\", false).", hash)) }
         if !extended_key_usage { exts.push(format!("extensionExists({}, \"ExtendedKeyUsage\", false).", hash)) }
-        if !basic_constraints { exts.push(format!("extensionExists({}, \"BasicConstraints\", false).", hash)) }
         if !subject_alternative_names { exts.push(format!("extensionExists({}, \"SubjectAlternativeNames\", false).", hash)) }
         if !subject_key_identifier { exts.push(format!("extensionExists({}, \"SubjectKeyIdentifier\", false).", hash)) }
         if !certificate_policies { exts.push(format!("extensionExists({}, \"CertificatePolicies\", false).", hash)) }
 
         format!("{}\n", exts.join("\n"))
+    }
+
+    pub fn emit_basic_constraints(&self, hash: &String) -> String {
+        let mut answer: Vec<String> = Vec::new();
+        match self.inner.basic_constraints() {
+            Some((is_critical, basic_constraints)) => {
+            answer.push(format!("extensionExists({}, \"BasicConstraints\", true).", hash));
+            answer.push(format!("exensionCritic({}, \"BasicConstraints\", {}).", hash, is_critical));
+            let path_constraint: String = basic_constraints.path_len_constraint.map_or(
+                "none".to_string(),
+                |x| x.to_string()
+            );
+            answer.push(format!("extensionValues({}, \"BasicConstraints\", {}, {}).",
+                    hash,
+                    basic_constraints.ca,
+                    path_constraint));
+            },
+            None => {
+                answer.push(format!("extensionExists({}, \"BasicConstraints\", false).", hash))
+            }
+        }
+        return answer.join("\n");
     }
 
     pub fn emit_subject_public_key_algorithm(&self, hash: &String) -> String {

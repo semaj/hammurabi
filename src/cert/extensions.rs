@@ -96,53 +96,6 @@ pub fn emit_extended_key_usage(hash: &String, extension: &X509Extension) -> Stri
     }
 }
 
-pub fn emit_basic_constraints(hash: &String, extension: &X509Extension) -> String {
-    match parse_der(extension.value) {
-        Ok(v) => {
-            let mut answer: String = format!("extensionExists({}, \"BasicConstraints\", true).
-extensionCritic({}, \"BasicConstraints\", {}).", hash, hash, extension.critical);
-
-            let mut items: Vec<String> = match v.1.as_sequence() {
-                Ok(objects) => objects
-                    .iter()
-                    .map(|f: &BerObject<'_>|
-                        if f.is_universal() {
-                            match f.content.as_bool() {
-                                Ok(v) => format!("{}", v),
-                                Err(_) => match f.content.as_u32() {
-                                    Ok(v) => format!("{}", v),
-                                    Err(e) => format!("{:?}", e),
-                                }
-                            }
-                        } else if f.is_application() {
-                            match f.content.as_u32() {
-                                Ok(v) => format!("{}", v),
-                                Err(_) => String::from("none")
-                            }
-                        } else {
-                            format!("Should not have gotten this!")
-                        }
-                    )
-                .collect::<Vec<String>>(),
-                Err(e) => vec![format!("{:?}", e)],
-            };
-            if items.len() < 2 {
-                items.push(String::from("none"));
-            }
-            let result: String = items
-                .iter()
-                .map(|item| format!("{}, ", item))
-                .collect::<String>()
-                .trim_end_matches(", ")
-                .to_string();
-
-            answer.push_str(format!("\nextensionValues({}, \"BasicConstraints\", {}).", hash, result).as_str());
-            answer
-        }
-        Err(_) => format!("extensionExists({}, \"BasicConstraints\", false).", hash)
-    }
-}
-
 pub fn emit_subject_key_identifier(hash: &String, extension: &X509Extension) -> String {
     match parse_der(extension.value) {
         Ok(v) => {
