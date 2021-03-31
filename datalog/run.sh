@@ -17,9 +17,13 @@ rm $DIR/* 2> /dev/null
 if [[ $CLIENT == "chrome" ]]; then
   BROWSER=chrome.pl
   BROWSER_SPECIFIC=chrome_env.pl
-else
+elif [[ $CLIENT == "firefox" ]]; then
   BROWSER=firefox.pl
   BROWSER_SPECIFIC=onecrl.pl
+else
+  CLIENT="test"
+  BROWSER=test.pl
+  BROWSER_SPECIFIC=chrome_env.pl
 fi
 
 GEN_FILES="$CHECKS $CERTS"

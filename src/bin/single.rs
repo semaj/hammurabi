@@ -11,9 +11,9 @@ Verifies certificate at <path> for host <hostname>.
 <path> should be an absolute path, because rustls has some silly behavior regarding paths.
 
 Usage:
-  localcheck [options] <path> <hostname> [--ocsp]
-  localcheck (--version | -v)
-  localcheck (--help | -h)
+  single [options] <path> <hostname> [--ocsp]
+  single (--version | -v)
+  single (--help | -h)
 
 Options:
     --version, -v       Show tool version.
