@@ -165,6 +165,7 @@ impl PrologCert<'_> {
         if !subject_key_identifier { exts.push(format!("extensionExists({}, \"SubjectKeyIdentifier\", false).", hash)) }
         if !certificate_policies { exts.push(format!("extensionExists({}, \"CertificatePolicies\", false).", hash)) }
         exts.push(self.emit_name_constraints(hash));
+        exts.push(self.emit_policy_extras(hash));
 
         format!("{}\n", exts.join("\n"))
     }
@@ -207,6 +208,60 @@ impl PrologCert<'_> {
             None => {
                 answer.push(format!("extensionExists({}, \"SubjectAlternativeNames\", false).",
                 hash))
+            }
+        }
+        return answer.join("\n");
+    }
+
+    pub fn emit_policy_extras(&self, hash: &String) -> String {
+        let mut answer: Vec<String> = Vec::new();
+        match self.inner.policy_constraints() {
+            Some((is_critical, policies)) => {
+                answer.push(format!("extensionExists({}, \"PolicyConstraints\", true).", hash));
+                answer.push(format!("exensionCritic({}, \"PolicyConstraints\", {}).", hash, is_critical));
+                match policies.require_explicit_policy {
+                    Some(u) => {
+                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"RequireExplicitPolicy\", {}).", hash, u));
+                    },
+                    None => {
+                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"RequireExplicitPolicy\", none).", hash));
+                    }
+                }
+                match policies.inhibit_policy_mapping {
+                    Some(u) => {
+                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"InhibitPolicyMapping\", {}).", hash, u));
+                    },
+                    None => {
+                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"InhibitPolicyMapping\", none).", hash));
+                    }
+                }
+            },
+            None => {
+                answer.push(format!("extensionExists({}, \"PolicyConstraints\", false).", hash))
+            }
+        }
+        match self.inner.inhibit_anypolicy() {
+            Some((is_critical, policies)) => {
+                answer.push(format!("extensionExists({}, \"InhibitAnyPolicy\", true).", hash));
+                answer.push(format!("exensionCritic({}, \"InhibitAnyPolicy\", {}).", hash, is_critical));
+                answer.push(format!("extensionValues({}, \"InhibitAnyPolicy\", {}).", hash, policies.skip_certs));
+            },
+            None => {
+                answer.push(format!("extensionExists({}, \"InhibitAnyPolicy\", false).", hash))
+            }
+        }
+        match self.inner.policy_mappings() {
+            Some((is_critical, policies)) => {
+                answer.push(format!("extensionExists({}, \"PolicyMappings\", true).", hash));
+                answer.push(format!("exensionCritic({}, \"PolicyMappings\", {}).", hash, is_critical));
+                for (oid, value_oids) in &policies.mappings {
+                    for value_oid in value_oids {
+                        answer.push(format!("exensionCritic({}, \"PolicyMappings\", \"{}\", \"{}\").", hash, oid.to_id_string(), value_oid.to_id_string()));
+                    }
+                }
+            },
+            None => {
+                answer.push(format!("extensionExists({}, \"PolicyMappings\", false).", hash))
             }
         }
         return answer.join("\n");
@@ -306,7 +361,7 @@ fn emit_general_name(name: &GeneralName) -> (String, String) {
         },
         GeneralName::URI(s) => ("URI".to_string(), s.to_string()),
         GeneralName::IPAddress(bytes) => {
-            if (bytes.len() == 8) { // ip+netmask
+            if bytes.len() == 8 { // ip+netmask
                 let ip = Ipv4Addr::new(bytes[0], bytes[1], bytes[2], bytes[3]);
                 ("IPv4Address".to_string(), format!("{}", ip))
             } else {
