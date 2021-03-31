@@ -4,7 +4,30 @@ use std::str;
 
 use der_parser::ber::{BerObject, BerObjectContent};
 use der_parser::parse_der;
-use x509_parser::x509::X509Extension;
+use x509_parser::extensions::{X509Extension};
+
+//pub fn emit_key_usage2(hash: &String, maybe_key_usage: Option<bool, extensions::KeyUsage>) -> Vec<String> {
+    //let mut answer: Vec<String> = Vec::new();
+    //match maybe_key_usage {
+        //Some(is_critical, key_usage) => {
+            //answer.push(format!("extensionExists({}, \"KeyUsage\", true).", hash));
+            //let prefix: String = format!("extensionValues({}, \"KeyUsage\",", hash);
+            //answer.push(format!("{} \"digitalSignature\", {:?}).", prefix, key_usage.digital_signature()));
+            //answer.push(format!("{} \"nonRepudiation\", {:?}).", prefix, key_usage.non_repudiation()));
+            //answer.push(format!("{} \"keyEncipherment\", {:?}).", prefix, key_usage.key_encipherment()));
+            //answer.push(format!("{} \"dataEncipherment\", {:?}).", prefix, key_usage.data_encipherment()));
+            //answer.push(format!("{} \"keyAgreement\", {:?}).", prefix, key_usage.key_agreement()));
+            //answer.push(format!("{} \"keyCertSign\", {:?}).", prefix, key_usage.key_cert_sign()));
+            //answer.push(format!("{} \"cRLSign\", {:?}).", prefix, key_usage.crl_sign()));
+            //answer.push(format!("{} \"encipherOnly\", {:?}).", prefix, key_usage.encipher_only()));
+            //answer.push(format!("{} \"decipherOnly\", {:?}).", prefix, key_usage.decipher_only()));
+        //}
+        //None => {
+            //format!("extensionExists({}, \"KeyUsage\", false).", hash)
+        //}
+    //}
+//}
+
 pub fn emit_key_usage(hash: &String, extension: &X509Extension) -> String {
     // order: digitalSignature nonRepudiation keyEncipherment dataEncipherment keyAgreement keyCertSign cRLSign encipherOnly decipherOnly
     match parse_der(extension.value) {
@@ -82,20 +105,24 @@ extensionCritic({}, \"BasicConstraints\", {}).", hash, hash, extension.critical)
             let mut items: Vec<String> = match v.1.as_sequence() {
                 Ok(objects) => objects
                     .iter()
-                    .map(|f: &BerObject<'_>| match f.class {
-                        0 => match f.content.as_bool() {
-                            Ok(v) => format!("{}", v),
-                            Err(_) => match f.content.as_u32() {
+                    .map(|f: &BerObject<'_>|
+                        if f.is_universal() {
+                            match f.content.as_bool() {
                                 Ok(v) => format!("{}", v),
-                                Err(e) => format!("{:?}", e),
-                            },
+                                Err(_) => match f.content.as_u32() {
+                                    Ok(v) => format!("{}", v),
+                                    Err(e) => format!("{:?}", e),
+                                }
+                            }
+                        } else if f.is_application() {
+                            match f.content.as_u32() {
+                                Ok(v) => format!("{}", v),
+                                Err(_) => String::from("none")
+                            }
+                        } else {
+                            format!("Should not have gotten this!")
                         }
-                        1 => match f.content.as_u32() {
-                            Ok(v) => format!("{}", v),
-                            Err(_) => String::from("none")
-                        },
-                        _ => format!("Should not have gotten this! {}", f.class),
-                    })
+                    )
                 .collect::<Vec<String>>(),
                 Err(e) => vec![format!("{:?}", e)],
             };
@@ -146,17 +173,19 @@ pub fn emit_subject_alternative_names(hash: &String, extension: &X509Extension) 
             let names: Vec<String> = match v.1.as_sequence() {
                 Ok(objects) => objects
                     .iter()
-                    .map(|f: &BerObject<'_>| match f.class {
-                        2 => match str::from_utf8(f.content.as_slice().unwrap()) {
-                            Ok(t) => format!("{}", t),
-                            Err(e) => {
-                                eprintln!("SAN parsing error: {}", e);
-                                format!("")
-                            },
-                        },
-                        _ => format!("Should not have gotten this! {}", f.class),
-                    })
-                .collect::<Vec<String>>(),
+                    .map(|f: &BerObject<'_>|
+                        if f.is_contextspecific() {
+                            match str::from_utf8(f.content.as_slice().unwrap()) {
+                                Ok(t) => format!("{}", t),
+                                Err(e) => {
+                                    eprintln!("SAN parsing error: {}", e);
+                                    format!("")
+                                }
+                            }
+                        } else {
+                            format!("Should not have gotten this!")
+                        }
+                    ).collect::<Vec<String>>(),
                 Err(e) => vec![format!("{:?}", e)],
             };
             let result: String = names

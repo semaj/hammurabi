@@ -1,18 +1,19 @@
 use std::str;
 use x509_parser;
-use x509_parser::parse_x509_der;
+use x509_parser::x509::X509Version;
+use x509_parser::parse_x509_certificate;
 
 mod extensions;
 
 #[derive(Debug)]
 pub struct PrologCert<'a> {
-    inner: x509_parser::x509::TbsCertificate<'a>,
+    inner: x509_parser::certificate::TbsCertificate<'a>,
     pub serial: String,
 }
 
 impl PrologCert<'_> {
     pub fn from_der(cert_der: &'_ [u8]) -> Result<PrologCert, ()> {
-        match parse_x509_der(cert_der) {
+        match parse_x509_certificate(cert_der) {
             Ok((rem, parsed)) => {
                 assert!(rem.is_empty());
                 Ok(PrologCert {
@@ -45,7 +46,7 @@ impl PrologCert<'_> {
         )
     }
 
-    fn str_from_rdn(name: &x509_parser::RelativeDistinguishedName) -> String {
+    fn str_from_rdn(name: &x509_parser::x509::RelativeDistinguishedName) -> String {
         String::from(
             str::from_utf8(
                 name.set[0].attr_value.content.as_slice().
@@ -88,8 +89,8 @@ impl PrologCert<'_> {
         format!(
             "validity({}, {:?}, {:?}).",
             hash,
-            &self.inner.validity.not_before.to_timespec().sec,
-            &self.inner.validity.not_after.to_timespec().sec
+            &self.inner.validity.not_before.timestamp(),
+            &self.inner.validity.not_after.timestamp()
         )
     }
 
@@ -114,7 +115,13 @@ impl PrologCert<'_> {
     }
 
     pub fn emit_version(&self, hash: &String) -> String {
-        format!("version({}, {}).", hash, &self.inner.version)
+        let version = match self.inner.version {
+            X509Version::V1 => 0,
+            X509Version::V2 => 1,
+            X509Version::V3 => 2,
+            _ => panic!("Invalid version"),
+        };
+        format!("version({}, {}).", hash, version)
     }
 
     pub fn emit_sign_alg(&self, hash: &String) -> String {
@@ -145,7 +152,7 @@ impl PrologCert<'_> {
             .inner
             .extensions
             .iter()
-            .filter_map(|ext| match ext.oid.to_string().as_str() {
+            .filter_map(|(oid, ext)| match oid.to_id_string().as_str() {
                 "2.5.29.15" => { key_usage = true; Some(extensions::emit_key_usage(hash, &ext))},
                 "2.5.29.37" => { extended_key_usage = true; Some(extensions::emit_extended_key_usage(hash, &ext)) },
                 "2.5.29.19" => { basic_constraints = true; Some(extensions::emit_basic_constraints(hash, &ext)) },
