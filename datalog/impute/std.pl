@@ -5,7 +5,6 @@
     nameMatches/2,
     isTimeValid/2,
     extendedKeyUsageExpected/3,
-    extendedKeyUsageExpected/3,
     isRoot/1,
     isCA/1,
     isNotCA/1,

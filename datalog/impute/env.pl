@@ -5,7 +5,7 @@
     ]).
 
 
-domain("www.dawn.com").
+domain("www.bing.com").
 max_intermediates(5).
 % This is our own Ruby CA for frankencert testing.
 trusted_roots("806900450323811634B49508D427C5C5F7BEC6733DD369FB2F6B7A4EA228223A").

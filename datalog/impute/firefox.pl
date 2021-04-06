@@ -1,3 +1,7 @@
+:- module(firefox, [
+  verified_fx/19
+]).
+
 :- use_module(env).
 :- use_module(std).
 :- use_module(onecrl).
@@ -72,7 +76,7 @@ nssNameConstraintValid(LeafSANList, RootFingerprint) :-
 
 notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   shortLived(Lower, Upper);
-  notOCSPRevokedCheck(CertPolicies, RootSubject, StapledResponse, OcspResponse).
+  notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse).
 
 stapledResponse(Response):-
   Response = [A, B, C, D],
@@ -118,13 +122,13 @@ ocspResponse(Response):-
 %   (OcspResponse = []; ocspResponseError(OcspResponse)).
 
 
-notOCSPRevokedCheck(_, _, _, OcspResponse) :-
+notOCSPRevoked(_, _, _, OcspResponse) :-
   OcspResponse = [].
 
-notOCSPRevokedCheck(_, _, _, OcspResponse) :-
+notOCSPRevoked(_, _, _, OcspResponse) :-
   OcspResponse = [1, 0, 1, good].
 
-notOCSPRevokedCheck(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
+notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   ev:isDV(CertPolicies, RootSubject),
   StapledResponse = [],
   ocspResponse(OcspResponse),
@@ -134,7 +138,7 @@ notOCSPRevokedCheck(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
     OcspResponse = [_, 1, _, _]
   ).
 
-notOCSPRevokedCheck(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
+notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   ev:isDV(CertPolicies, RootSubject),
   stapledResponse(StapledResponse),
   StapledResponse = [1, 0, 1, _],
@@ -151,11 +155,6 @@ tenDaysInSeconds(864001).
 shortLived(Lower, Upper) :-
   tenDaysInSeconds(ValidDuration),
   Upper - Lower #< ValidDuration.
-
-notInOneCRL(Cert) :-
-  certs:fingerprint(Cert, Fingerprint),
-  \+onecrl:onecrl(Fingerprint).
-
 
 checkKeyUsage(_, KeyUsage) :-
   KeyUsage = [].
@@ -184,10 +183,6 @@ checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
 checkExtendedKeyUsage(_, ExtKeyUsage) :-
   ExtKeyUsage = [].
 
-
-notSymantec(Cert) :-
-  certs:fingerprint(Cert, F),
-  \+symantecFingerprint(F).
 
 checkKeyCertSign(KeyUsage) :-
   KeyUsage = [];
@@ -231,7 +226,7 @@ verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verified(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+verified_fx(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
   onecrl:notcrl(Fingerprint),
   firefoxNameMatches(SANList, Subject),
   std:isTimeValid(Lower, Upper),
@@ -244,7 +239,7 @@ verified(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraint
   verifiedRoot(SANList, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
 
 
-?- verified(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
+% ?- verified(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
 
 % Fingerprint = Fingerprint,
 % SANList = SANList,
