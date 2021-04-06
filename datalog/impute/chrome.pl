@@ -1,5 +1,5 @@
 :- module(chrome, [
-  verified_ch/19
+  verified_chrome/19
 ]).
 
 :- use_module(std).
@@ -106,7 +106,7 @@ verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verified_ch(Fingerprint, SANList, _, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, _, _, _, _, _, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+verified_chrome(Fingerprint, SANList, _, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, _, _, _, _, _, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
   \+crl_set(Fingerprint),
   std:nameMatchesSAN(SANList),
   std:isTimeValid(Lower, Upper),
@@ -116,5 +116,3 @@ verified_ch(Fingerprint, SANList, _, Lower, Upper, Algorithm, BasicConstraints, 
   leaf_duration_valid(Lower, Upper),
   \+bad_symantec(Fingerprint, Lower),
   verifiedRoot(RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
-
-% ?- verified(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).

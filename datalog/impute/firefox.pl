@@ -1,5 +1,5 @@
 :- module(firefox, [
-  verified_fx/19
+  verified_firefox/19
 ]).
 
 :- use_module(env).
@@ -226,7 +226,7 @@ verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verified_fx(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
   onecrl:notcrl(Fingerprint),
   firefoxNameMatches(SANList, Subject),
   std:isTimeValid(Lower, Upper),
@@ -237,26 +237,3 @@ verified_fx(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstra
   notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse),
   isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject),
   verifiedRoot(SANList, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
-
-
-% ?- verified(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
-
-% Fingerprint = Fingerprint,
-% SANList = SANList,
-% Subject = Subject,
-% Lower = Lower,
-% Upper = Upper,
-% Algorithm = Algorithm,
-% BasicConstraints = BasicConstraints,
-% KeyUsage = KeyUsage,
-% ExtKeyUsage = ExtKeyUsage,
-% CertPolicies = CertPolicies,
-% RootSubject = RootSubject,
-% StapledResponse = StapledResponse,
-% OcspResponse = OcspResponse,
-% RootSubject = RootSubject,
-% RootFingerprint = RootFingerprint,
-% RootLower = RootLower,
-% RootUpper = RootUpper,
-% RootBasicConstraints = RootBasicConstraints,
-% RootKeyUsage = RootKeyUsage,
