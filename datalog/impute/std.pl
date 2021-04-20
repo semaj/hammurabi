@@ -10,14 +10,15 @@
     isNotCA/1,
     pathLengthOkay/3,
     maxIntermediatesOkay/1,
-    algorithm/1
+    algorithm/1,
+    keyUsageList/1,
+    extKeyUsageList/1
 ]).
 
 :- use_module(env).
 :- use_module(library(dialect/sicstus/system)).
 :- use_module(library(clpfd)).
 
-:- set_prolog_flag(double_quotes, chars).
 
 stringMatch(Pattern, CommonName):-
     var(CommonName),
@@ -45,6 +46,7 @@ stringMatch(Pattern, CommonName):-
 % domain name matches one of the names in SAN
 nameMatchesSAN(SANList):-
     env:domain(D),
+    N in 0..4, label([N]), length(SANList, N),
     member(SAN, SANList),
     stringMatch(SAN, D).
 
@@ -61,13 +63,10 @@ epoch_end(2524626000).                  % 01-01-2050 00:00:00
 
 % time validity check. between Lower and Upper
 isTimeValid(Lower, Upper):-
-    now(T),
-    epoch_start(Start),
-    epoch_end(End),
-    Lower #> Start,
-    Upper #< End,
-    T #> Lower,
-    Upper #> T.
+    % now(T),
+    T #= 1618287688 #/\
+    Lower in 631170000..2524626000 #/\ Upper in 631170000..2524626000 #/\
+    Lower #< T #/\ Upper #> T.
 
 extendedKeyUsageExpected(ExtUseList, Usage, Expected):-
     Expected = 1,
@@ -87,12 +86,12 @@ isCA(BasicConstraints):-
     BasicConstraints = [1, _].
 
 isNotCA(BasicConstraints):-
-    BasicConstraints = none;
+    BasicConstraints = [];
     BasicConstraints = [0, _].
 
 % Path length is okay if the extension doesn't exist
 pathLengthOkay(BasicConstraints, ChainLen, SelfCount) :-
-    BasicConstraints = none;
+    BasicConstraints = [];
     BasicConstraints = [_, none];
     (
         BasicConstraints = [_, Limit],
@@ -133,3 +132,19 @@ algorithm(Oid):-
     md4_sig_algo(Oid);
     md5_sig_algo(Oid);
     sha1_sig_algo(Oid).
+
+keyUsageVal(digitalSignature).
+keyUsageVal(keyEncipherment).
+keyUsageVal(keyAgreement).
+keyUsageVal(keyCertSign).
+
+keyUsageList(L):-
+  N in 0..4, label([N]), length(PreL, N),
+  maplist(keyUsageVal, PreL), is_set(PreL), sort(PreL, L).
+  
+extKeyUsageVal(serverAuth).
+extKeyUsageVal(oCSPSigning).
+
+extKeyUsageList(L):-
+  N in 0..2, label([N]), length(PreL, N),
+  maplist(extKeyUsageVal, PreL), is_set(PreL), sort(PreL, L).

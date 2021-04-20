@@ -1,5 +1,5 @@
 :- module(firefox, [
-  verified_firefox/19
+  verified_firefox/18
 ]).
 
 :- use_module(env).
@@ -72,81 +72,49 @@ nssNameConstraintValid(LeafSANList, RootFingerprint) :-
   member(Name, LeafSANList),
   std:stringMatch(Tree, Name).
 
-% revocation_response = [valid, expired, verified, status]
-
 notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   shortLived(Lower, Upper);
   notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse).
 
 stapledResponse(Response):-
-  Response = [A, B, C, D],
-  (A = 0; A = 1),
-  (B = 0; B = 1),
-  (C = 0; C = 1),
-  (D = 0; D = 1).
+  Response = [A, B, C],
+  (A = not_verified; A = verified),
+  (B = not_expired; B = expired),
+  (C = invalid; C = valid).
 
 ocspResponse(Response):-
   Response = [A, B, C, D],
-  (A = 0; A = 1),
-  (B = 0; B = 1),
-  (C = 0; C = 1),
-  (D = revoked; D = notknown).
-
-
-% stapledResponseError(StapledResponse) :-
-%   stapledResponse(StapledResponse),
-%   (
-%     StapledResponse = [0, _, _, _];
-%     StapledResponse = [_, 1, _, _];
-%     StapledResponse = [_, _, 0, _]
-%   ).
-
-% ocspResponseError(OcspResponse):-
-%   ocspResponse(OcspResponse),
-%   (
-%     OcspResponse = [0, _, _, _];
-%     OcspResponse = [_, 1, _, _];
-%     OcspResponse = [_, _, 0, _]
-%   ).
-
-% ocspRevoked(_, _, _, OcspResponse) :-
-%   OcspResponse = [1, 0, 1, revoked];
-%   OcspResponse = [1, 0, 1, notknown].
-
-% ocspRevoked(_, _, StapledResponse, OcspResponse) :-
-%   (OcspResponse = [], stapledResponseError(StapledResponse));
-%   (ocspResponseError(OcspResponse), stapledResponseError(StapledResponse)).
-
-% ocspRevoked(CertPolicies, RootSubject, _, OcspResponse) :-
-%   ev:isEV(CertPolicies, RootSubject),
-%   (OcspResponse = []; ocspResponseError(OcspResponse)).
+  (A = not_verified; A = verified),
+  (B = not_expired; B = expired),
+  (C = invalid; C = valid),
+  (D = revoked; D = good).
 
 
 notOCSPRevoked(_, _, _, OcspResponse) :-
   OcspResponse = [].
 
 notOCSPRevoked(_, _, _, OcspResponse) :-
-  OcspResponse = [1, 0, 1, good].
+  OcspResponse = [verified, not_expired, valid, good].
 
 notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   ev:isDV(CertPolicies, RootSubject),
   StapledResponse = [],
   ocspResponse(OcspResponse),
   (
-    OcspResponse = [0, _, _, _];
-    OcspResponse = [_, _, 0, _];
-    OcspResponse = [_, 1, _, _]
+    OcspResponse = [not_verified, _, _, _];
+    OcspResponse = [_, _, invalid, _];
+    OcspResponse = [_, expired, _, _]
   ).
 
 notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   ev:isDV(CertPolicies, RootSubject),
   stapledResponse(StapledResponse),
-  StapledResponse = [1, 0, 1, _],
+  StapledResponse = [verified, not_expired, valid],
   ocspResponse(OcspResponse),
   (
-    OcspResponse = [0, _, _, _];
-    OcspResponse = [_, 1, _, _];
-    OcspResponse = [_, _, 0, _]
+    OcspResponse = [not_verified, _, _, _];
+    OcspResponse = [_, expired, _, _];
+    OcspResponse = [_, _, invalid, _]
   ).
 
 
@@ -157,36 +125,42 @@ shortLived(Lower, Upper) :-
   Upper - Lower #< ValidDuration.
 
 checkKeyUsage(_, KeyUsage) :-
+  std:keyUsageList(KeyUsage),
   KeyUsage = [].
 
 checkKeyUsage(BasicConstraints, KeyUsage) :-
   std:isCA(BasicConstraints),
-  member("keyCertSign", KeyUsage).
+  std:keyUsageList(KeyUsage),
+  member(keyCertSign, KeyUsage).
 
 checkKeyUsage(BasicConstraints, KeyUsage) :-
   std:isNotCA(BasicConstraints),
+  std:keyUsageList(KeyUsage),
   (
-    member("digitalSignature", KeyUsage);
-    member("keyEncipherment", KeyUsage);
-    member("keyAgreement", KeyUsage)
+    member(digitalSignature, KeyUsage);
+    member(keyEncipherment, KeyUsage);
+    member(keyAgreement, KeyUsage)
   ).
 
 checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
   std:isCA(BasicConstraints),
-  std:extendedKeyUsageExpected(ExtKeyUsage, "serverAuth", 1).
+  std:extKeyUsageList(ExtKeyUsage),
+  std:extendedKeyUsageExpected(ExtKeyUsage, serverAuth, 1).
 
 checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
   std:isNotCA(BasicConstraints),
-  std:extendedKeyUsageExpected(ExtKeyUsage, "OCSPSigning", 0),
-  std:extendedKeyUsageExpected(ExtKeyUsage, "serverAuth", 1).
+  std:extKeyUsageList(ExtKeyUsage),
+  std:extendedKeyUsageExpected(ExtKeyUsage, oCSPSigning, 0),
+  std:extendedKeyUsageExpected(ExtKeyUsage, serverAuth, 1).
 
 checkExtendedKeyUsage(_, ExtKeyUsage) :-
+  std:extKeyUsageList(ExtKeyUsage),
   ExtKeyUsage = [].
 
 
 checkKeyCertSign(KeyUsage) :-
-  KeyUsage = [];
-  member("keyCertSign", KeyUsage).
+  std:keyUsageList(KeyUsage),
+  (KeyUsage = []; member(keyCertSign, KeyUsage)).
 
 
 validSHA1(Algorithm) :-
@@ -216,7 +190,7 @@ isNSSTimeValid(CertPolicies, _, _, RootSubject):-
 isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject):-
   ev:isEV(CertPolicies, RootSubject),
   duration27MonthsPlusSlop(ValidDuration),
-  ValidDuration #>= Upper - Lower.
+  Upper - Lower #< ValidDuration.
 
 verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   std:isRoot(Fingerprint),
@@ -226,7 +200,7 @@ verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, RootSubject, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
   onecrl:notcrl(Fingerprint),
   firefoxNameMatches(SANList, Subject),
   std:isTimeValid(Lower, Upper),

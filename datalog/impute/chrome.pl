@@ -1,5 +1,5 @@
 :- module(chrome, [
-  verified_chrome/19
+  verified_chrome/18
 ]).
 
 :- use_module(std).
@@ -12,7 +12,7 @@
 % For certificates issued on-or-after 1 September 2020 (398 days)
 % net/cert/cert_verify_proc
 leaf_duration_valid(Lower, Upper):-
-  Duration = Lower - Upper,
+  Duration = Upper - Lower,
   July2012 = 1341100800,
   April2015 = 1427846400,
   March2018 = 1519862400,
@@ -25,9 +25,9 @@ leaf_duration_valid(Lower, Upper):-
   ThreeNinetyEightDays = 34387200,
   (
     (Lower #< July2012, Upper #< July2019, Duration #=< TenYears);
-    (Lower #>= July2012, Lower #< April2015, Duration #=< SixtyMonths);
-    (Lower #>= April2015, Lower #< March2018, Duration #=< ThirtyNineMonths);
-    (Lower #>= March2018, Lower #< Sep2020, Duration #=< EightTwentyFiveDays);
+    (Lower in July2012..April2015, Duration #=< SixtyMonths);
+    (Lower in April2015..March2018, Duration #=< ThirtyNineMonths);
+    (Lower in March2018..Sep2020, Duration #=< EightTwentyFiveDays);
     (Lower #>= Sep2020, Duration #=< ThreeNinetyEightDays)
   ).
 
@@ -53,33 +53,36 @@ strong_signature(Algorithm):-
   \+std:md5_sig_algo(Algorithm).
 
 checkKeyUsage(_, KeyUsage) :-
+  std:keyUsageList(KeyUsage),
   KeyUsage = [].
 
 checkKeyUsage(BasicConstraints, KeyUsage) :-
   std:isCA(BasicConstraints),
-  member("keyCertSign", KeyUsage).
+  std:keyUsageList(KeyUsage),
+  member(keyCertSign, KeyUsage).
 
 checkKeyUsage(BasicConstraints, KeyUsage) :-
   std:isNotCA(BasicConstraints),
+  std:keyUsageList(KeyUsage),
   (
-    member("digitalSignature", KeyUsage);
-    member("keyEncipherment", KeyUsage);
-    member("keyAgreement", KeyUsage)
+    member(digitalSignature, KeyUsage);
+    member(keyEncipherment, KeyUsage);
+    member(keyAgreement, KeyUsage)
   ),
-  \+member("keyCertSign", KeyUsage).
+  \+member(keyCertSign, KeyUsage).
 
 checkKeyCertSign(KeyUsage) :-
-  KeyUsage = [];
-  member("keyCertSign", KeyUsage).
+  std:keyUsageList(KeyUsage),
+  (KeyUsage = []; member(keyCertSign, KeyUsage)).
 
 checkExtendedKeyUsage(ExtKeyUsage) :-
-  ExtKeyUsage = [];
-  std:extendedKeyUsageExpected(ExtKeyUsage, "serverAuth", 1).
+  std:extKeyUsageList(ExtKeyUsage),
+  (ExtKeyUsage = []; std:extendedKeyUsageExpected(ExtKeyUsage, serverAuth, 1)).
 
 symantec_untrusted(Lower):-
-  June2016 = 1464739200,
-  Dec2017 = 1512086400,
-  (Lower #< June2016; Lower #> Dec2017).
+  % June2016 = 1464739200,
+  % Dec2017 = 1512086400,
+  Lower #< 1464739200 #\/ Lower #> 1512086400.
 
 % if legacy symantec and
 % symantec enforcement on OR untrusted symantec
@@ -106,7 +109,7 @@ verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verified_chrome(Fingerprint, SANList, _, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, _, _, _, _, _, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+verified_chrome(Fingerprint, SANList, _, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, _, _, _, _, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
   \+crl_set(Fingerprint),
   std:nameMatchesSAN(SANList),
   std:isTimeValid(Lower, Upper),
