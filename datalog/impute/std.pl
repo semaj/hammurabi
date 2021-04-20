@@ -1,12 +1,10 @@
 :- module(std, [
     stringMatch/2,
-    nameMatchesSAN/1,
-    nameMatchesCN/1,
+    nameMatchesSAN/2,
+    nameMatchesCN/2,
     isTimeValid/2,
-    isRoot/1,
     isCA/1,
-    isEV/2,
-    notcrl/1
+    isEV/2
 ]).
 
 :- use_module(env).
@@ -41,10 +39,10 @@ stringMatch(Pattern, CommonName):-
 % domain name matches one of the names in SAN
 nameMatchesSAN(Domain, SANList):-
     member(SAN, SANList),
-    stringMatch(SAN, D).
+    stringMatch(SAN, Domain).
 
 nameMatchesCN(Domain, Subject):-
-    stringMatch(Subject, D).
+    stringMatch(Subject, Domain).
 
 % time validity check. between Lower and Upper
 isTimeValid(Lower, Upper):-

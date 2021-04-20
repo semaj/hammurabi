@@ -1,6 +1,11 @@
-:- module(env, [
+:- module(firefox_env, [
         trusted_roots/1,
-        onecrl/1
+        onecrl/1,
+        symantecFingerprint/1,
+        tubitak1Fingerprint/1,
+        tubitak1Subtree/1,
+        anssiFingerprint/1,
+        anssiSubtree/1
     ]).
 
 

@@ -3,6 +3,7 @@
 ]).
 
 :- use_module(firefox_env).
+:- use_module(env).
 :- use_module(std).
 :- use_module(library(clpfd)).
 
@@ -106,7 +107,7 @@ firefoxNameMatches(SANList, _):-
 % Check CN ONLY if SAN not present
 firefoxNameMatches(SANList, Subject) :-
   SANList = [],
-  firefox_env:domain(D),
+  env:domain(D),
   std:nameMatchesCN(D, Subject).
 
 % in seconds
