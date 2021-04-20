@@ -8,7 +8,7 @@ use std::{fs, env};
 use std::io::Write;
 use std::time::Instant;
 use std::process::Command;
-use x509_parser::pem::pem_to_der;
+use x509_parser::pem::parse_x509_pem;
 
 mod cert;
 mod revocation;
@@ -85,7 +85,7 @@ pub fn verify_prolog(
 
         counter += 1;
         let cert_pem = [part, separator].join("");
-        let temp = pem_to_der(cert_pem.as_bytes()).unwrap().1.contents;
+        let temp = parse_x509_pem(cert_pem.as_bytes()).unwrap().1.contents;
         let root_x509 = X509::from_der(&temp).unwrap();
         for intermediate_x509 in chain.iter() {
             fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
