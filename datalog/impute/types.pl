@@ -1,32 +1,86 @@
-:- module(ev, [
-    isDV/2,
-    isEV/2
+:- module(types, [
+    sANList/1,
+    timestamp/1,
+    md2_sig_algo/1,
+    md4_sig_algo/1,
+    md5_sig_algo/1,
+    sha1_sig_algo/1,
+    algorithm/1,
+    basicConstraints/1,
+    keyUsageList/1,
+    extKeyUsageList/1,
+    anyPolicyOid/1,
+    evPolicyOid/2,
+    certificatePolicy/1,
+    stapledResponse/1,
+    ocspResponse/1
 ]).
-
 :- use_module(library(clpfd)).
-% EV logic probably broken
 
-% extended validation intermediate cert
+sANList(L):-
+    N in 0..4, label([N]), length(L, N).
 
-% recognized EV policy OID clause
-isEV(CertPolicies, RootSubject) :-
-    CertPolicies = [[Oid, Index] | _],
-    Index #>= 0,
-    Index #< 9,
-    evPolicyOid(Oid, RootSubject).
+epoch_start(631170000).                 % 01-01-1990 00:00:00
+epoch_end(2524626000).                  % 01-01-2050 00:00:00
 
-isEV(CertPolicies, RootSubject) :-
-    CertPolicies = [_ | T],
-    isEV(T, RootSubject).
+timestamp(T):-
+    epoch_start(Start),
+    epoch_end(End),
+    T in Start..End.
 
-isDV(CertPolicies, _):-
-    CertPolicies = [].
+% md2
+md2_sig_algo("1.2.840.113549.1.1.2").
+md2_sig_algo("1.3.14.7.2.3.1").
 
-isDV(CertPolicies, RootSubject):-
-    CertPolicies = [[Oid, Index] | _],
-    nth1(1, Oid, _),
-    Index #> 10,
-    \+evPolicyOid(Oid, RootSubject).
+% md4
+md4_sig_algo("1.2.840.113549.1.1.3").
+md4_sig_algo("1.3.14.3.2.2").
+md4_sig_algo("1.3.14.3.2.4").
+
+% md5
+md5_sig_algo("1.2.840.113549.1.1.4").
+md5_sig_algo("1.3.14.3.2.3").
+md5_sig_algo("1.2.840.113549.2.5").
+
+% sha1
+sha1_sig_algo("1.2.840.113549.1.1.5"). % sha1RSA
+sha1_sig_algo("1.2.840.10040.4.3"). % sha1DSA
+sha1_sig_algo("1.3.14.3.2.29"). % sha1RSA
+sha1_sig_algo("1.3.14.3.2.13"). % sha1DSA
+sha1_sig_algo("1.3.14.3.2.27"). % dsaSHA1
+sha1_sig_algo("1.3.14.3.2.26"). % sha1NoSign
+sha1_sig_algo("1.2.840.10045.4.1"). % sha1ECDSA
+
+algorithm(Oid):-
+    md2_sig_algo(Oid);
+    md4_sig_algo(Oid);
+    md5_sig_algo(Oid);
+    sha1_sig_algo(Oid).
+
+basicConstraints(Bc):-
+    Bc = [];
+    (
+        Bc = [Ca, Len],
+        (Ca = ca; Ca = notca),
+        Len in 0..10
+    ).
+
+keyUsageVal(digitalSignature).
+keyUsageVal(keyEncipherment).
+keyUsageVal(keyAgreement).
+keyUsageVal(keyCertSign).
+
+keyUsageList(L):-
+  N in 0..4, label([N]), length(PreL, N),
+  maplist(keyUsageVal, PreL), is_set(PreL), sort(PreL, L).
+  
+extKeyUsageVal(serverAuth).
+extKeyUsageVal(oCSPSigning).
+
+extKeyUsageList(L):-
+  N in 0..2, label([N]), length(PreL, N),
+  maplist(extKeyUsageVal, PreL), is_set(PreL), sort(PreL, L).
+
 
 % The anyPolicy OID, usable by intermediates
 anyPolicyOid("2.5.29.32.0").
@@ -100,3 +154,20 @@ evPolicyOid("2.23.140.1.1", ["emSign ECC Root CA - G3","IN","","","eMudhra Techn
 evPolicyOid("2.23.140.1.1", ["emSign Root CA - C1","US","","","eMudhra Inc"]).
 evPolicyOid("2.23.140.1.1", ["emSign ECC Root CA - C3","US","","","eMudhra Inc"]).
 
+certificatePolicy(Cp):-
+    Cp = [];
+    (anyPolicyOid(Oid), Cp = [Oid]);
+    (evPolicyOid(Oid, _), Cp = [Oid]).
+
+stapledResponse(Response):-
+  Response = [A, B, C],
+  (A = not_verified; A = verified),
+  (B = not_expired; B = expired),
+  (C = invalid; C = valid).
+
+ocspResponse(Response):-
+  Response = [A, B, C, D],
+  (A = not_verified; A = verified),
+  (B = not_expired; B = expired),
+  (C = invalid; C = valid),
+  (D = revoked; D = good).

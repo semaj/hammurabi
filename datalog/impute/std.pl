@@ -2,20 +2,15 @@
     stringMatch/2,
     nameMatchesSAN/1,
     nameMatchesCN/1,
-    nameMatches/2,
     isTimeValid/2,
-    extendedKeyUsageExpected/3,
     isRoot/1,
     isCA/1,
-    isNotCA/1,
-    pathLengthOkay/3,
-    maxIntermediatesOkay/1,
-    algorithm/1,
-    keyUsageList/1,
-    extKeyUsageList/1
+    isEV/2,
+    notcrl/1
 ]).
 
 :- use_module(env).
+:- use_module(types).
 :- use_module(library(dialect/sicstus/system)).
 :- use_module(library(clpfd)).
 
@@ -44,110 +39,25 @@ stringMatch(Pattern, CommonName):-
     Pattern \= ['*' , '.' | _].
 
 % domain name matches one of the names in SAN
-nameMatchesSAN(SANList):-
-    env:domain(D),
-    N in 0..4, label([N]), length(SANList, N),
+nameMatchesSAN(Domain, SANList):-
     member(SAN, SANList),
     stringMatch(SAN, D).
 
-nameMatchesCN(Subject):-
-    env:domain(D),
+nameMatchesCN(Domain, Subject):-
     stringMatch(Subject, D).
-
-% domain name matches any
-nameMatches(SAN, Subject):-
-  nameMatchesSAN(SAN); nameMatchesCN(Subject).
-
-epoch_start(631170000).                 % 01-01-1990 00:00:00
-epoch_end(2524626000).                  % 01-01-2050 00:00:00
 
 % time validity check. between Lower and Upper
 isTimeValid(Lower, Upper):-
     % now(T),
     T #= 1618287688,
-    epoch_start(Start),
-    epoch_end(End),
-    [Lower, Upper] ins Start..End,
-    Lower #< T,
-    Upper #> T.
-
-extendedKeyUsageExpected(ExtUseList, Usage, Expected):-
-    Expected = 1,
-    member(Usage, ExtUseList).
-
-extendedKeyUsageExpected(ExtUseList, Usage, Expected):-
-    Expected = 0,
-    \+member(Usage, ExtUseList).
-
-% check if Cert is a trusted root
-isRoot(Fingerprint):-
-    env:trusted_roots(Fingerprint).
+    Lower #< T, Upper #> T.
 
 % Basic Constraints checks
 % CA bit set
 isCA(BasicConstraints):-
-    BasicConstraints = [1, _].
+    BasicConstraints = [ca, _].
 
-isNotCA(BasicConstraints):-
-    BasicConstraints = [];
-    BasicConstraints = [0, _].
+isEV(CertPolicies, RootSubject):-
+    CertPolicies = [Oid, _],
+    types:evPolicyOid(Oid, RootSubject).
 
-% Path length is okay if the extension doesn't exist
-pathLengthOkay(BasicConstraints, ChainLen, SelfCount) :-
-    BasicConstraints = [];
-    BasicConstraints = [_, none];
-    (
-        BasicConstraints = [_, Limit],
-        Limit > ChainLen - SelfCount 
-    ).
-
-% Custom limit on intermediate certs check
-% exempts trusted certs from limit
-maxIntermediatesOkay(ChainLen):-
-    env:max_intermediates(M),
-    M > ChainLen.
-
-% md2
-md2_sig_algo("1.2.840.113549.1.1.2").
-md2_sig_algo("1.3.14.7.2.3.1").
-
-% md4
-md4_sig_algo("1.2.840.113549.1.1.3").
-md4_sig_algo("1.3.14.3.2.2").
-md4_sig_algo("1.3.14.3.2.4").
-
-% md5
-md5_sig_algo("1.2.840.113549.1.1.4").
-md5_sig_algo("1.3.14.3.2.3").
-md5_sig_algo("1.2.840.113549.2.5").
-
-% sha1
-sha1_sig_algo("1.2.840.113549.1.1.5"). % sha1RSA
-sha1_sig_algo("1.2.840.10040.4.3"). % sha1DSA
-sha1_sig_algo("1.3.14.3.2.29"). % sha1RSA
-sha1_sig_algo("1.3.14.3.2.13"). % sha1DSA
-sha1_sig_algo("1.3.14.3.2.27"). % dsaSHA1
-sha1_sig_algo("1.3.14.3.2.26"). % sha1NoSign
-sha1_sig_algo("1.2.840.10045.4.1"). % sha1ECDSA
-
-algorithm(Oid):-
-    md2_sig_algo(Oid);
-    md4_sig_algo(Oid);
-    md5_sig_algo(Oid);
-    sha1_sig_algo(Oid).
-
-keyUsageVal(digitalSignature).
-keyUsageVal(keyEncipherment).
-keyUsageVal(keyAgreement).
-keyUsageVal(keyCertSign).
-
-keyUsageList(L):-
-  N in 0..4, label([N]), length(PreL, N),
-  maplist(keyUsageVal, PreL), is_set(PreL), sort(PreL, L).
-  
-extKeyUsageVal(serverAuth).
-extKeyUsageVal(oCSPSigning).
-
-extKeyUsageList(L):-
-  N in 0..2, label([N]), length(PreL, N),
-  maplist(extKeyUsageVal, PreL), is_set(PreL), sort(PreL, L).
