@@ -1,5 +1,5 @@
 :- module(chrome, [
-  verified_chrome/18
+  verified_chrome/13
 ]).
 
 :- use_module(std).
@@ -32,7 +32,7 @@ leaf_duration_valid(Lower, Upper):-
   ).
 
 no_name_constraint_violation(Fingerprint, _):-
-  trusted(Fingerprint),
+  chrome_env:trusted(Fingerprint),
   \+chrome_env:anssiFingerprint(Fingerprint),
   \+chrome_env:indiaFingerprint(Fingerprint).
 
@@ -47,23 +47,19 @@ no_name_constraint_violation(Fingerprint, Domain):-
   std:stringMatch(Accepted, Domain).
 
 strong_signature(Algorithm):-
-  std:algorithm(Algorithm),
-  \+std:md2_sig_algo(Algorithm),
-  \+std:md4_sig_algo(Algorithm),
-  \+std:md5_sig_algo(Algorithm).
+  \+types:md2_sig_algo(Algorithm),
+  \+types:md4_sig_algo(Algorithm),
+  \+types:md5_sig_algo(Algorithm).
 
 checkKeyUsage(_, KeyUsage) :-
-  std:keyUsageList(KeyUsage),
   KeyUsage = [].
 
 checkKeyUsage(BasicConstraints, KeyUsage) :-
   std:isCA(BasicConstraints),
-  std:keyUsageList(KeyUsage),
   member(keyCertSign, KeyUsage).
 
 checkKeyUsage(BasicConstraints, KeyUsage) :-
-  std:isNotCA(BasicConstraints),
-  std:keyUsageList(KeyUsage),
+  \+std:isCA(BasicConstraints),
   (
     member(digitalSignature, KeyUsage);
     member(keyEncipherment, KeyUsage);
@@ -72,12 +68,10 @@ checkKeyUsage(BasicConstraints, KeyUsage) :-
   \+member(keyCertSign, KeyUsage).
 
 checkKeyCertSign(KeyUsage) :-
-  std:keyUsageList(KeyUsage),
   (KeyUsage = []; member(keyCertSign, KeyUsage)).
 
 checkExtendedKeyUsage(ExtKeyUsage) :-
-  std:extKeyUsageList(ExtKeyUsage),
-  (ExtKeyUsage = []; std:extendedKeyUsageExpected(ExtKeyUsage, serverAuth, 1)).
+  (ExtKeyUsage = []; member(serverAuth, ExtKeyUsage)).
 
 symantec_untrusted(Lower):-
   June2016 = 1464739200,
@@ -101,21 +95,44 @@ isChromeRoot(Fingerprint):-
   env:domain(Domain),
   no_name_constraint_violation(Fingerprint, Domain).
 
+notcrl_set(F):-
+    var(F), F = "".
+
+notcrl_set(F):-
+    nonvar(F), \+chrome_env:crl_set(F).
 
 verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
-  isChromeRoot(Fingerprint),
-  \+bad_symantec(Fingerprint, Lower),
-  std:isTimeValid(Lower, Upper),
   std:isCA(BasicConstraints),
-  checkKeyCertSign(KeyUsage).
-
-verified_chrome(Fingerprint, SANList, _, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, _, _, _, _, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
-  \+crl_set(Fingerprint),
-  std:nameMatchesSAN(SANList),
+  checkKeyCertSign(KeyUsage),
   std:isTimeValid(Lower, Upper),
-  strong_signature(Algorithm),
-  checkKeyUsage(BasicConstraints, KeyUsage),
-  checkExtendedKeyUsage(ExtKeyUsage),
+  isChromeRoot(Fingerprint),
+  \+bad_symantec(Fingerprint, Lower).
+
+verified_chrome(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+  notcrl_set(Fingerprint),
+
+  types:sANList(SANList),
+  env:domain(Domain),
+  std:nameMatchesSAN(Domain, SANList),
+
+  types:timestamp(Lower),
+  types:timestamp(Upper),
+  std:isTimeValid(Lower, Upper),
   leaf_duration_valid(Lower, Upper),
-  \+bad_symantec(Fingerprint, Lower),
+
+  types:algorithm(Algorithm),
+  strong_signature(Algorithm),
+
+  types:basicConstraints(BasicConstraints),
+  types:keyUsageList(KeyUsage),
+  checkKeyUsage(BasicConstraints, KeyUsage),
+
+  types:extKeyUsageList(ExtKeyUsage),
+  checkExtendedKeyUsage(ExtKeyUsage),
+
+  types:timestamp(RootLower),
+  types:timestamp(RootUpper),
+  types:basicConstraints(RootBasicConstraints),
+  types:keyUsageList(RootKeyUsage),
+  
   verifiedRoot(RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).

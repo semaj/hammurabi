@@ -136,27 +136,35 @@ verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   checkKeyCertSign(KeyUsage).
 
 verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+  notcrl(Fingerprint),
+
   types:sANList(SANList),
+  firefoxNameMatches(SANList, Subject),
+
   types:timestamp(Lower),
   types:timestamp(Upper),
+  std:isTimeValid(Lower, Upper),
+
   types:algorithm(Algorithm),
+  validSHA1(Algorithm),
+
   types:basicConstraints(BasicConstraints),
+  \+std:isCA(BasicConstraints),
+
   types:keyUsageList(KeyUsage),
+  checkKeyUsage(BasicConstraints, KeyUsage),
+
   types:extKeyUsageList(ExtKeyUsage),
+  checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage),
+
   types:certificatePolicy(CertPolicies),
+  isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject),
+
   types:stapledResponse(StapledResponse),
   types:ocspResponse(OcspResponse),
+  notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse),
+
   types:timestamp(RootLower),
   types:timestamp(RootUpper),
   types:basicConstraints(RootBasicConstraints),
-  types:keyUsageList(RootKeyUsage),
-  notcrl(Fingerprint),
-  firefoxNameMatches(SANList, Subject),
-  std:isTimeValid(Lower, Upper),
-  validSHA1(Algorithm),
-  \+std:isCA(BasicConstraints),
-  checkKeyUsage(BasicConstraints, KeyUsage),
-  checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage),
-  notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse),
-  isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject),
   verifiedRoot(SANList, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).

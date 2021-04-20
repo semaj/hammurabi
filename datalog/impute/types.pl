@@ -160,10 +160,16 @@ certificatePolicy(Cp):-
     (evPolicyOid(Oid, _), Cp = [Oid]).
 
 stapledResponse(Response):-
+  Response = [].
+
+stapledResponse(Response):-
   Response = [A, B, C],
   (A = not_verified; A = verified),
   (B = not_expired; B = expired),
   (C = invalid; C = valid).
+
+ocspResponse(Response):-
+  OcspResponse = [].
 
 ocspResponse(Response):-
   Response = [A, B, C, D],
