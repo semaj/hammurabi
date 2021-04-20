@@ -80,9 +80,9 @@ checkExtendedKeyUsage(ExtKeyUsage) :-
   (ExtKeyUsage = []; std:extendedKeyUsageExpected(ExtKeyUsage, serverAuth, 1)).
 
 symantec_untrusted(Lower):-
-  % June2016 = 1464739200,
-  % Dec2017 = 1512086400,
-  Lower #< 1464739200 #\/ Lower #> 1512086400.
+  June2016 = 1464739200,
+  Dec2017 = 1512086400,
+  (Lower #< June2016; Lower #> Dec2017).
 
 % if legacy symantec and
 % symantec enforcement on OR untrusted symantec

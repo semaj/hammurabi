@@ -64,9 +64,12 @@ epoch_end(2524626000).                  % 01-01-2050 00:00:00
 % time validity check. between Lower and Upper
 isTimeValid(Lower, Upper):-
     % now(T),
-    T #= 1618287688 #/\
-    Lower in 631170000..2524626000 #/\ Upper in 631170000..2524626000 #/\
-    Lower #< T #/\ Upper #> T.
+    T #= 1618287688,
+    epoch_start(Start),
+    epoch_end(End),
+    [Lower, Upper] ins Start..End,
+    Lower #< T,
+    Upper #> T.
 
 extendedKeyUsageExpected(ExtUseList, Usage, Expected):-
     Expected = 1,
