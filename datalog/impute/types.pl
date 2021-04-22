@@ -156,8 +156,8 @@ evPolicyOid("2.23.140.1.1", ["emSign ECC Root CA - C3","US","","","eMudhra Inc"]
 
 certificatePolicy(Cp):-
     Cp = [];
-    (anyPolicyOid(Oid), Cp = [Oid]);
-    (evPolicyOid(Oid, _), Cp = [Oid]).
+    % (anyPolicyOid(Oid), Cp = [Oid]);
+    (evPolicyOid(Oid, _), Cp = [Oid, _]).
 
 stapledResponse(Response):-
   Response = [].
@@ -169,7 +169,7 @@ stapledResponse(Response):-
   (C = invalid; C = valid).
 
 ocspResponse(Response):-
-  OcspResponse = [].
+  Response = [].
 
 ocspResponse(Response):-
   Response = [A, B, C, D],

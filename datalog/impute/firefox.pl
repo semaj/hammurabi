@@ -78,11 +78,14 @@ checkKeyUsage(BasicConstraints, KeyUsage) :-
   ).
 
 checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
-  member(ExtKeyUsage, serverAuth),
-  (
-    std:isCA(BasicConstraints);
-    (\+std:isCA(BasicConstraints), \+member(ExtKeyUsage, oCSPSigning))
-  ).
+  std:isCA(BasicConstraints),
+  member(serverAuth, ExtKeyUsage).
+
+
+checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
+  \+std:isCA(BasicConstraints),
+  member(serverAuth, ExtKeyUsage),
+  \+member(oCSPSigning, ExtKeyUsage).
 
 checkExtendedKeyUsage(_, ExtKeyUsage) :-
   ExtKeyUsage = [].
@@ -167,4 +170,5 @@ verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicCo
   types:timestamp(RootLower),
   types:timestamp(RootUpper),
   types:basicConstraints(RootBasicConstraints),
+  types:keyUsageList(RootKeyUsage),
   verifiedRoot(SANList, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
