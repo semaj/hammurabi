@@ -8,22 +8,21 @@ SimpleFields = ("BasicConstraints0",)
 ListFields = ("KeyUsage",)
 
 
-def topological_sort(graph, start):
-    seen = set()
-    stack = []  # path variable is gone, stack and order are new
-    order = []  # order will be in reverse order at first
-    q = [start]
-    while q:
-        v = q.pop()
-        if v not in seen:
-            seen.add(v)  # no need to append to path any more
-            q.extend(graph[v])
+def topo_sort(nodes, adj):
+    output = []
+    fresh = set(nodes.keys())
 
-            while stack and v not in graph[stack[-1]]:  # new stuff here!
-                order.append(stack.pop())
-            stack.append(v)
+    def dfs(node):
+        fresh.remove(node)
+        for child in adj[node]:
+            if child in fresh:
+                dfs(child)
+        output.append(node)
 
-    return stack + order[::-1]  # new return value!
+    for node in nodes:
+        if node in fresh:
+            dfs(node)
+    return output
 
 
 ########### Transformation methods #############################################
@@ -83,12 +82,12 @@ def dump_fact(fact):
 
 ########### Parser patterns ####################################################
 comment = ("%" + restOfLine).suppress()
-number = Word(nums)("ints*")
-atom = Word(alphas.lower(), alphanums)("atoms*")
+number = Word(nums + "-")("ints*")
+atom = Word(alphas.lower(), alphanums + "_")("atoms*")
 variable = Word(alphas.upper(), alphanums)("variables*")
-term = Group(number | atom | variable)("terms*")
+term = Group(number | atom | variable | QuotedString('"'))("terms*")
 
-predicate = Group(Optional(atom + Suppress(":")) + atom)("predicate")
+predicate = Group(Optional("\+") + Optional(atom + Suppress(":")) + atom)("predicate")
 # arguments= Group(Suppress('(') + delimitedList(term) + Suppress(')'))('arguments*')
 
 head_clause = Group(
@@ -112,10 +111,12 @@ prolog = OneOrMore(sentence)
 ########### Transformation #####################################################
 if __name__ == "__main__":
     # read input file
+    sys.argv = ["", "transform.pl"]
     with open(sys.argv[1]) as f:
         toparse = comment.transformString(f.read())
 
     code = prolog.parseString(toparse, parseAll=True).asDict()
+    print("parsed")
 
     # build graph for topological sort
     nodes = defaultdict(list)
@@ -130,10 +131,10 @@ if __name__ == "__main__":
                 if b in nodes:
                     adj[b].append(a)
 
-    graph = {n: adj[n] for n in nodes}
-    sorted = topological_sort(graph, next(iter(nodes)))
+    sorted_preds = topo_sort(nodes, adj)
 
     # fix rules
-    for rule in code["rules"]:
-        fix_rule(rule)
-        print(dump_rule(rule))
+    for pred in sorted_preds:
+        for rule in nodes[pred]:
+            fix_rule(rule)
+            print(dump_rule(rule))
