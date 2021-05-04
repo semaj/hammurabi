@@ -86,6 +86,11 @@ number = Word(nums + "-")("ints*")
 atom = Word(alphas.lower(), alphanums + "_")("atoms*")
 variable = Word(alphas.upper(), alphanums)("variables*")
 term = Group(number | atom | variable | QuotedString('"'))("terms*")
+arity = atom + "/" + Word(nums)
+arity_list = "[" + delimitedList(arity) + "]"
+module_directive = LineStart() + ":-" + "module" + "(" + term + "," + arity_list + ")."
+other_directive = LineStart() + ":-" + term + OneOrMore(~("." | LineEnd())) + "."
+directive = module_directive | other_directive
 
 predicate = Group(Optional("\+") + Optional(atom + Suppress(":")) + atom)("predicate")
 # arguments= Group(Suppress('(') + delimitedList(term) + Suppress(')'))('arguments*')
@@ -105,13 +110,13 @@ clause = Group(predicate + Suppress("(") + delimitedList(term) + Suppress(")"))(
 fact = Group(clause + Suppress("."))("facts*")
 rule = Group(head_clause + delimitedList(clause) + Suppress("."))("rules*")
 
-sentence = fact | rule
+sentence = fact | rule | directive
 prolog = OneOrMore(sentence)
 
 ########### Transformation #####################################################
 if __name__ == "__main__":
     # read input file
-    sys.argv = ["", "transform.pl"]
+    # sys.argv = ["", "transform.pl"]
     with open(sys.argv[1]) as f:
         toparse = comment.transformString(f.read())
 
