@@ -4,8 +4,20 @@ from collections import defaultdict
 
 from pyparsing import *
 
-SimpleFields = ("BasicConstraints0",)
-ListFields = ("KeyUsage",)
+SimpleFields = (
+    "Fingerprint",
+    "SerialNumber",
+    "Subject",
+    "NotBefore",
+    "NotAfter",
+    "Issuer",
+    "BasicConstraints0",
+)
+ListFields = (
+    "SubjectiveAlternativeNames",
+    "KeyUsage",
+    "ExtendedKeyUsage",
+)
 
 
 def topo_sort(nodes, adj):
@@ -42,7 +54,8 @@ def fix_rule(rule):
         ):
             field = clause["predicate"]["atoms"][1]
             field = field[0].upper() + field[1:]
-            value = clause["terms"][1]["atoms"][0]
+            value = next(iter(clause["terms"][1].values()))[0]
+            # value = clause["terms"][1]["atoms"][0]
             if field in SimpleFields:
                 fix_head_clause(rule["head_clause"], field)
                 rule["clauses"][i] = f"{field} = {value}"
@@ -85,12 +98,11 @@ comment = ("%" + restOfLine).suppress()
 number = Word(nums + "-")("ints*")
 atom = Word(alphas.lower(), alphanums + "_")("atoms*")
 variable = Word(alphas.upper(), alphanums)("variables*")
-term = Group(number | atom | variable | QuotedString('"'))("terms*")
+string = QuotedString('"')("strings*")
+term = Group(number | atom | variable | string)("terms*")
 arity = atom + "/" + Word(nums)
-arity_list = "[" + delimitedList(arity) + "]"
-module_directive = LineStart() + ":-" + "module" + "(" + term + "," + arity_list + ")."
-other_directive = LineStart() + ":-" + term + OneOrMore(~("." | LineEnd())) + "."
-directive = module_directive | other_directive
+module_directive = LineStart() + ":-" + "module" + "(" + term + "," + "[" + delimitedList(arity) + "]" + ")" + "."
+directive = module_directive | (LineStart() + ":-" + restOfLine)
 
 predicate = Group(Optional("\+") + Optional(atom + Suppress(":")) + atom)("predicate")
 # arguments= Group(Suppress('(') + delimitedList(term) + Suppress(')'))('arguments*')
@@ -116,12 +128,12 @@ prolog = OneOrMore(sentence)
 ########### Transformation #####################################################
 if __name__ == "__main__":
     # read input file
-    # sys.argv = ["", "transform.pl"]
+    sys.argv = ["", "parser/std.pl"]
     with open(sys.argv[1]) as f:
         toparse = comment.transformString(f.read())
 
     code = prolog.parseString(toparse, parseAll=True).asDict()
-    print("parsed")
+    # exit()
 
     # build graph for topological sort
     nodes = defaultdict(list)
