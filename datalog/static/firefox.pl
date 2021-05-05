@@ -328,7 +328,8 @@ isNSSTimeValid(Cert):-
 isNSSTimeValid(Cert):-
   ev:isEV(Cert),
   duration27MonthsPlusSlop(ValidDuration),
-  certs:validity(Cert, Lower, Upper),
+  certs:notBefore(Cert, Lower),
+  certs:notAfter(Cert, Upper),
   ext:subtract(Duration, Upper, Lower),
   ext:geq(ValidDuration, Duration).
 

@@ -90,9 +90,10 @@ impl PrologCert<'_> {
     }
     pub fn emit_validity(&self, hash: &String) -> String {
         format!(
-            "validity({}, {:?}, {:?}).",
+            "notBefore({}, {:?}).\nnotAfter({}, {:?}).",
             hash,
             &self.inner.validity.not_before.timestamp(),
+            hash,
             &self.inner.validity.not_after.timestamp()
         )
     }

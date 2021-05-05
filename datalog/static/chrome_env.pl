@@ -95,7 +95,8 @@ leaf_duration_valid(Cert):-
   std:isCert(Cert).
 
 leaf_duration_valid(Cert):-
-  certs:validity(Cert, Start, End),
+  certs:notBefore(Cert, Start),
+  certs:notAfter(Cert, End),
   ext:subtract(Duration, End, Start),
   duration_valid(Start, End, Duration).
 

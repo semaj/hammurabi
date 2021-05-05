@@ -38,12 +38,12 @@ time_2016_06_01(1464739200). % 01 Jun 2016
 time_2017_12_01(1512086400). % 01 Dec 2017
 
 symantec_untrusted(Cert):-
-  certs:validity(Cert, Start, End),
+  certs:notBefore(Cert, Start),
   time_2016_06_01(June2016),
   ext:larger(Jun2016, Start).
 
 symantec_untrusted(Cert):-
-  certs:validity(Cert, Start, End),
+  certs:notBefore(Cert, Start),
   time_2017_12_01(Dec2017),
   ext:larger(Start, Dec2017).
 
