@@ -30,25 +30,6 @@
 isCert(Cert):-
     certs:serialNumber(Cert, Serial).
 
-% dotted quad to decimal util function
-% IPv4 only
-ipToNumber(Byte1, Byte2, Byte3, Byte4, Mask, N):-
-    % create mask. Shift 255.255.255.255 by Mask
-    ext:b_lshift(M, 4294967295, Mask),
-    % make decimal from dotted quad and apply mask
-    ext:b_lshift(SB1, Byte1, 24),
-    ext:b_lshift(SB2, Byte2, 16),
-    ext:b_lshift(SB3, Byte3, 8),
-    ext:add(R1, SB1, SB2),
-    ext:add(R2, SB3, Byte4),
-    ext:add(R3, R1, R2),
-    ext:b_and(N, R3, M).
-
-% check if host is in network
-hostInNetwork(HostIP, Network):-
-    b_and(N, HostIP, Network),
-    Network = N.
-
 % common name match function
 % wildcard clause
 stringMatch(Pattern, CommonName):-
@@ -61,7 +42,7 @@ stringMatch(Pattern, CommonName):-
 % common name match function
 % exact clause
 stringMatch(Pattern, CommonName):-
-    Pattern = CommonName.
+    ext:equal(Pattern, CommonName).
 
 
 % domain name matches one of the names in SAN
@@ -92,7 +73,7 @@ isTimeValid(Cert):-
 
 % time validity check. between Lower and Upper
 isTimeValid(Cert):-
-    T = 1618246820,
+    ext:equal(T, 1618246820),
     % ext:now(T),
     certs:validity(Cert, Lower, Upper),
     ext:larger(T, Lower),
