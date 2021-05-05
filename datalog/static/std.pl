@@ -6,7 +6,6 @@
     extendedKeyUsageExpected/3,
     usageAllowed/2,
     isCA/1,
-    isNotCA/1,
     isRoot/1,
     pathLengthOkay/3,
     maxIntermediatesOkay/1,
@@ -93,7 +92,8 @@ isTimeValid(Cert):-
 
 % time validity check. between Lower and Upper
 isTimeValid(Cert):-
-    ext:now(T),
+    T = 1618246820,
+    % ext:now(T),
     certs:validity(Cert, Lower, Upper),
     ext:larger(T, Lower),
     ext:larger(Upper, T).
@@ -126,13 +126,6 @@ isCA(Cert):-
 isCA(Cert):-
     certs:extensionExists(Cert, "BasicConstraints", true),
     certs:extensionValues(Cert, "BasicConstraints", true, Limit).
-
-isNotCA(Cert):-
-    certs:extensionExists(Cert, "BasicConstraints", false).
-
-isNotCA(Cert):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", false, Limit).
 
 % Error reporting clause
 pathLengthOkay(Cert, ChainLen, SelfCount):-
@@ -186,27 +179,4 @@ descendant(X, Y):-
     certs:subject(Z, Psub, S2, S3, S4, S5),
     ext:unequal(X, Z),
     descendant(Z, Y).
-
-
-% Error reporting clause
-internalCheck(Cert):-
-    checks:aCCCheckEnabled(false),
-    std:isCert(Cert).
-
-% run internal checks of cert
-% hard-coded. need to find better solution
-internalCheck(Cert):-
-   Cert = cert_0,
-   cert_0:cert_0(Cert).
-
-internalCheck(Cert):-
-   Cert = cert_1,
-   cert_1:cert_1(Cert).
-
-% check basics like time validity
-% and self-verification
-basicsWork(Cert):-
-    isTimeValid(Cert),
-    internalCheck(Cert).
-
 

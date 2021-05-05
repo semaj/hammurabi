@@ -214,15 +214,15 @@ checkKeyUsage(Cert) :-
   certs:extensionExists(Cert, "KeyUsage", false).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   std:usageAllowed(Cert, "digitalSignature").
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   std:usageAllowed(Cert, "keyEncipherment").
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   std:usageAllowed(Cert, "keyAgreement").
 
 
@@ -257,7 +257,7 @@ checkExtendedKeyUsage(Cert) :-
   std:extendedKeyUsageExpected(Cert, "serverAuth", true).
 
 checkExtendedKeyUsage(Cert):-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   std:extendedKeyUsageExpected(Cert, "OCSPSigning", false),
   std:extendedKeyUsageExpected(Cert, "serverAuth", true).
 
@@ -333,7 +333,7 @@ isNSSTimeValid(Cert):-
   ext:geq(ValidDuration, Duration).
 
 verified(Cert):-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   checkKeyUsage(Cert),
   checkExtendedKeyUsage(Cert),
   firefoxNameMatches(Cert),

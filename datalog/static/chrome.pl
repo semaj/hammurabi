@@ -16,19 +16,19 @@ checkKeyUsage(Cert) :-
   std:usageAllowed(Cert, "keyCertSign").
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   certs:extensionExists(Cert, "KeyUsage", true),
   \+std:usageAllowed(Cert, "keyCertSign"),
   std:usageAllowed(Cert, "digitalSignature").
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   certs:extensionExists(Cert, "KeyUsage", true),
   \+std:usageAllowed(Cert, "keyCertSign"),
   std:usageAllowed(Cert, "keyEncipherment").
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   certs:extensionExists(Cert, "KeyUsage", true),
   \+std:usageAllowed(Cert, "keyCertSign"),
   std:usageAllowed(Cert, "keyAgreement").
@@ -133,7 +133,7 @@ checkExtendedKeyUsage(Cert) :-
   certs:extensionExists(Cert, "ExtendedKeyUsage", false).
 
 checkExtendedKeyUsage(Cert):-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   std:extendedKeyUsageExpected(Cert, "serverAuth", true).
 
 verified(Cert):-
