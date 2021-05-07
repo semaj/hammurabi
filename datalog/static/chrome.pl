@@ -73,8 +73,7 @@ isRoot(Cert):-
 
 
 parent(C, P, ChainLen):-
-    certs:issuer(C, Sub1, Sub2, Sub3, Sub4, Sub5),
-    certs:subject(P, Sub1, Sub2, Sub3, Sub4, Sub5),
+    certs:issuer(C, P),
     isRoot(P),
     std:pathLengthOkay(P, ChainLen, 0).
 
@@ -85,8 +84,7 @@ checkKeyCertSign(Cert) :-
   certs:extensionExists(Cert, "KeyUsage", false).
 
 parent(C, P, ChainLen):-
-    certs:issuer(C, Sub1, Sub2, Sub3, Sub4, Sub5),
-    certs:subject(P, Sub1, Sub2, Sub3, Sub4, Sub5),
+    certs:issuer(C, P),
     std:isCA(P),
     checkKeyCertSign(P),
     std:pathLengthOkay(P, ChainLen, 0).

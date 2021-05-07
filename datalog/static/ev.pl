@@ -57,10 +57,9 @@ isEVIntermediate(Cert, Oid) :-
 
 % body copied from std:descendant, only want direct parents
 % TODO: is there a better way?
-directDescendant(X, Y):-
-    certs:issuer(X, Psub, S2, S3, S4, S5),
-    certs:subject(Y, Psub, S2, S3, S4, S5),
-    ext:unequal(X, Y).
+directDescendant(Cert, Y):-
+    certs:issuer(Cert, Y),
+    ext:unequal(Cert, Y).
 
 % The anyPolicy OID, usable by intermediates
 anyPolicyOid("2.5.29.32.0").

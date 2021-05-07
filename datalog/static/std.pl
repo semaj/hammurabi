@@ -55,7 +55,7 @@ nameMatchesSAN(Cert) :-
 % domain name matches common name
 nameMatchesCN(Cert):-
     env:domain(D),
-    certs:subject(Cert, Subject, S2, S3, S4, S5),
+    certs:commonName(Cert, Subject),
     \+ext:s_containstldwildcard(Subject),
     stringMatch(Subject, D).
 
@@ -149,16 +149,14 @@ maxIntermediatesOkay(ChainLen):-
 
 % descendant. also works for ancestor
 % direct parent clause
-descendant(X, Y):-
-    certs:issuer(X, Psub, S2, S3, S4, S5),
-    certs:subject(Y, Psub, S2, S3, S4, S5),
-    ext:unequal(X, Y).
+descendant(Cert, Y):-
+    certs:issuer(Cert, Y),
+    ext:unequal(Cert, Y).
 
 % descendant. also works for ancestor
 % chain clause
-descendant(X, Y):-
-    certs:issuer(X, Psub, S2, S3, S4, S5),
-    certs:subject(Z, Psub, S2, S3, S4, S5),
-    ext:unequal(X, Z),
+descendant(Cert, Y):-
+    certs:issuer(Cert, Y),
+    ext:unequal(Cert, Z),
     descendant(Z, Y).
 
