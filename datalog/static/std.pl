@@ -106,8 +106,8 @@ isCA(Cert):-
 % Basic Constraints checks
 % CA bit set
 isCA(Cert):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", true, Limit).
+    certs:basicConstraintsExt(Cert, true),
+    certs:isCA(Cert, true).
 
 % Error reporting clause
 pathLengthOkay(Cert, ChainLen, SelfCount):-
@@ -118,21 +118,21 @@ pathLengthOkay(Cert, ChainLen, SelfCount):-
 
 % Path length is okay if the extension doesn't exist
 pathLengthOkay(Cert, ChainLen, SelfCount) :-
-  certs:extensionExists(Cert, "BasicConstraints", false),
+  certs:basicConstraintsExt(Cert, false),
   ext:geq(ChainLen, ChainLen),
   ext:geq(SelfCount, Selfcount).
 
 % Basic Constraints checks
 % Path length constraint
 pathLengthOkay(Cert, ChainLen, SelfCount):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", Ca, Limit),
+    certs:basicConstraintsExt(Cert, true),
+    certs:pathLimit(Cert, Limit),
     ext:add(ChainLen, Effective, SelfCount),
     ext:larger(Limit, Effective).
 
 pathLengthOkay(Cert, ChainLen, SelfCount):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", Ca, none),
+    certs:basicConstraintsExt(Cert, true),
+    certs:pathLimit(Cert, none),
     ext:geq(ChainLen, ChainLen),
     ext:geq(SelfCount, SelfCount).
 

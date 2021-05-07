@@ -287,19 +287,17 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.basic_constraints() {
             Some((is_critical, basic_constraints)) => {
-            answer.push(format!("extensionExists({}, \"BasicConstraints\", true).", hash));
-            answer.push(format!("exensionCritic({}, \"BasicConstraints\", {}).", hash, is_critical));
+            answer.push(format!("basicConstraintsExt({}, true).", hash));
+            answer.push(format!("basicConstraintsCritical({}, {}).", hash, is_critical));
             let path_constraint: String = basic_constraints.path_len_constraint.map_or(
                 "none".to_string(),
                 |x| x.to_string()
             );
-            answer.push(format!("extensionValues({}, \"BasicConstraints\", {}, {}).",
-                    hash,
-                    basic_constraints.ca,
-                    path_constraint));
+            answer.push(format!("isCA({}, {}).", hash, basic_constraints.ca));
+            answer.push(format!("pathLimit({}, {}).", hash, path_constraint));
             },
             None => {
-                answer.push(format!("extensionExists({}, \"BasicConstraints\", false).", hash))
+                answer.push(format!("basicConstraintsExt({}, false).", hash));
             }
         }
         return answer.join("\n");
