@@ -204,17 +204,16 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.subject_alternative_name() {
             Some((is_critical, sans)) => {
-                answer.push(format!("extensionExists({}, \"SubjectAlternativeNames\", true).", hash));
-                answer.push(format!("exensionCritic({}, \"SubjectAlternativeNames\", {}).", hash, is_critical));
+                answer.push(format!("sanExt({}, true).", hash));
+                answer.push(format!("sanCritical({}, {}).", hash, is_critical));
                 for general_name in &sans.general_names {
                     let (_, name) = emit_general_name(general_name);
-                    answer.push(format!("extensionValues({}, \"SubjectAlternativeNames\", \"{}\").",
+                    answer.push(format!("san({}, \"{}\").",
                     hash, name));
                 }
             },
             None => {
-                answer.push(format!("extensionExists({}, \"SubjectAlternativeNames\", false).",
-                hash))
+                answer.push(format!("sanExt({}, false).", hash))
             }
         }
         return answer.join("\n");

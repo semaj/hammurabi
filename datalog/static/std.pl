@@ -47,7 +47,7 @@ stringMatch(Pattern, CommonName):-
 % domain name matches one of the names in SAN
 nameMatchesSAN(Cert) :-
     env:domain(D),
-    certs:extensionValues(Cert, "SubjectAlternativeNames", Name),
+    certs:san(Cert, Name),
     \+ext:s_containstldwildcard(Name),
     stringMatch(Name, D).
 

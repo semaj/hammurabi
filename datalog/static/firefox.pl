@@ -75,14 +75,14 @@ nssNameConstraintValid(Leaf, Root) :-
 nssNameConstraintValid(Leaf, Root) :-
   tubitak1Fingerprint(F),
   certs:fingerprint(Root, F),
-  certs:extensionValues(Leaf, "SubjectAlternativeNames", Name),
+  certs:san(Leaf, Name),
   tubitak1Subtree(Tree),
   std:stringMatch(Tree, Name).
 
 nssNameConstraintValid(Leaf, Root) :-
   anssiFingerprint(F),
   certs:fingerprint(Root, F),
-  certs:extensionValues(Leaf, "SubjectAlternativeNames", Name),
+  certs:san(Leaf, Name),
   anssiSubtree(Tree),
   std:stringMatch(Tree, Name).
 
@@ -310,12 +310,12 @@ firefoxNameMatches(Cert) :-
   std:isCert(Cert).
 
 firefoxNameMatches(Cert) :-
-  certs:extensionExists(Cert, "SubjectAlternativeNames", true),
+  certs:sanExt(Cert, true),
   std:nameMatchesSAN(Cert).
 
 % Check CN ONLY if SAN not present
 firefoxNameMatches(Cert) :-
-  certs:extensionExists(Cert, "SubjectAlternativeNames", false),
+  certs:sanExt(Cert, false),
   std:nameMatchesCN(Cert).
 
 % in seconds

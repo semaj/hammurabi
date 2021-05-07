@@ -116,7 +116,7 @@ chromeNameMatches(Cert) :-
   std:isCert(Cert).
 
 chromeNameMatches(Cert) :-
-  certs:extensionExists(Cert, "SubjectAlternativeNames", true),
+  certs:sanExt(Cert, true),
   std:nameMatchesSAN(Cert).
 
 % Check CN ONLY if SAN not present
