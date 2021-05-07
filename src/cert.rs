@@ -309,29 +309,38 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.key_usage() {
             Some((is_critical, key_usage)) => {
-                answer.push(format!("extensionExists({}, \"KeyUsage\", true).", hash));
-                answer.push(format!("exensionCritic({}, \"KeyUsage\", {}).", hash, is_critical));
-                let prefix: String = format!("extensionValues({}, \"KeyUsage\",", hash);
-                answer.push(format!("{} \"digitalSignature\", {:?}).",
-                        prefix, key_usage.digital_signature()));
-                answer.push(format!("{} \"nonRepudiation\", {:?}).",
-                        prefix, key_usage.non_repudiation()));
-                answer.push(format!("{} \"keyEncipherment\", {:?}).",
-                        prefix, key_usage.key_encipherment()));
-                answer.push(format!("{} \"dataEncipherment\", {:?}).",
-                        prefix, key_usage.data_encipherment()));
-                answer.push(format!("{} \"keyAgreement\", {:?}).",
-                        prefix, key_usage.key_agreement()));
-                answer.push(format!("{} \"keyCertSign\", {:?}).",
-                        prefix, key_usage.key_cert_sign()));
-                answer.push(format!("{} \"cRLSign\", {:?}).",
-                        prefix, key_usage.crl_sign()));
-                answer.push(format!("{} \"encipherOnly\", {:?}).",
-                        prefix, key_usage.encipher_only()));
-                answer.push(format!("{} \"decipherOnly\", {:?}).",
-                        prefix, key_usage.decipher_only()));
+                answer.push(format!("keyUsageExt({}, true).", hash));
+                answer.push(format!("keyUsageCritical({}, {}).", hash, is_critical));
+                let prefix: String = format!("keyUsage({}, ", hash);
+                if key_usage.digital_signature() {
+                    answer.push(format!("{} digitalSignature).", prefix));
+                }
+                if key_usage.non_repudiation() {
+                    answer.push(format!("{} nonRepudiation).", prefix));
+                }
+                if key_usage.key_encipherment() {
+                    answer.push(format!("{} keyEncipherment).", prefix));
+                }
+                if key_usage.data_encipherment() {
+                    answer.push(format!("{} dataEncipherment).", prefix));
+                }
+                if key_usage.key_agreement() {
+                    answer.push(format!("{} keyAgreement).", prefix));
+                }
+                if key_usage.key_cert_sign() {
+                    answer.push(format!("{} keyCertSign).", prefix));
+                }
+                if key_usage.crl_sign() {
+                    answer.push(format!("{} cRLSign).", prefix));
+                }
+                if key_usage.encipher_only() {
+                    answer.push(format!("{} encipherOnly).", prefix));
+                }
+                if key_usage.decipher_only() {
+                    answer.push(format!("{} decipherOnly).", prefix));
+                }
             }
-            None => answer.push(format!("extensionExists({}, \"KeyUsage\", false).", hash))
+            None => answer.push(format!("keyUsageExt({}, false).", hash))
         }
         return answer.join("\n");
     }

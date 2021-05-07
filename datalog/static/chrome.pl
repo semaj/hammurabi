@@ -8,30 +8,30 @@
 :- use_module(chrome_env).
 
 checkKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
+  certs:keyUsageExt(Cert, false).
 
 checkKeyUsage(Cert) :-
   std:isCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  std:usageAllowed(Cert, "keyCertSign").
+  certs:keyUsageExt(Cert, true),
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyUsage(Cert) :-
   \+std:isCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  \+std:usageAllowed(Cert, "keyCertSign"),
-  std:usageAllowed(Cert, "digitalSignature").
+  certs:keyUsageExt(Cert, true),
+  \+std:usageAllowed(Cert, keyCertSign),
+  std:usageAllowed(Cert, digitalSignature).
 
 checkKeyUsage(Cert) :-
   \+std:isCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  \+std:usageAllowed(Cert, "keyCertSign"),
-  std:usageAllowed(Cert, "keyEncipherment").
+  certs:keyUsageExt(Cert, true),
+  \+std:usageAllowed(Cert, keyCertSign),
+  std:usageAllowed(Cert, keyEncipherment).
 
 checkKeyUsage(Cert) :-
   \+std:isCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  \+std:usageAllowed(Cert, "keyCertSign"),
-  std:usageAllowed(Cert, "keyAgreement").
+  certs:keyUsageExt(Cert, true),
+  \+std:usageAllowed(Cert, keyCertSign),
+  std:usageAllowed(Cert, keyAgreement).
 
 
 time_2016_06_01(1464739200). % 01 Jun 2016
@@ -78,10 +78,10 @@ parent(C, P, ChainLen):-
     std:pathLengthOkay(P, ChainLen, 0).
 
 checkKeyCertSign(Cert) :-
-  std:usageAllowed(Cert, "keyCertSign").
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyCertSign(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
+  certs:keyUsageExt(Cert, false).
 
 parent(C, P, ChainLen):-
     certs:issuer(C, P),

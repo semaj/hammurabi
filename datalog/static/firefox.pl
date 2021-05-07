@@ -207,23 +207,23 @@ notOCSPRevokedCheck(Cert) :-
 
 checkKeyUsage(Cert) :-
   std:isCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  std:usageAllowed(Cert, "keyCertSign").
+  certs:keyUsageExt(Cert, true),
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
-
-checkKeyUsage(Cert) :-
-  \+std:isCA(Cert),
-  std:usageAllowed(Cert, "digitalSignature").
+  certs:keyUsageExt(Cert, false).
 
 checkKeyUsage(Cert) :-
   \+std:isCA(Cert),
-  std:usageAllowed(Cert, "keyEncipherment").
+  std:usageAllowed(Cert, digitalSignature).
 
 checkKeyUsage(Cert) :-
   \+std:isCA(Cert),
-  std:usageAllowed(Cert, "keyAgreement").
+  std:usageAllowed(Cert, keyEncipherment).
+
+checkKeyUsage(Cert) :-
+  \+std:isCA(Cert),
+  std:usageAllowed(Cert, keyAgreement).
 
 
 notSymantec(Cert) :-
@@ -231,10 +231,10 @@ notSymantec(Cert) :-
   \+symantecFingerprint(F).
 
 checkKeyCertSign(Cert) :-
-  std:usageAllowed(Cert, "keyCertSign").
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyCertSign(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
+  certs:keyUsageExt(Cert, false).
 
 parent(C, P, ChainLen):-
     certs:issuer(C, P),

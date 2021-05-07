@@ -90,8 +90,8 @@ extensionAbsent(Cert, Extension):-
 % check if key usage allowed
 % keyUsage extension exists clause
 usageAllowed(Cert, Usage):-
-    certs:extensionExists(Cert, "KeyUsage", true),
-    certs:extensionValues(Cert, "KeyUsage", Usage, true).
+    certs:keyUsageExt(Cert, true),
+    certs:keyUsage(Cert, Usage).
 
 % check if Cert is a trusted root
 isRoot(Cert):-
