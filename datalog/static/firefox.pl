@@ -253,15 +253,15 @@ validSHA1(Cert) :-
 
 checkExtendedKeyUsage(Cert) :-
   std:isCA(Cert),
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 checkExtendedKeyUsage(Cert):-
   \+std:isCA(Cert),
-  std:extendedKeyUsageExpected(Cert, "OCSPSigning", false),
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  \+certs:extendedKeyUsage(Cert, oCSPSigning),
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 checkExtendedKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "ExtendedKeyUsage", false).
+  certs:extendedKeyUsageExt(Cert, false).
 
 % Override kb_env.pl
 max_intermediates(5).

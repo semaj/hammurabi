@@ -39,7 +39,6 @@ impl PrologCert<'_> {
                 self.emit_validity(&hash),
                 self.emit_common_name(&hash),
                 self.emit_subject(&hash),
-                // self.emit_issuer(&hash),
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
                 self.emit_subject_public_key_algorithm(&hash),
@@ -123,14 +122,6 @@ impl PrologCert<'_> {
 
     pub fn emit_serial(&self, hash: &String) -> String {
         format!("serialNumber({}, \"{}\").", hash, self.serial)
-    }
-
-    pub fn emit_issuer(&self, hash: &String) -> String {
-        format!(
-            "issuer({}, {}).",
-            hash,
-            PrologCert::name_from_rdn(&self.inner.issuer).to_lowercase()
-        )
     }
 
     pub fn emit_version(&self, hash: &String) -> String {
@@ -309,7 +300,7 @@ impl PrologCert<'_> {
             Some((is_critical, key_usage)) => {
                 answer.push(format!("keyUsageExt({}, true).", hash));
                 answer.push(format!("keyUsageCritical({}, {}).", hash, is_critical));
-                let prefix: String = format!("keyUsage({}, ", hash);
+                let prefix: String = format!("keyUsage({},", hash);
                 if key_usage.digital_signature() {
                     answer.push(format!("{} digitalSignature).", prefix));
                 }
@@ -347,20 +338,36 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.extended_key_usage() {
             Some((is_critical, eku)) => {
-                answer.push(format!("extensionExists({}, \"ExtendedKeyUsage\", true).", hash));
-                answer.push(format!("exensionCritic({}, \"ExtendedKeyUsage\", {}).", hash, is_critical));
-                let prefix: String = format!("extensionValues({}, \"ExtendedKeyUsage\",", hash);
-                answer.push(format!("{} \"serverAuth\", {:?}).", prefix, eku.server_auth));
-                answer.push(format!("{} \"clientAuth\", {:?}).", prefix, eku.client_auth));
-                answer.push(format!("{} \"codeSigning\", {:?}).", prefix, eku.code_signing));
-                answer.push(format!("{} \"emailProtection\", {:?}).", prefix, eku.email_protection));
-                answer.push(format!("{} \"timeStamping\", {:?}).", prefix, eku.time_stamping));
-                answer.push(format!("{} \"OCSPSigning\", {:?}).", prefix, eku.ocscp_signing));
-                // TODO: Use this in Datalog
-                answer.push(format!("{} \"any\", {:?}).", prefix, eku.any));
-                answer.push(format!("{} \"hasOther\", {:?}).", prefix, eku.other.len() > 0));
+                answer.push(format!("extendedKeyUsageExt({}, true).", hash));
+                answer.push(format!("extendedKeyUsageCritical({}, {}).", hash, is_critical));
+                let prefix: String = format!("extendedKeyUsage({},", hash);
+                if eku.server_auth { 
+                answer.push(format!("{} serverAuth).", prefix));
+                }
+                if eku.client_auth {
+                    answer.push(format!("{} clientAuth).", prefix));
+                }
+                if eku.code_signing {
+                    answer.push(format!("{} codeSigning).", prefix));
+                }
+                if eku.email_protection {
+                    answer.push(format!("{} emailProtection).", prefix));
+                }
+                if eku.time_stamping {
+                    answer.push(format!("{} timeStamping).", prefix));
+                }
+                if eku.ocscp_signing {
+                    answer.push(format!("{} oCSPSigning).", prefix));
+                }
+                    // TODO: Use this in Datalog
+                if eku.any {
+                    answer.push(format!("{} any).", prefix));
+                }
+                if eku.other.len() > 0 {
+                    answer.push(format!("{} hasOther).", prefix));
+                }
             }
-            None => answer.push(format!("extensionExists({}, \"ExtendedKeyUsage\", false).", hash))
+            None => answer.push(format!("extendedKeyUsageExt({}, false).", hash)) 
         }
         return answer.join("\n");
     }

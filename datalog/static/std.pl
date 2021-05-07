@@ -3,7 +3,6 @@
     nameMatchesCN/1,
     nameMatchesSAN/1,
     isTimeValid/1,
-    extendedKeyUsageExpected/3,
     usageAllowed/2,
     isCA/1,
     isRoot/1,
@@ -79,9 +78,6 @@ isTimeValid(Cert):-
     certs:notAfter(Cert, Upper),
     ext:larger(T, Lower),
     ext:larger(Upper, T).
-
-extendedKeyUsageExpected(Cert, Usage, Expected):-
-    certs:extensionValues(Cert, "ExtendedKeyUsage", Usage, Expected).
 
 % check if extension does not exist
 extensionAbsent(Cert, Extension):-

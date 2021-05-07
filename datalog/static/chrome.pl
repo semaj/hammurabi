@@ -125,14 +125,14 @@ chromeNameMatches(Cert) :-
   %std:nameMatchesCN(Cert).
 
 checkExtendedKeyUsage(Cert):-
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 checkExtendedKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "ExtendedKeyUsage", false).
+  certs:extendedKeyUsageExt(Cert, false).
 
 checkExtendedKeyUsage(Cert):-
   \+std:isCA(Cert),
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 verified(Cert):-
   chromeNameMatches(Cert),
