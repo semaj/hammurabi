@@ -203,7 +203,6 @@ fn emit_kb_cert_preamble() -> String {
         issuer/6,
         validity/3,
         subject/6,
-        extensionExists/3,
         extensionCritic/3,
         extensionValues/3,
         extensionValues/4,

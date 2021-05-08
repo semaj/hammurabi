@@ -119,11 +119,6 @@ chromeNameMatches(Cert) :-
   certs:sanExt(Cert, true),
   std:nameMatchesSAN(Cert).
 
-% Check CN ONLY if SAN not present
-%chromeNameMatches(Cert) :-
-  %certs:extensionExists(Cert, "SubjectAlternativeNames", false),
-  %std:nameMatchesCN(Cert).
-
 checkExtendedKeyUsage(Cert):-
   certs:extendedKeyUsage(Cert, serverAuth).
 

@@ -79,10 +79,6 @@ isTimeValid(Cert):-
     ext:larger(T, Lower),
     ext:larger(Upper, T).
 
-% check if extension does not exist
-extensionAbsent(Cert, Extension):-
-    certs:extensionExists(Cert, Extension, false).
-
 % check if key usage allowed
 % keyUsage extension exists clause
 usageAllowed(Cert, Usage):-

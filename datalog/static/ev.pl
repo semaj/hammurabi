@@ -12,45 +12,33 @@
 :- use_module(browser).
 
 % extended validation cert
-% driver clause
-isEV(Cert) :-
-    certs:extensionExists(Cert, "CertificatePolicies", true),
-    isEV(Cert, 0).
-
 % recognized EV policy OID clause
-isEV(Cert, Index) :-
-    certs:extensionValues(Cert, "CertificatePolicies", Oid, Index), 
+isEV(Cert) :-
+    certs:certificatePoliciesExt(Cert, true),
+    certs:certificatePolicies(Cert, Oid), 
     evPolicyOid(Oid, CN, C, L, ST, O),
     directDescendant(Cert, P),
     isEVIntermediate(P, Oid).
-
-% recursive clause
-isEV(Cert, Index) :-
-    certs:extensionValues(Cert, "CertificatePolicies", Oid, Index),
-    \+evPolicyOid(Oid, CN, C, L, ST, O),
-    ext:larger(10, Index), % TODO: decide on max index before failure
-    ext:add(Next, Index, 1), % next index
-    isEV(Cert, Next).
 
 % extended validation intermediate cert
 % root clause
 isEVIntermediate(Cert, Oid) :-
     std:isRoot(Cert),
-    certs:subject(Cert, CN, C, L, ST, O),
-    evPolicyOid(Oid, CN, C, L, ST, O).
+    certs:serialNumber(Cert, Serial),
+    evPolicyOid(Oid, Serial).
 
 % chain clause: matching EV policy OID
 isEVIntermediate(Cert, Oid) :-
-    certs:extensionExists(Cert, "CertificatePolicies", true),
-    certs:extensionValues(Cert, "CertificatePolicies", Oid, Index),
+    certs:certificatePoliciesExt(Cert, true),
+    certs:certificatePolicies(Cert, Oid),
     directDescendant(Cert, P),
     isEVIntermediate(P, Oid).
 
 % chain clause: matching anyPolicy OID
 isEVIntermediate(Cert, Oid) :-
-    certs:extensionExists(Cert, "CertificatePolicies", true),
+    certs:certificatePoliciesExt(Cert, true),
     anyPolicyOid(AnyPolicyOid),
-    certs:extensionValues(Cert, "CertificatePolicies", AnyPolicyOid, Values),
+    certs:certificatePolicies(Cert, AnyPolicyOid),
     directDescendant(Cert, P),
     isEVIntermediate(P, Oid).
 
@@ -67,6 +55,7 @@ anyPolicyOid("2.5.29.32.0").
 % all recognized EV policy OIDs
 % maps ev policy OIDs to root cert subject info
 % evPolicyOid(Oid, CN, C, L, ST, O).
+% Replace subject with serial number here
 evPolicyOid("1.3.6.1.4.1.6334.1.100.1", "Cybertrust Global Root","","","","Cybertrust, Inc").
 evPolicyOid("2.16.756.1.89.1.2.1.1", "SwissSign Gold CA - G2","CH","","","SwissSign AG").
 evPolicyOid("2.16.840.1.114404.1.1.2.4.1", "XRamp Global Certification Authority","US","","","XRamp Security Services Inc").

@@ -38,7 +38,7 @@ impl PrologCert<'_> {
                 self.emit_serial(&hash),
                 self.emit_validity(&hash),
                 self.emit_common_name(&hash),
-                self.emit_subject(&hash),
+                // self.emit_subject(&hash),
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
                 self.emit_subject_public_key_algorithm(&hash),
@@ -58,36 +58,36 @@ impl PrologCert<'_> {
         ).replace("\"", "\\\"")
     }
 
-    fn name_from_rdn(name: &x509_parser::x509::X509Name) -> String {
-        let mut cn: String = String::from("");
-        let mut cnt_n: String = String::from("");
-        let mut ln: String = String::from("");
-        let mut spn: String = String::from("");
-        let mut on: String = String::from("");
-        &name.rdn_seq.iter().for_each(|f| {
-            //println!("{:?}", f.set);
-            // TODO: This should PROBABLY be a foldLeft() equivilant instead of a foreach()
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.3" => {
-                    cn = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.6" => {
-                    cnt_n = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.7" => {
-                    ln = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.8" => {
-                    spn = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.10" => {
-                    on = PrologCert::str_from_rdn(f)
-                }
-                _ => (),
-            }
-        });
-        format!("\"{}\", \"{}\", \"{}\", \"{}\", \"{}\"", cn, cnt_n, ln, spn, on)
-    }
+    // fn name_from_rdn(name: &x509_parser::x509::X509Name) -> String {
+    //     let mut cn: String = String::from("");
+    //     let mut cnt_n: String = String::from("");
+    //     let mut ln: String = String::from("");
+    //     let mut spn: String = String::from("");
+    //     let mut on: String = String::from("");
+    //     &name.rdn_seq.iter().for_each(|f| {
+    //         //println!("{:?}", f.set);
+    //         // TODO: This should PROBABLY be a foldLeft() equivilant instead of a foreach()
+    //         match f.set[0].attr_type.to_string().as_str() {
+    //             "2.5.4.3" => {
+    //                 cn = PrologCert::str_from_rdn(f)
+    //             }
+    //             "2.5.4.6" => {
+    //                 cnt_n = PrologCert::str_from_rdn(f)
+    //             }
+    //             "2.5.4.7" => {
+    //                 ln = PrologCert::str_from_rdn(f)
+    //             }
+    //             "2.5.4.8" => {
+    //                 spn = PrologCert::str_from_rdn(f)
+    //             }
+    //             "2.5.4.10" => {
+    //                 on = PrologCert::str_from_rdn(f)
+    //             }
+    //             _ => (),
+    //         }
+    //     });
+    //     format!("\"{}\", \"{}\", \"{}\", \"{}\", \"{}\"", cn, cnt_n, ln, spn, on)
+    // }
 
     fn emit_common_name(&self, hash: &String) -> String {
         let mut cn: String = String::from("");
@@ -112,13 +112,13 @@ impl PrologCert<'_> {
         )
     }
 
-    pub fn emit_subject(&self, hash: &String) -> String {
-        format!(
-            "subject({}, {}).",
-            hash,
-            PrologCert::name_from_rdn(&self.inner.subject).to_lowercase()
-        )
-    }
+    // pub fn emit_subject(&self, hash: &String) -> String {
+    //     format!(
+    //         "subject({}, {}).",
+    //         hash,
+    //         PrologCert::name_from_rdn(&self.inner.subject).to_lowercase()
+    //     )
+    // }
 
     pub fn emit_serial(&self, hash: &String) -> String {
         format!("serialNumber({}, \"{}\").", hash, self.serial)
@@ -169,8 +169,8 @@ impl PrologCert<'_> {
         exts.push(self.emit_basic_constraints(hash));
         exts.push(self.emit_extended_key_usage(hash));
         exts.push(self.emit_subject_alternative_names(hash));
-        if !subject_key_identifier { exts.push(format!("extensionExists({}, \"SubjectKeyIdentifier\", false).", hash)) }
-        if !certificate_policies { exts.push(format!("extensionExists({}, \"CertificatePolicies\", false).", hash)) }
+        if !subject_key_identifier { exts.push(format!("subjectKeyIdentifierExt({}, false).", hash)) }
+        if !certificate_policies { exts.push(format!("certificatePoliciesExt({}, false).", hash)) }
         exts.push(self.emit_name_constraints(hash));
         exts.push(self.emit_policy_extras(hash));
 
@@ -181,20 +181,19 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.name_constraints() {
             Some((is_critical, constraints)) => {
-                answer.push(format!("extensionExists({}, \"NameConstraints\", true).", hash));
-                answer.push(format!("exensionCritic({}, \"NameConstraints\", {}).", hash, is_critical));
+                answer.push(format!("nameConstraintsExt({}, true).", hash));
+                answer.push(format!("nameConstraintsCritical({}, {}).", hash, is_critical));
                 for permitted in constraints.permitted_subtrees.as_ref().unwrap_or(&vec![]) {
                     let (title, name) = emit_general_name(&permitted.base);
-                    answer.push(format!("extensionValues({}, \"NameConstraints\", \"Permitted\", \"{}\", \"{}\").", hash, title, name));
+                    answer.push(format!("nameConstraintsPermitted({}, \"{}\", \"{}\").", hash, title, name));
                 }
                 for excluded in constraints.excluded_subtrees.as_ref().unwrap_or(&vec![]) {
                     let (title, name) = emit_general_name(&excluded.base);
-                    answer.push(format!("extensionValues({}, \"NameConstraints\", \"Excluded\", \"{}\", \"{}\").", hash, title, name));
+                    answer.push(format!("nameConstraintsExcluded({}, \"{}\", \"{}\").", hash, title, name));
                 }
             },
             None => {
-                answer.push(format!("extensionExists({}, \"NameConstraints\", false).",
-                hash))
+                answer.push(format!("nameConstraintsExt({}, false).", hash))
             }
         }
         return answer.join("\n");
@@ -223,51 +222,51 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.policy_constraints() {
             Some((is_critical, policies)) => {
-                answer.push(format!("extensionExists({}, \"PolicyConstraints\", true).", hash));
-                answer.push(format!("exensionCritic({}, \"PolicyConstraints\", {}).", hash, is_critical));
+                answer.push(format!("policyConstraintsExt({}, true).", hash));
+                answer.push(format!("policyConstraintsCritical({}, {}).", hash, is_critical));
                 match policies.require_explicit_policy {
                     Some(u) => {
-                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"RequireExplicitPolicy\", {}).", hash, u));
+                    answer.push(format!("requireExplicitPolicy({}, {}).", hash, u));
                     },
                     None => {
-                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"RequireExplicitPolicy\", none).", hash));
+                    answer.push(format!("requireExplicitPolicy({}, none).", hash));
                     }
                 }
                 match policies.inhibit_policy_mapping {
                     Some(u) => {
-                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"InhibitPolicyMapping\", {}).", hash, u));
+                    answer.push(format!("inhibitPolicyMapping({}, {}).", hash, u));
                     },
                     None => {
-                    answer.push(format!("extensionValues({}, \"PolicyConstraints\", \"InhibitPolicyMapping\", none).", hash));
+                    answer.push(format!("inhibitPolicyMapping({}, none).", hash));
                     }
                 }
             },
             None => {
-                answer.push(format!("extensionExists({}, \"PolicyConstraints\", false).", hash))
+                answer.push(format!("policyConstraintsExt({}, false).", hash))
             }
         }
         match self.inner.inhibit_anypolicy() {
             Some((is_critical, policies)) => {
-                answer.push(format!("extensionExists({}, \"InhibitAnyPolicy\", true).", hash));
-                answer.push(format!("exensionCritic({}, \"InhibitAnyPolicy\", {}).", hash, is_critical));
-                answer.push(format!("extensionValues({}, \"InhibitAnyPolicy\", {}).", hash, policies.skip_certs));
+                answer.push(format!("inhibitAnyPolicyExt({}, true).", hash));
+                answer.push(format!("inhibitAnyPolicyCritical({}, {}).", hash, is_critical));
+                answer.push(format!("inhibitAnyPolicy({}, {}).", hash, policies.skip_certs));
             },
             None => {
-                answer.push(format!("extensionExists({}, \"InhibitAnyPolicy\", false).", hash))
+                answer.push(format!("inhibitAnyPolicyExt({}, false).", hash))
             }
         }
         match self.inner.policy_mappings() {
             Some((is_critical, policies)) => {
-                answer.push(format!("extensionExists({}, \"PolicyMappings\", true).", hash));
-                answer.push(format!("exensionCritic({}, \"PolicyMappings\", {}).", hash, is_critical));
+                answer.push(format!("policyMappingsExt({}, true).", hash));
+                answer.push(format!("policyMappingsCritial({}, {}).", hash, is_critical));
                 for (oid, value_oids) in &policies.mappings {
                     for value_oid in value_oids {
-                        answer.push(format!("exensionCritic({}, \"PolicyMappings\", \"{}\", \"{}\").", hash, oid.to_id_string(), value_oid.to_id_string()));
+                        answer.push(format!("policyMappings({}, \"{}\", \"{}\").", hash, oid.to_id_string(), value_oid.to_id_string()));
                     }
                 }
             },
             None => {
-                answer.push(format!("extensionExists({}, \"PolicyMappings\", false).", hash))
+                answer.push(format!("policyMappingsExt({}, \"PolicyMappings\", false).", hash))
             }
         }
         return answer.join("\n");
