@@ -1,104 +1,10 @@
 :- module(chrome_env, [
-     strong_signature/1,
      trusted/1,
      symantec_root/1,
      symantec_exception/1,
      symantec_managed_ca/1,
-     leaf_duration_valid/1,
-     no_name_constraint_violation/2,
      crl_set/1
 ]).
-
-:- use_module(ext).
-:- use_module(certs).
-:- use_module(std).
-
-% fine-grained validity checks
-
-% One possible leap year, two at 365 dats, and the
-% longest months sequence of 31/31/30 days (June/July/August)
-thirty_nine_months(102643200). % (366+365+365+31+31+30)*24*60*60).
-eight_twenty_five_days(71280000). % (825)*24*60*60).
-three_ninety_eight_days(34387200). % (398)*24*60*60).
-sixty_months(157852800). % (365*3+366*2)*24*60*60). % Two possible leap years
-ten_years(315532800). % (365*8+366*2)*24*60*60). % Two possible leap years
-
-time_2012_07_01(1341100800).
-time_2015_04_01(1427846400).
-time_2019_01_01(1546300800).
-time_2019_07_01(1561939200).
-time_2018_03_01(1519862400).
-time_2020_09_01(1598918400).
-
-% For certificates issued before the BRs took effect
-% net/cert/cert_verify_proc
-% lines 957-961
- duration_valid(Start, Expiry, Duration):-
-  time_2012_07_01(July2012),
-  time_2019_07_01(July2019),
-  ext:larger(July2012, Start),
-  ext:larger(July2019, Expiry),
-  ten_years(TenYears),
-  ext:geq(TenYears, Duration).
-
-% For certificates issued on-or-after the BR effective
-% net/cert/cert_verify_proc
-% lines 963-966
-duration_valid(Start, Expiry, Duration):-
-  time_2012_07_01(July2012),
-  time_2015_04_01(April2015),
-  ext:geq(Start, July2012),
-  ext:larger(April2015, Start),
-  sixty_months(SixtyMonths),
-  ext:geq(SixtyMonths, Duration),
-  ext:larger(Expiry, -1).
-
-% For certificates issued on-or-after 1 April 2015 (39 months)
-% net/cert/cert_verify_proc
-% lines 968-970
-duration_valid(Start, Expiry, Duration):-
-  time_2015_04_01(April2015),
-  time_2018_03_01(March2018),
-  ext:geq(Start, April2015),
-  ext:larger(March2018, Start),
-  thirty_nine_months(ThirtyNineMonths),
-  ext:geq(ThirtyNineMonths, Duration),
-  ext:larger(Expiry, -1).
-
-
-% For certificates issued on-or-after 1 March 2018 (825 days)
-% net/cert/cert_verify_proc
-% lines 972-976
-duration_valid(Start, Expiry, Duration):-
-  time_2018_03_01(March2018),
-  time_2020_09_01(Sep2020),
-  ext:geq(Start, March2018),
-  ext:larger(Sep2020, Start),
-  eight_twenty_five_days(EightTwentyFiveDays),
-  ext:geq(EightTwentyFiveDays, Duration),
-  ext:larger(Expiry, -1).
-
-
-% For certificates issued on-or-after 1 September 2020 (398 days)
-% net/cert/cert_verify_proc
-% lines 978-982
-duration_valid(Start, Expiry, Duration):-
-  time_2020_09_01(Sep2020),
-  three_ninety_eight_days(ThreeNinetyEightDays),
-  ext:geq(Start, Sep2020),
-  ext:geq(ThreeNinetyEightDays, Duration),
-  ext:larger(Expiry, -1).
-
-% Error reporting clause
-leaf_duration_valid(Cert):-
-  checks:leafValidityCheckEnabled(false),
-  std:isCert(Cert).
-
-leaf_duration_valid(Cert):-
-  certs:notBefore(Cert, Start),
-  certs:notAfter(Cert, End),
-  ext:subtract(Duration, End, Start),
-  duration_valid(Start, End, Duration).
 
 
 % Name constraints
@@ -130,61 +36,6 @@ indiaDomain("*.ncode.in").
 indiaDomain("*.tcs.co.in").
 
 
-% Error reporting clause
-no_name_constraint_violation(Root, Domain):-
-  checks:nssNameConstraintCheckEnabled(false),
-  std:isCert(Root),
-  ext:unequal(Domain, "").
-
-no_name_constraint_violation(Root, Domain):-
-  certs:fingerprint(Root, Fingerprint),
-  \+anssiFingerprint(Fingerprint),
-  \+indiaFingerprint(Fingerprint),
-  ext:unequal(Domain, "").
-
-no_name_constraint_violation(Root, Domain):-
-  certs:fingerprint(Root, Fingerprint),
-  indiaFingerprint(Fingerprint),
-  indiaDomain(Accepted),
-  std:stringMatch(Accepted, Domain).
-
-no_name_constraint_violation(Root, Domain):-
-  certs:fingerprint(Root, Fingerprint),
-  anssiFingerprint(Fingerprint),
-  anssiDomain(Accepted),
-  std:stringMatch(Accepted, Domain).
-
-% md2
-md2_sig_algo("1.2.840.113549.1.1.2").
-md2_sig_algo("1.3.14.7.2.3.1").
-
-% md4
-md4_sig_algo("1.2.840.113549.1.1.3").
-md4_sig_algo("1.3.14.3.2.2").
-md4_sig_algo("1.3.14.3.2.4").
-
-% md5
-md5_sig_algo("1.2.840.113549.1.1.4").
-md5_sig_algo("1.3.14.3.2.3").
-md5_sig_algo("1.2.840.113549.2.5").
-
-% sha1
-sha1_sig_algo("1.2.840.113549.1.1.5"). % sha1RSA
-sha1_sig_algo("1.2.840.10040.4.3"). % sha1DSA
-sha1_sig_algo("1.3.14.3.2.29"). % sha1RSA
-sha1_sig_algo("1.3.14.3.2.13"). % sha1DSA
-sha1_sig_algo("1.3.14.3.2.27"). % dsaSHA1
-sha1_sig_algo("1.3.14.3.2.26"). % sha1NoSign
-sha1_sig_algo("1.2.840.10045.4.1"). % sha1ECDSA
-
-
-strong_signature(Cert):-
-  certs:signatureAlgorithm(Cert, Algo),
-  \+md2_sig_algo(Algo),
-  \+md4_sig_algo(Algo),
-  \+md5_sig_algo(Algo).
-
-
 % This is our own Ruby CA for frankencert testing.
 trusted("806900450323811634B49508D427C5C5F7BEC6733DD369FB2F6B7A4EA228223A").
 
@@ -192,7 +43,6 @@ trusted("5A2FC03F0C83B090BBFA40604B0988446C7636183DF9846E17101A447FB8EFD6").
 trusted("125609AA301DA0A249B97A8239CB6A34216F44DCAC9F3954B14292F2E8C8608F").
 trusted("BC4D809B15189D78DB3E1D8CF4F9726A795DA1643CA5F1358E1DDB0EDC0D7EB3").
 trusted("86A1ECBA089C4A8D3BBE2734C612BA341D813E043CF9E8A862CD5C57A36BBE6B").
-
 trusted("9A6EC012E1A7DA9DBE34194D478AD7C0DB1822FB071DF12981496ED104384113").
 trusted("55926084EC963A64B96E2ABE01CE0BA86A64FBFEBCC7AAB5AFC155B37FD76066").
 trusted("0376AB1D54C5F9803CE4B2E201A0EE7EEF7B57B636E8A93C9B8D4860C96F5FA7").

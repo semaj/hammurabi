@@ -66,6 +66,7 @@ pub fn verify_prolog(
             counter,
             hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
         ));
+        repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter - 1, counter));
         stack.push(intermediate_x509.clone()).unwrap();
         // We just assume (for now) that intermediates
         // do not have stapled ocsp responses.
@@ -83,13 +84,13 @@ pub fn verify_prolog(
             continue;
         }
 
-        counter += 1;
         let cert_pem = [part, separator].join("");
         let temp = parse_x509_pem(cert_pem.as_bytes()).unwrap().1.contents;
         let root_x509 = X509::from_der(&temp).unwrap();
         for intermediate_x509 in chain.iter() {
             fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
+                counter += 1;
                 found_issuer = true;
                 let root_x509_for_stack = X509::from_der(&temp).unwrap();
                 stack.push(root_x509_for_stack).unwrap();
@@ -105,6 +106,7 @@ pub fn verify_prolog(
                     },
                 };
                 repr.push_str(&v.emit_all(&format!("cert_{}", counter)));
+                repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter - 1, counter));
             }
         }
 
@@ -201,7 +203,6 @@ fn emit_kb_cert_preamble() -> String {
         issuer/6,
         validity/3,
         subject/6,
-        extensionExists/3,
         extensionCritic/3,
         extensionValues/3,
         extensionValues/4,

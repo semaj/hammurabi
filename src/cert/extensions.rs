@@ -14,14 +14,14 @@ pub fn emit_subject_key_identifier(hash: &String, extension: &X509Extension) -> 
                 _ => String::from("00"),
             };
 
-            format!("extensionExists({}, \"SubjectKeyIdentifier\", true).
-extensionCritic({}, \"SubjectKeyIdentifier\", {}).
-extensionValues({}, \"SubjectKeyIdentifier\", \"{}\").", hash, hash, extension.critical, hash, string_id)
+            format!("subjectKeyIdentifierExt({}, true).
+subjectKeyIdentifierCritical({}, {}).
+subjectKeyIdentifier({}, \"{}\").", hash, hash, extension.critical, hash, string_id)
         }
         Err(e) => {
             println!("{:?}", e);
-            format!("extensionExists({}, \"SubjectKeyIdentifier\", false).
-extensionCritic({}, \"SubjectKeyIdentifier\", {}).", hash, hash, extension.critical)
+            format!("subjectKeyIdentifierExt({}, false).
+subjectKeyIdentifierCritical({}, {}).", hash, hash, extension.critical)
         }
     }
 }
@@ -36,10 +36,10 @@ pub fn emit_certificate_policies(hash: &String, extension: &X509Extension) -> St
             let result: String = certificate_policies
                 .iter()
                 .enumerate()
-                .filter_map(|(i, policy): (usize, &BerObject<'_>)| match &policy.content {
+                .filter_map(|(_, policy): (usize, &BerObject<'_>)| match &policy.content {
                     BerObjectContent::Sequence(policy_info) => Some(
                         match &policy_info[0].content {
-                            BerObjectContent::OID(policy_oid) => format!("\nextensionValues({}, \"CertificatePolicies\", \"{}\", {}).", hash, policy_oid.to_owned().to_string(), i),
+                            BerObjectContent::OID(policy_oid) => format!("\ncertificatePolicies({}, \"{}\").", hash, policy_oid.to_owned().to_string()),
                             _ => String::from("")
                         }
                     ),
@@ -48,13 +48,11 @@ pub fn emit_certificate_policies(hash: &String, extension: &X509Extension) -> St
             .collect::<Vec<String>>()
                 .join("");
 
-            format!("extensionExists({}, \"CertificatePolicies\", true).
-extensionCritic({}, \"CertificatePolicies\", {}). {}", hash, hash, extension.critical, result)
+            format!("certificatePoliciesExt({}, true).\ncertificatePoliciesCritical({}, {}). {}", hash, hash, extension.critical, result)
         }
         Err(e) => {
             println!("{:?}", e);
-            format!("extensionExists({}, \"CertificatePolicies\", false).
-extensionCritic({}, \"CertificatePolicies\", {}).", hash, hash, extension.critical)
+            format!("certificatePoliciesExt({}, false).\ncertificatePoliciesCritical({}, {}).", hash, hash, extension.critical)
         }
     }
 }

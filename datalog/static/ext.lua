@@ -35,6 +35,10 @@ local function equal(literal)
         else
           return nil
         end
+      elseif x:is_const() then
+         return {x.id,x.id}
+      elseif y:is_const() then
+         return {y.id,y.id}
       else
         return nil
       end

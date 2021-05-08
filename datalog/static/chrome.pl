@@ -8,42 +8,42 @@
 :- use_module(chrome_env).
 
 checkKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
+  certs:keyUsageExt(Cert, false).
 
 checkKeyUsage(Cert) :-
   std:isCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  std:usageAllowed(Cert, "keyCertSign").
+  certs:keyUsageExt(Cert, true),
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  \+std:usageAllowed(Cert, "keyCertSign"),
-  std:usageAllowed(Cert, "digitalSignature").
+  \+std:isCA(Cert),
+  certs:keyUsageExt(Cert, true),
+  \+std:usageAllowed(Cert, keyCertSign),
+  std:usageAllowed(Cert, digitalSignature).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  \+std:usageAllowed(Cert, "keyCertSign"),
-  std:usageAllowed(Cert, "keyEncipherment").
+  \+std:isCA(Cert),
+  certs:keyUsageExt(Cert, true),
+  \+std:usageAllowed(Cert, keyCertSign),
+  std:usageAllowed(Cert, keyEncipherment).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  \+std:usageAllowed(Cert, "keyCertSign"),
-  std:usageAllowed(Cert, "keyAgreement").
+  \+std:isCA(Cert),
+  certs:keyUsageExt(Cert, true),
+  \+std:usageAllowed(Cert, keyCertSign),
+  std:usageAllowed(Cert, keyAgreement).
 
 
 time_2016_06_01(1464739200). % 01 Jun 2016
 time_2017_12_01(1512086400). % 01 Dec 2017
 
 symantec_untrusted(Cert):-
-  certs:validity(Cert, Start, End),
+  certs:notBefore(Cert, Start),
   time_2016_06_01(June2016),
   ext:larger(Jun2016, Start).
 
 symantec_untrusted(Cert):-
-  certs:validity(Cert, Start, End),
+  certs:notBefore(Cert, Start),
   time_2017_12_01(Dec2017),
   ext:larger(Start, Dec2017).
 
@@ -73,20 +73,18 @@ isRoot(Cert):-
 
 
 parent(C, P, ChainLen):-
-    certs:issuer(C, Sub1, Sub2, Sub3, Sub4, Sub5),
-    certs:subject(P, Sub1, Sub2, Sub3, Sub4, Sub5),
+    certs:issuer(C, P),
     isRoot(P),
     std:pathLengthOkay(P, ChainLen, 0).
 
 checkKeyCertSign(Cert) :-
-  std:usageAllowed(Cert, "keyCertSign").
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyCertSign(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
+  certs:keyUsageExt(Cert, false).
 
 parent(C, P, ChainLen):-
-    certs:issuer(C, Sub1, Sub2, Sub3, Sub4, Sub5),
-    certs:subject(P, Sub1, Sub2, Sub3, Sub4, Sub5),
+    certs:issuer(C, P),
     std:isCA(P),
     checkKeyCertSign(P),
     std:pathLengthOkay(P, ChainLen, 0).
@@ -118,23 +116,18 @@ chromeNameMatches(Cert) :-
   std:isCert(Cert).
 
 chromeNameMatches(Cert) :-
-  certs:extensionExists(Cert, "SubjectAlternativeNames", true),
+  certs:sanExt(Cert, true),
   std:nameMatchesSAN(Cert).
 
-% Check CN ONLY if SAN not present
-%chromeNameMatches(Cert) :-
-  %certs:extensionExists(Cert, "SubjectAlternativeNames", false),
-  %std:nameMatchesCN(Cert).
-
 checkExtendedKeyUsage(Cert):-
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 checkExtendedKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "ExtendedKeyUsage", false).
+  certs:extendedKeyUsageExt(Cert, false).
 
 checkExtendedKeyUsage(Cert):-
-  std:isNotCA(Cert),
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  \+std:isCA(Cert),
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 verified(Cert):-
   chromeNameMatches(Cert),

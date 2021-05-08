@@ -3,10 +3,8 @@
     nameMatchesCN/1,
     nameMatchesSAN/1,
     isTimeValid/1,
-    extendedKeyUsageExpected/3,
     usageAllowed/2,
     isCA/1,
-    isNotCA/1,
     isRoot/1,
     pathLengthOkay/3,
     maxIntermediatesOkay/1,
@@ -31,25 +29,6 @@
 isCert(Cert):-
     certs:serialNumber(Cert, Serial).
 
-% dotted quad to decimal util function
-% IPv4 only
-ipToNumber(Byte1, Byte2, Byte3, Byte4, Mask, N):-
-    % create mask. Shift 255.255.255.255 by Mask
-    ext:b_lshift(M, 4294967295, Mask),
-    % make decimal from dotted quad and apply mask
-    ext:b_lshift(SB1, Byte1, 24),
-    ext:b_lshift(SB2, Byte2, 16),
-    ext:b_lshift(SB3, Byte3, 8),
-    ext:add(R1, SB1, SB2),
-    ext:add(R2, SB3, Byte4),
-    ext:add(R3, R1, R2),
-    ext:b_and(N, R3, M).
-
-% check if host is in network
-hostInNetwork(HostIP, Network):-
-    b_and(N, HostIP, Network),
-    Network = N.
-
 % common name match function
 % wildcard clause
 stringMatch(Pattern, CommonName):-
@@ -62,20 +41,20 @@ stringMatch(Pattern, CommonName):-
 % common name match function
 % exact clause
 stringMatch(Pattern, CommonName):-
-    Pattern = CommonName.
+    ext:equal(Pattern, CommonName).
 
 
 % domain name matches one of the names in SAN
 nameMatchesSAN(Cert) :-
     env:domain(D),
-    certs:extensionValues(Cert, "SubjectAlternativeNames", Name),
+    certs:san(Cert, Name),
     \+ext:s_containstldwildcard(Name),
     stringMatch(Name, D).
 
 % domain name matches common name
 nameMatchesCN(Cert):-
     env:domain(D),
-    certs:subject(Cert, Subject, S2, S3, S4, S5),
+    certs:commonName(Cert, Subject),
     \+ext:s_containstldwildcard(Subject),
     stringMatch(Subject, D).
 
@@ -93,23 +72,18 @@ isTimeValid(Cert):-
 
 % time validity check. between Lower and Upper
 isTimeValid(Cert):-
-    ext:now(T),
-    certs:validity(Cert, Lower, Upper),
+    ext:equal(T, 1618246820),
+    % ext:now(T),
+    certs:notBefore(Cert, Lower),
+    certs:notAfter(Cert, Upper),
     ext:larger(T, Lower),
     ext:larger(Upper, T).
-
-extendedKeyUsageExpected(Cert, Usage, Expected):-
-    certs:extensionValues(Cert, "ExtendedKeyUsage", Usage, Expected).
-
-% check if extension does not exist
-extensionAbsent(Cert, Extension):-
-    certs:extensionExists(Cert, Extension, false).
 
 % check if key usage allowed
 % keyUsage extension exists clause
 usageAllowed(Cert, Usage):-
-    certs:extensionExists(Cert, "KeyUsage", true),
-    certs:extensionValues(Cert, "KeyUsage", Usage, true).
+    certs:keyUsageExt(Cert, true),
+    certs:keyUsage(Cert, Usage).
 
 % check if Cert is a trusted root
 isRoot(Cert):-
@@ -124,15 +98,8 @@ isCA(Cert):-
 % Basic Constraints checks
 % CA bit set
 isCA(Cert):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", true, Limit).
-
-isNotCA(Cert):-
-    certs:extensionExists(Cert, "BasicConstraints", false).
-
-isNotCA(Cert):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", false, Limit).
+    certs:basicConstraintsExt(Cert, true),
+    certs:isCA(Cert, true).
 
 % Error reporting clause
 pathLengthOkay(Cert, ChainLen, SelfCount):-
@@ -143,21 +110,21 @@ pathLengthOkay(Cert, ChainLen, SelfCount):-
 
 % Path length is okay if the extension doesn't exist
 pathLengthOkay(Cert, ChainLen, SelfCount) :-
-  certs:extensionExists(Cert, "BasicConstraints", false),
+  certs:basicConstraintsExt(Cert, false),
   ext:geq(ChainLen, ChainLen),
   ext:geq(SelfCount, Selfcount).
 
 % Basic Constraints checks
 % Path length constraint
 pathLengthOkay(Cert, ChainLen, SelfCount):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", Ca, Limit),
+    certs:basicConstraintsExt(Cert, true),
+    certs:pathLimit(Cert, Limit),
     ext:add(ChainLen, Effective, SelfCount),
     ext:larger(Limit, Effective).
 
 pathLengthOkay(Cert, ChainLen, SelfCount):-
-    certs:extensionExists(Cert, "BasicConstraints", true),
-    certs:extensionValues(Cert, "BasicConstraints", Ca, none),
+    certs:basicConstraintsExt(Cert, true),
+    certs:pathLimit(Cert, none),
     ext:geq(ChainLen, ChainLen),
     ext:geq(SelfCount, SelfCount).
 
@@ -174,39 +141,14 @@ maxIntermediatesOkay(ChainLen):-
 
 % descendant. also works for ancestor
 % direct parent clause
-descendant(X, Y):-
-    certs:issuer(X, Psub, S2, S3, S4, S5),
-    certs:subject(Y, Psub, S2, S3, S4, S5),
-    ext:unequal(X, Y).
+descendant(Cert, Y):-
+    certs:issuer(Cert, Y),
+    ext:unequal(Cert, Y).
 
 % descendant. also works for ancestor
 % chain clause
-descendant(X, Y):-
-    certs:issuer(X, Psub, S2, S3, S4, S5),
-    certs:subject(Z, Psub, S2, S3, S4, S5),
-    ext:unequal(X, Z),
+descendant(Cert, Y):-
+    certs:issuer(Cert, Y),
+    ext:unequal(Cert, Z),
     descendant(Z, Y).
-
-
-% Error reporting clause
-internalCheck(Cert):-
-    checks:aCCCheckEnabled(false),
-    std:isCert(Cert).
-
-% run internal checks of cert
-% hard-coded. need to find better solution
-internalCheck(Cert):-
-   Cert = cert_0,
-   cert_0:cert_0(Cert).
-
-internalCheck(Cert):-
-   Cert = cert_1,
-   cert_1:cert_1(Cert).
-
-% check basics like time validity
-% and self-verification
-basicsWork(Cert):-
-    isTimeValid(Cert),
-    internalCheck(Cert).
-
 

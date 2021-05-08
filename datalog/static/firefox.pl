@@ -75,14 +75,14 @@ nssNameConstraintValid(Leaf, Root) :-
 nssNameConstraintValid(Leaf, Root) :-
   tubitak1Fingerprint(F),
   certs:fingerprint(Root, F),
-  certs:extensionValues(Leaf, "SubjectAlternativeNames", Name),
+  certs:san(Leaf, Name),
   tubitak1Subtree(Tree),
   std:stringMatch(Tree, Name).
 
 nssNameConstraintValid(Leaf, Root) :-
   anssiFingerprint(F),
   certs:fingerprint(Root, F),
-  certs:extensionValues(Leaf, "SubjectAlternativeNames", Name),
+  certs:san(Leaf, Name),
   anssiSubtree(Tree),
   std:stringMatch(Tree, Name).
 
@@ -207,23 +207,23 @@ notOCSPRevokedCheck(Cert) :-
 
 checkKeyUsage(Cert) :-
   std:isCA(Cert),
-  certs:extensionExists(Cert, "KeyUsage", true),
-  std:usageAllowed(Cert, "keyCertSign").
+  certs:keyUsageExt(Cert, true),
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
+  certs:keyUsageExt(Cert, false).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
-  std:usageAllowed(Cert, "digitalSignature").
+  \+std:isCA(Cert),
+  std:usageAllowed(Cert, digitalSignature).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
-  std:usageAllowed(Cert, "keyEncipherment").
+  \+std:isCA(Cert),
+  std:usageAllowed(Cert, keyEncipherment).
 
 checkKeyUsage(Cert) :-
-  std:isNotCA(Cert),
-  std:usageAllowed(Cert, "keyAgreement").
+  \+std:isCA(Cert),
+  std:usageAllowed(Cert, keyAgreement).
 
 
 notSymantec(Cert) :-
@@ -231,14 +231,13 @@ notSymantec(Cert) :-
   \+symantecFingerprint(F).
 
 checkKeyCertSign(Cert) :-
-  std:usageAllowed(Cert, "keyCertSign").
+  std:usageAllowed(Cert, keyCertSign).
 
 checkKeyCertSign(Cert) :-
-  certs:extensionExists(Cert, "KeyUsage", false).
+  certs:keyUsageExt(Cert, false).
 
 parent(C, P, ChainLen):-
-    certs:issuer(C, Sub1, Sub2, Sub3, Sub4, Sub5),
-    certs:subject(P, Sub1, Sub2, Sub3, Sub4, Sub5),
+    certs:issuer(C, P),
     std:isCA(P),
     checkKeyCertSign(P),
     std:pathLengthOkay(P, ChainLen, 0).
@@ -254,15 +253,15 @@ validSHA1(Cert) :-
 
 checkExtendedKeyUsage(Cert) :-
   std:isCA(Cert),
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 checkExtendedKeyUsage(Cert):-
-  std:isNotCA(Cert),
-  std:extendedKeyUsageExpected(Cert, "OCSPSigning", false),
-  std:extendedKeyUsageExpected(Cert, "serverAuth", true).
+  \+std:isCA(Cert),
+  \+certs:extendedKeyUsage(Cert, oCSPSigning),
+  certs:extendedKeyUsage(Cert, serverAuth).
 
 checkExtendedKeyUsage(Cert) :-
-  certs:extensionExists(Cert, "ExtendedKeyUsage", false).
+  certs:extendedKeyUsageExt(Cert, false).
 
 % Override kb_env.pl
 max_intermediates(5).
@@ -311,12 +310,12 @@ firefoxNameMatches(Cert) :-
   std:isCert(Cert).
 
 firefoxNameMatches(Cert) :-
-  certs:extensionExists(Cert, "SubjectAlternativeNames", true),
+  certs:sanExt(Cert, true),
   std:nameMatchesSAN(Cert).
 
 % Check CN ONLY if SAN not present
 firefoxNameMatches(Cert) :-
-  certs:extensionExists(Cert, "SubjectAlternativeNames", false),
+  certs:sanExt(Cert, false),
   std:nameMatchesCN(Cert).
 
 % in seconds
@@ -328,12 +327,13 @@ isNSSTimeValid(Cert):-
 isNSSTimeValid(Cert):-
   ev:isEV(Cert),
   duration27MonthsPlusSlop(ValidDuration),
-  certs:validity(Cert, Lower, Upper),
+  certs:notBefore(Cert, Lower),
+  certs:notAfter(Cert, Upper),
   ext:subtract(Duration, Upper, Lower),
   ext:geq(ValidDuration, Duration).
 
 verified(Cert):-
-  std:isNotCA(Cert),
+  \+std:isCA(Cert),
   checkKeyUsage(Cert),
   checkExtendedKeyUsage(Cert),
   firefoxNameMatches(Cert),
