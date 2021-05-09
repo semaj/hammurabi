@@ -36,7 +36,13 @@ pub fn verify_prolog(
         },
     };
     let mut repr: String = cert.emit_all(&format!("cert_{}", counter));
-    let mut fingerprints: Vec<String> = Vec::new();
+    let sha256 = hex::encode(leaf.digest(MessageDigest::sha256()).unwrap());
+    repr.push_str(&format!(
+        "fingerprint(cert_0, \"{}\").\n",
+        sha256.to_uppercase()
+    ));
+
+    let mut root_fingerprints: Vec<String> = Vec::new();
 
     let mut stack = Stack::new().unwrap();
     let mut recursive_subject = leaf.clone();
@@ -88,7 +94,7 @@ pub fn verify_prolog(
         let temp = parse_x509_pem(cert_pem.as_bytes()).unwrap().1.contents;
         let root_x509 = X509::from_der(&temp).unwrap();
         for intermediate_x509 in chain.iter() {
-            fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
+            root_fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
                 counter += 1;
                 found_issuer = true;
@@ -117,11 +123,7 @@ pub fn verify_prolog(
     }
     let issuer_x509 = &chain[0];
     let subject_x509 = leaf;
-    let sha256 = hex::encode(subject_x509.digest(MessageDigest::sha256()).unwrap());
-    repr.push_str(&format!(
-        "fingerprint(cert_0, \"{}\").\n",
-        sha256.to_uppercase()
-    ));
+   
 
     let store = store_builder.build();
 
@@ -154,7 +156,7 @@ pub fn verify_prolog(
 
     let key = "JOBINDEX";
     let jobindex = env::var(key).unwrap_or("".to_string());
-    let roots: String = fingerprints
+    let roots: String = root_fingerprints
         .iter()
         .map(|name| format!("\ntrusted_roots(\"{}\").", name))
         .collect::<String>()
