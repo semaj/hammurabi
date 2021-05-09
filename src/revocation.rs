@@ -39,7 +39,6 @@ pub fn check_ocsp(
         .build()
         .unwrap();
     if ocsp_responders.len() == 0 {
-        output_facts.push(format!("no_ocsp_responders({}).", cert_identifier));
         return output_facts;
     }
 
@@ -50,12 +49,12 @@ pub fn check_ocsp(
         }
         // Each OCSP URI gets its own fact (for a given cert).
         output_facts.push(format!(
-            "ocsp_responder({}, \"{}\").",
+            "ocspResponder({}, \"{}\").",
             cert_identifier, ocsp_uri
         ));
         if !check_ocsp {
             output_facts.push(format!(
-                    "ocsp_response_invalid({}, \"{}\").",
+                    "ocspValid({}, \"{}\", false).",
                     cert_identifier, ocsp_uri
             ));
             continue;
@@ -70,7 +69,7 @@ pub fn check_ocsp(
                 Ok(r) => r,
                 Err(_) => {
                     output_facts.push(format!(
-                            "ocsp_response_invalid({}, \"{}\").",
+                            "ocspValid({}, \"{}\", false).",
                             cert_identifier, ocsp_uri
                     ));
                     continue;
@@ -84,7 +83,7 @@ pub fn check_ocsp(
             Err(_) => {
                 eprintln!("OCSP response parsing error!");
                 output_facts.push(format!(
-                        "ocsp_response_invalid({}, \"{}\").",
+                        "ocspValid({}, \"{}\", false).",
                         cert_identifier, ocsp_uri
                 ));
                 continue;
@@ -93,7 +92,7 @@ pub fn check_ocsp(
         let ocsp_response_result = OcspResponse::from_der(&bytes);
         if ocsp_response_result.is_err() {
             output_facts.push(format!(
-                "ocsp_response_invalid({}, \"{}\").",
+                "ocspValid({}, \"{}\", false).",
                 cert_identifier, ocsp_uri
             ));
             continue;
@@ -102,7 +101,7 @@ pub fn check_ocsp(
         let ocsp_basic_response = match ocsp_response.basic() {
             Ok(basic_response) => {
                 output_facts.push(format!(
-                    "ocsp_response_valid({}, \"{}\").",
+                    "ocspValid({}, \"{}\", true).",
                     cert_identifier, ocsp_uri
                 ));
                 basic_response
@@ -117,7 +116,7 @@ pub fn check_ocsp(
                     //panic!("Problem sending OCSP request.");
                 }
                 output_facts.push(format!(
-                    "ocsp_response_invalid({}, \"{}\").",
+                    "ocspValid({}, \"{}\", false).",
                     cert_identifier, ocsp_uri
                 ));
                 continue;
@@ -125,7 +124,7 @@ pub fn check_ocsp(
         };
         match ocsp_basic_response.verify(certs.as_ref(), store, OcspFlag::empty()) {
             Ok(_) => output_facts.push(format!(
-                "ocsp_response_verified({}, \"{}\").",
+                "ocspVerified({}, \"{}\", true).",
                 cert_identifier, ocsp_uri
             )),
             Err(error_stack) => {
@@ -134,7 +133,7 @@ pub fn check_ocsp(
                     ocsp_uri, error_stack
                 );
                 output_facts.push(format!(
-                    "ocsp_response_not_verified({}, \"{}\").",
+                    "ocspVerified({}, \"{}\", false).",
                     cert_identifier, ocsp_uri
                 ));
                 continue; // Try the next URI.
@@ -146,41 +145,26 @@ pub fn check_ocsp(
             .unwrap();
         // Allow for 1s (1e9 ns) clock skew.
         match ocsp_status.check_validity(1000000000, None) {
-            Ok(_) => output_facts.push(format!(
-                "ocsp_response_not_expired({}, \"{}\").",
-                cert_identifier, ocsp_uri
-            )),
+            Ok(_) => output_facts.push(format!( "ocsp_expired({}, \"{}\", false).", cert_identifier, ocsp_uri)),
             Err(error_stack) => {
                 eprintln!(
                     "Validation failed for URI {}. Error stack: {}",
                     ocsp_uri, error_stack
                 );
-                output_facts.push(format!(
-                    "ocsp_response_expired({}, \"{}\").",
-                    cert_identifier, ocsp_uri
-                ));
+                output_facts.push(format!( "ocsp_expired({}, \"{}\", true).", cert_identifier, ocsp_uri));
                 continue;
             }
         }
         match ocsp_status.status {
             OcspCertStatus::GOOD => {
-                output_facts.push(format!(
-                    "ocsp_status_good({}, \"{}\").",
-                    cert_identifier, ocsp_uri
-                ));
-                //break;
+                output_facts.push(format!("ocspStatus({}, \"{}\", good).", cert_identifier, ocsp_uri));
             }
             OcspCertStatus::REVOKED => {
-                output_facts.push(format!(
-                    "ocsp_status_revoked({}, \"{}\").",
-                    cert_identifier, ocsp_uri
-                ));
-                //break;
+                output_facts.push(format!("ocspStatus({}, \"{}\", revoked).", cert_identifier, ocsp_uri));
             }
-            OcspCertStatus::UNKNOWN => output_facts.push(format!(
-                "ocsp_status_unknown({}, \"{}\").",
-                cert_identifier, ocsp_uri
-            )),
+            OcspCertStatus::UNKNOWN => {
+                output_facts.push(format!("ocspStatus({}, \"{}\", unknown).", cert_identifier, ocsp_uri));
+            }
             // Do not break, since perhaps the other responders know.
             _ => panic!("OCSPCertStatus is an unknown value."),
         }
@@ -197,21 +181,21 @@ pub fn ocsp_stapling(
     let ocsp_response: OcspResponse = match stapled_ocsp_response {
         Some(raw) => OcspResponse::from_der(raw).unwrap(),
         None => {
-            output_facts.push(format!("no_stapled_ocsp_response({}).", cert_identifier));
+            output_facts.push(format!("stapledOcspPresent({}, false).", cert_identifier));
             return output_facts;
         }
     };
-    output_facts.push(format!("stapled_ocsp_response({}).", cert_identifier));
+    output_facts.push(format!("stapledOcspPresent({}, true).", cert_identifier));
     let verification_cert_id =
         OcspCertId::from_cert(MessageDigest::sha1(), subject, issuer).unwrap();
     let ocsp_basic_response = match ocsp_response.basic() {
         Ok(basic_response) => {
-            output_facts.push(format!("stapled_ocsp_response_valid({}).", cert_identifier));
+            output_facts.push(format!("stapledOcspValid({}, true).", cert_identifier));
             basic_response
         }
         Err(_) => {
             output_facts.push(format!(
-                "stapled_ocsp_response_invalid({}).",
+                "stapledOcspValid({}, false).",
                 cert_identifier
             ));
             return output_facts;
@@ -219,7 +203,7 @@ pub fn ocsp_stapling(
     };
     match ocsp_basic_response.verify(certs.as_ref(), store, OcspFlag::empty()) {
         Ok(_) => output_facts.push(format!(
-            "stapled_ocsp_response_verified({}).",
+            "stapledOcspVerified({}, true).",
             cert_identifier
         )),
         Err(error_stack) => {
@@ -228,7 +212,7 @@ pub fn ocsp_stapling(
                 error_stack
             );
             output_facts.push(format!(
-                "stapled_ocsp_response_not_verified({}).",
+                "stapledOcspVerified({}, false).",
                 cert_identifier
             ));
             return output_facts;
@@ -241,7 +225,7 @@ pub fn ocsp_stapling(
     // Allow for 1s (1e9 ns) clock skew.
     match ocsp_status.check_validity(1000000000, None) {
         Ok(_) => output_facts.push(format!(
-            "stapled_ocsp_response_not_expired({}).",
+            "stapledOcspExpired({}, false).",
             cert_identifier
         )),
         Err(error_stack) => {
@@ -250,7 +234,7 @@ pub fn ocsp_stapling(
                 error_stack
             );
             output_facts.push(format!(
-                "stapled_ocsp_response_expired({}).",
+                "stapledOcspExpired({}, true).",
                 cert_identifier
             ));
             return output_facts;
@@ -258,13 +242,13 @@ pub fn ocsp_stapling(
     }
     match ocsp_status.status {
         OcspCertStatus::GOOD => {
-            output_facts.push(format!("stapled_ocsp_status_good({}).", cert_identifier));
+            output_facts.push(format!("stapledOcspStatus({}, good).", cert_identifier));
         }
         OcspCertStatus::REVOKED => {
-            output_facts.push(format!("stapled_ocsp_status_revoked({}).", cert_identifier));
+            output_facts.push(format!("stapledOcspStatus({}, revoked).", cert_identifier));
         }
         OcspCertStatus::UNKNOWN => {
-            output_facts.push(format!("stapled_ocsp_status_unknown({}).", cert_identifier))
+            output_facts.push(format!("stapledOcspStatus({}, unknown).", cert_identifier))
         }
         // Do not break, since perhaps the other responders know.
         _ => panic!("OCSPCertStatus is an unknown value."),
