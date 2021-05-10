@@ -33,7 +33,7 @@ impl PrologCert<'_> {
 
     pub fn emit_all(&self, hash: &String) -> String {
         format!(
-            "{}\n\n",
+            "{}",
             vec![
                 self.emit_serial(&hash),
                 self.emit_validity(&hash),

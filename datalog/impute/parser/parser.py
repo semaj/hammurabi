@@ -7,11 +7,19 @@ from pyparsing import *
 SimpleFields = (
     "Fingerprint",
     "SerialNumber",
-    "Subject",
     "NotBefore",
     "NotAfter",
+    "CommonName",
+    "San",
     "Issuer",
-    "BasicConstraints0",
+    "BasicConstraintsExt",
+    "BasicConstraintsCritical",
+    "IsCA",
+    "PathLimit",
+    "KeyUsageExt",
+    "KeyUsageCritical",
+    "ExtendedKeyUsageExt",
+    "ExtendedKeyUsageCritical",
 )
 ListFields = (
     "SubjectiveAlternativeNames",
@@ -38,11 +46,14 @@ def topo_sort(nodes, adj):
 
 
 ########### Transformation methods #############################################
-def fix_head_clause(head_clause, to_put):
+def fix_head_clause(head_clause, to_remove, to_put):
     if type(head_clause["terms"]) != set:
         terms = map(lambda t: next(iter(t.values()))[0], head_clause["terms"])
         head_clause["terms"] = set(terms)
-        head_clause["terms"].remove("Cert")
+        try:
+            head_clause["terms"].remove(to_remove)
+        except KeyError:
+            pass
     head_clause["terms"].add(to_put)
 
 
@@ -52,15 +63,17 @@ def fix_rule(rule):
             len(clause["predicate"]["atoms"]) == 2
             and clause["predicate"]["atoms"][0] == "certs"
         ):
+            container = clause["predicate"]["atoms"][0]
             field = clause["predicate"]["atoms"][1]
             field = field[0].upper() + field[1:]
+            print(clause)
             value = next(iter(clause["terms"][1].values()))[0]
             # value = clause["terms"][1]["atoms"][0]
             if field in SimpleFields:
-                fix_head_clause(rule["head_clause"], field)
+                fix_head_clause(rule["head_clause"], container, field)
                 rule["clauses"][i] = f"{field} = {value}"
             elif field in ListFields:
-                fix_head_clause(rule["head_clause"], field)
+                fix_head_clause(rule["head_clause"], container, field)
                 if value == "none":
                     rule["clauses"][i] = f"{field} = []"
                 else:
@@ -128,7 +141,7 @@ prolog = OneOrMore(sentence)
 ########### Transformation #####################################################
 if __name__ == "__main__":
     # read input file
-    sys.argv = ["", "parser/std.pl"]
+    # sys.argv = ["", "~/acc-engine/datalog/impute/input.pl"]
     with open(sys.argv[1]) as f:
         toparse = comment.transformString(f.read())
 
@@ -155,3 +168,4 @@ if __name__ == "__main__":
         for rule in nodes[pred]:
             fix_rule(rule)
             print(dump_rule(rule))
+            print()

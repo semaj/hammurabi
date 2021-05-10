@@ -99,42 +99,36 @@ notRevoked(Cert) :-
   \+ocspRevoked(Cert).
 
 stapledResponseError(Cert) :-
-  certs:stapled_ocsp_response_invalid(Cert).
+  certs:stapledOcspValid(Cert, false).
 
 stapledResponseError(Cert) :-
-  certs:stapled_ocsp_response_expired(Cert).
+  certs:stapledOcspExpired(Cert, true).
 
 stapledResponseError(Cert) :-
-  certs:stapled_ocsp_response_not_verified(Cert).
+  certs:stapledOcspVerified(Cert, false).
 
 ocspResponseError(Cert) :-
-  certs:ocsp_response_expired(Cert, R).
+  certs:ocspExpired(Cert, R, true).
 
 ocspResponseError(Cert) :-
-  certs:ocsp_response_invalid(Cert, R).
+  certs:ocspValid(Cert, R, false).
 
 ocspResponseError(Cert) :-
-  certs:ocsp_response_not_verified(Cert, R).
+  certs:ocspVerified(Cert, R, false).
 
 ocspRevoked(Cert) :-
-  certs:ocsp_response_valid(Cert, Responder),
-  certs:ocsp_response_verified(Cert, Responder),
-  certs:ocsp_response_not_expired(Cert, Responder),
-  certs:ocsp_status_revoked(Cert, Responder).
+  certs:ocspStatus(Cert, Responder, revoked).
 
 ocspRevoked(Cert) :-
-  certs:ocsp_response_valid(Cert, Responder),
-  certs:ocsp_response_verified(Cert, Responder),
-  certs:ocsp_response_not_expired(Cert, Responder),
-  certs:ocsp_status_unknown(Cert, Responder).
+  certs:ocspStatus(Cert, Responder, unknown).
 
 ocspRevoked(Cert) :-
-  certs:no_ocsp_responders(Cert),
-  stapledResponseError(Cert).
+  stapledResponseError(Cert),
+  \+certs:ocspResponder(Cert, R).
 
 ocspRevoked(Cert) :-
   ev:isEV(Cert),
-  certs:no_ocsp_responders(Cert).
+  \+certs:ocspResponder(Cert, R).
 
 ocspRevoked(Cert) :-
   ocspResponseError(Cert),
@@ -155,55 +149,6 @@ shortLived(Cert) :-
 notInOneCRL(Cert) :-
   certs:fingerprint(Cert, Fingerprint),
   \+onecrl:onecrl(Fingerprint).
-
-notOCSPRevokedCheck(Cert) :-
-  certs:no_ocsp_responders(Cert).
-
-
-notOCSPRevokedCheck(Cert) :-
-  certs:ocsp_response_valid(Cert, Responder),
-  certs:ocsp_response_verified(Cert, Responder),
-  certs:ocsp_response_not_expired(Cert, Responder),
-  certs:ocsp_status_good(Cert, Responder).
-
-notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:no_stapled_ocsp_response(Cert),
-  certs:ocsp_response_invalid(Cert, R).
-
-
-notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:no_stapled_ocsp_response(Cert),
-  certs:ocsp_response_not_verified(Cert, R).
-
-
-notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:no_stapled_ocsp_response(Cert),
-  certs:ocsp_response_expired(Cert, R).
-
-notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:stapled_ocsp_response_valid(Cert),
-  certs:stapled_ocsp_response_verified(Cert),
-  certs:stapled_ocsp_response_not_expired(Cert),
-  certs:ocsp_response_invalid(Cert, R).
-
-notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:stapled_ocsp_response_valid(Cert),
-  certs:stapled_ocsp_response_verified(Cert),
-  certs:stapled_ocsp_response_not_expired(Cert),
-  certs:ocsp_response_not_verified(Cert, R).
-
-
-notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:stapled_ocsp_response_valid(Cert),
-  certs:stapled_ocsp_response_verified(Cert),
-  certs:stapled_ocsp_response_not_expired(Cert),
-  certs:ocsp_response_expired(Cert, R).
 
 checkKeyUsage(Cert) :-
   std:isCA(Cert),
