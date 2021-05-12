@@ -10,8 +10,11 @@ SimpleFields = (
     "NotBefore",
     "NotAfter",
     "CommonName",
+    "SanExt",
+    "SanCritical",
     "San",
     "Issuer",
+    "SignatureAlgorithm",
     "BasicConstraintsExt",
     "BasicConstraintsCritical",
     "IsCA",
@@ -20,6 +23,14 @@ SimpleFields = (
     "KeyUsageCritical",
     "ExtendedKeyUsageExt",
     "ExtendedKeyUsageCritical",
+    "StapledOcspValid",
+    "StapledOcspVerified",
+    "StapledOcspExpired",
+    "OcspResponder",
+    "OcspValid",
+    "OcspVerified",
+    "OcspExpired",
+    "OcspStatus",
 )
 ListFields = (
     "SubjectiveAlternativeNames",
@@ -46,39 +57,56 @@ def topo_sort(nodes, adj):
 
 
 ########### Transformation methods #############################################
-def fix_head_clause(head_clause, to_remove, to_put):
+def fix_head_clause(rule, to_remove, to_put):
+    head_clause = rule["head_clause"]
     if type(head_clause["terms"]) != set:
         terms = map(lambda t: next(iter(t.values()))[0], head_clause["terms"])
         head_clause["terms"] = set(terms)
+    for rem in to_remove or {"Cert"}:
         try:
-            head_clause["terms"].remove(to_remove)
+            head_clause["terms"].remove(rem)
         except KeyError:
             pass
-    head_clause["terms"].add(to_put)
+    head_clause["terms"].update(to_put)
 
 
 def fix_rule(rule):
+    added = set()
+    removed = set()
     for i, clause in enumerate(rule["clauses"]):
+        if type(clause) == str:
+            continue
         if (
             len(clause["predicate"]["atoms"]) == 2
             and clause["predicate"]["atoms"][0] == "certs"
         ):
-            container = clause["predicate"]["atoms"][0]
             field = clause["predicate"]["atoms"][1]
             field = field[0].upper() + field[1:]
-            print(clause)
             value = next(iter(clause["terms"][1].values()))[0]
-            # value = clause["terms"][1]["atoms"][0]
+            container = next(iter(clause["terms"][0].values()))[0]
+            removed.add(container)
             if field in SimpleFields:
-                fix_head_clause(rule["head_clause"], container, field)
                 rule["clauses"][i] = f"{field} = {value}"
+                added.add(field)
             elif field in ListFields:
-                fix_head_clause(rule["head_clause"], container, field)
                 if value == "none":
                     rule["clauses"][i] = f"{field} = []"
                 else:
                     rule["clauses"][i] = f"member({value}, {field})"
+                added.add(field)
+    return removed, added
 
+def fix_calls(key, replace_clause, nodes, adj, added):
+    for pred in adj[key]:
+        for rule_to_fix in nodes[pred]:
+            for i, clause in enumerate(rule_to_fix["clauses"]):
+                if type(clause) != str and key == ":".join(clause["predicate"]["atoms"]):
+                    rule_to_fix["clauses"][i] = replace_clause
+                
+            fix_head_clause(rule_to_fix, None, added)
+            key = ":".join(rule_to_fix["head_clause"]["predicate"]["atoms"])
+            fix_calls(key, dump_clause(rule_to_fix["head_clause"]), nodes, adj, added)
+     
 
 ########### Print methods ######################################################
 def dump_clause(clause):
@@ -88,7 +116,7 @@ def dump_clause(clause):
         terms = clause["terms"]
     else:
         terms = map(lambda t: next(iter(t.values()))[0], clause["terms"])
-    return "".join([":".join(clause["predicate"]["atoms"]), "(", ",".join(terms), ")"])
+    return f'{":".join(clause["predicate"]["atoms"])}({", ".join(sorted(terms))})'
 
 
 def dump_rule(rule):
@@ -141,7 +169,7 @@ prolog = OneOrMore(sentence)
 ########### Transformation #####################################################
 if __name__ == "__main__":
     # read input file
-    # sys.argv = ["", "~/acc-engine/datalog/impute/input.pl"]
+    # sys.argv = ["", "datalog/impute/input.pl"]
     with open(sys.argv[1]) as f:
         toparse = comment.transformString(f.read())
 
@@ -153,19 +181,34 @@ if __name__ == "__main__":
     for rule in code["rules"]:
         nodes[":".join(rule["head_clause"]["predicate"]["atoms"])].append(rule)
 
-    adj = defaultdict(list)
+    dep = defaultdict(set)
+    dep_rev = defaultdict(set)
     for a, rules in nodes.items():
         for rule in rules:
             for b in rule["clauses"]:
                 b = ":".join(b["predicate"]["atoms"])
-                if b in nodes:
-                    adj[b].append(a)
+                if b in nodes and a != b:
+                    dep[a].add(b)
+                    dep_rev[b].add(a)
 
-    sorted_preds = topo_sort(nodes, adj)
+    sorted_preds = topo_sort(nodes, dep)
 
     # fix rules
-    for pred in sorted_preds:
+    for i, pred in enumerate(sorted_preds):
+        added = set()
+        removed = set()
         for rule in nodes[pred]:
-            fix_rule(rule)
+            rem, add = fix_rule(rule)
+            added.update(add)
+            removed.update(rem)
+
+        for rule in nodes[pred]:
+            fix_head_clause(rule, removed, added)
+
+        if added:
+            rule = next(iter(nodes[pred]))
+            key = ":".join(rule["head_clause"]["predicate"]["atoms"])
+            fix_calls(key, dump_clause(rule["head_clause"]), nodes, dep_rev, added)
+        for rule in nodes[pred]:
             print(dump_rule(rule))
             print()

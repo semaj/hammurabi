@@ -310,129 +310,6 @@ std:descendant(Cert, Y):-
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-% extended validation cert
-% recognized EV policy OID clause
-ev:isEV(Cert) :-
-    certs:certificatePoliciesExt(Cert, true),
-    certs:certificatePolicies(Cert, Oid), 
-    ev:evPolicyOid(Oid, CN, C, L, ST, O),
-    ev:directDescendant(Cert, P),
-    ev:isEVIntermediate(P, Oid).
-
-% extended validation intermediate cert
-% root clause
-ev:isEVIntermediate(Cert, Oid) :-
-    std:isRoot(Cert),
-    certs:serialNumber(Cert, Serial),
-    ev:evPolicyOid(Oid, Serial).
-
-% chain clause: matching EV policy OID
-ev:isEVIntermediate(Cert, Oid) :-
-    certs:certificatePoliciesExt(Cert, true),
-    certs:certificatePolicies(Cert, Oid),
-    ev:directDescendant(Cert, P),
-    ev:isEVIntermediate(P, Oid).
-
-% chain clause: matching anyPolicy OID
-ev:isEVIntermediate(Cert, Oid) :-
-    certs:certificatePoliciesExt(Cert, true),
-    ev:anyPolicyOid(AnyPolicyOid),
-    certs:certificatePolicies(Cert, AnyPolicyOid),
-    ev:directDescendant(Cert, P),
-    ev:isEVIntermediate(P, Oid).
-
-
-% body copied from std:descendant, only want direct parents
-% TODO: is there a better way?
-ev:directDescendant(Cert, Y):-
-    certs:issuer(Cert, Y),
-    ext:unequal(Cert, Y).
-
-% The anyPolicy OID, usable by intermediates
-ev:anyPolicyOid("2.5.29.32.0").
-
-% all recognized EV policy OIDs
-% maps ev policy OIDs to root cert subject info
-% ev:evPolicyOid(Oid, CN, C, L, ST, O).
-% Replace subject with serial number here
-ev:evPolicyOid("1.3.6.1.4.1.6334.1.100.1", "Cybertrust Global Root","","","","Cybertrust, Inc").
-ev:evPolicyOid("2.16.756.1.89.1.2.1.1", "SwissSign Gold CA - G2","CH","","","SwissSign AG").
-ev:evPolicyOid("2.16.840.1.114404.1.1.2.4.1", "XRamp Global Certification Authority","US","","","XRamp Security Services Inc").
-ev:evPolicyOid("2.16.840.1.114404.1.1.2.4.1", "SecureTrust CA","US","","","SecureTrust Corporation").
-ev:evPolicyOid("2.16.840.1.114404.1.1.2.4.1", "Secure Global CA","US","","","SecureTrust Corporation").
-ev:evPolicyOid("1.3.6.1.4.1.6449.1.2.1.5.1", "COMODO ECC Certification Authority","GB","Salford","Greater Manchester","COMODO CA Limited").
-ev:evPolicyOid("1.3.6.1.4.1.6449.1.2.1.5.1", "COMODO Certification Authority","GB","Salford","Greater Manchester","COMODO CA Limited").
-ev:evPolicyOid("2.16.840.1.114413.1.7.23.3", "","US","","","The Go Daddy Group, Inc."). % no matching root cert
-ev:evPolicyOid("2.16.840.1.114413.1.7.23.3", "Go Daddy Root Certificate Authority - G2","US","Scottsdale","Arizona","GoDaddy.com, Inc."). % no matching root cert
-ev:evPolicyOid("2.16.840.1.114414.1.7.23.3", "","US","","","Starfield Technologies, Inc."). % no matching root cert
-ev:evPolicyOid("2.16.840.1.114414.1.7.23.3", "Starfield Root Certificate Authority - G2","US","Scottsdale","Arizona","Starfield Technologies, Inc"). % no matching root cert
-ev:evPolicyOid("2.16.840.1.114412.2.1", "DigiCert High Assurance EV Root CA","US","","","DigiCert Inc").
-ev:evPolicyOid("1.3.6.1.4.1.8024.0.2.100.1.2", "QuoVadis Root CA 2","BM","","","QuoVadis Limited").
-ev:evPolicyOid("1.3.6.1.4.1.782.1.2.1.8.1", "Network Solutions Certificate Authority","US","","","Network Solutions L.L.C.").
-ev:evPolicyOid("2.16.840.1.114028.10.1.2", "Entrust Root Certification Authority","US","","","Entrust, Inc.").
-ev:evPolicyOid("2.16.840.1.114028.10.1.2", "Entrust Root Certification Authority - G4","US","","","Entrust, Inc.").
-ev:evPolicyOid("2.23.140.1.1", "GlobalSign Root CA","BE","","","GlobalSign nv-sa").
-ev:evPolicyOid("2.23.140.1.1", "GlobalSign","","","","GlobalSign"). % multiple matching root certs
-ev:evPolicyOid("2.16.578.1.26.1.3.3", "Buypass Class 3 Root CA","NO","","","Buypass AS-983163327").
-ev:evPolicyOid("1.3.6.1.4.1.17326.10.14.2.1.2", "Chambers of Commerce Root - 2008","EU","Madrid (see current address at www.camerfirma.com/address)","","AC Camerfirma S.A.").
-ev:evPolicyOid("1.3.6.1.4.1.34697.2.1", "AffirmTrust Commercial","US","","","AffirmTrust").
-ev:evPolicyOid("1.3.6.1.4.1.34697.2.2", "AffirmTrust Networking","US","","","AffirmTrust").
-ev:evPolicyOid("1.3.6.1.4.1.34697.2.3", "AffirmTrust Premium","US","","","AffirmTrust").
-ev:evPolicyOid("1.3.6.1.4.1.34697.2.4", "AffirmTrust Premium ECC","US","","","AffirmTrust").
-ev:evPolicyOid("1.2.616.1.113527.2.5.1.1", "Certum Trusted Network CA","PL","","","Unizeto Technologies S.A.").
-ev:evPolicyOid("1.2.616.1.113527.2.5.1.1", "Certum Trusted Network CA 2","PL","","","Unizeto Technologies S.A.").
-ev:evPolicyOid("1.3.6.1.4.1.14777.6.1.1", "Izenpe.com","ES","","","IZENPE S.A.").
-ev:evPolicyOid("1.3.6.1.4.1.14777.6.1.2", "Izenpe.com","ES","","","IZENPE S.A.").
-ev:evPolicyOid("1.3.6.1.4.1.7879.13.24.1", "T-TeleSec GlobalRoot Class 3","DE","","","T-Systems Enterprise Services GmbH").
-ev:evPolicyOid("1.3.6.1.4.1.40869.1.1.22.3", "TWCA Root Certification Authority","TW","","","TAIWAN-CA").
-ev:evPolicyOid("1.3.6.1.4.1.4788.2.202.1", "D-TRUST Root Class 3 CA 2 EV 2009","DE","","","D-Trust GmbH").
-ev:evPolicyOid("1.3.6.1.4.1.13177.10.1.3.10", "Autoridad de Certificacion Firmaprofesional CIF A62634068","ES","","","").
-ev:evPolicyOid("1.3.6.1.4.1.40869.1.1.22.3", "TWCA Global Root CA","TW","","","TAIWAN-CA").
-ev:evPolicyOid("2.16.792.3.0.4.1.1.4", "E-Tugra Certification Authority","TR","Ankara","","E-Tuğra EBG Bilişim Teknolojileri ve Hizmetleri A.Ş.").
-ev:evPolicyOid("1.3.159.1.17.1", "Actalis Authentication Root CA","IT","Milan","","Actalis S.p.A./03358520967").
-ev:evPolicyOid("2.16.840.1.114412.2.1", "DigiCert Assured ID Root G2","US","","","DigiCert Inc").
-ev:evPolicyOid("2.16.840.1.114412.2.1", "DigiCert Assured ID Root G3","US","","","DigiCert Inc").
-ev:evPolicyOid("2.16.840.1.114412.2.1", "DigiCert Global Root G2","US","","","DigiCert Inc").
-ev:evPolicyOid("2.16.840.1.114412.2.1", "DigiCert Global Root G3","US","","","DigiCert Inc").
-ev:evPolicyOid("2.16.840.1.114412.2.1", "DigiCert Trusted Root G4","US","","","DigiCert Inc").
-ev:evPolicyOid("1.3.6.1.4.1.8024.0.2.100.1.2", "QuoVadis Root CA 2 G3","BM","","","QuoVadis Limited").
-ev:evPolicyOid("1.3.6.1.4.1.6449.1.2.1.5.1", "COMODO RSA Certification Authority","GB","Salford","Greater Manchester","COMODO CA Limited").
-ev:evPolicyOid("1.3.6.1.4.1.6449.1.2.1.5.1", "USERTrust RSA Certification Authority","US","Jersey City","New Jersey","The USERTRUST Network").
-ev:evPolicyOid("1.3.6.1.4.1.6449.1.2.1.5.1", "USERTrust ECC Certification Authority","US","Jersey City","New Jersey","The USERTRUST Network").
-ev:evPolicyOid("2.16.840.1.114028.10.1.2", "Entrust.net Certification Authority (2048)","","","","Entrust.net").
-ev:evPolicyOid("2.16.528.1.1003.1.2.7", "Staat der Nederlanden EV Root CA","NL","","","Staat der Nederlanden").
-ev:evPolicyOid("2.16.840.1.114028.10.1.2", "Entrust Root Certification Authority - G2","US","","","Entrust, Inc.").
-ev:evPolicyOid("2.16.840.1.114028.10.1.2", "Entrust Root Certification Authority - EC1","US","","","Entrust, Inc.").
-ev:evPolicyOid("2.16.156.112554.3", "CFCA EV ROOT","CN","","","China Financial Certification Authority").
-ev:evPolicyOid("1.2.392.200091.100.721.1", "","JP","","","SECOM Trust Systems CO.,LTD."). % no matching root cert
-ev:evPolicyOid("2.16.756.5.14.7.4.8", "OISTE WISeKey Global Root GB CA","CH","","","WISeKey").
-ev:evPolicyOid("2.23.140.1.1", "Amazon Root CA 1","US","","","Amazon").
-ev:evPolicyOid("2.23.140.1.1", "Amazon Root CA 2","US","","","Amazon").
-ev:evPolicyOid("2.23.140.1.1", "Amazon Root CA 3","US","","","Amazon").
-ev:evPolicyOid("2.23.140.1.1", "Amazon Root CA 4","US","","","Amazon").
-ev:evPolicyOid("2.23.140.1.1", "Starfield Services Root Certificate Authority - G2","US","Scottsdale","Arizona","Starfield Technologies, Inc."). % no matching root cert
-ev:evPolicyOid("1.2.156.112559.1.1.6.1", "GDCA TrustAUTH R5 ROOT","CN","","","GUANG DONG CERTIFICATE AUTHORITY CO.,LTD.").
-ev:evPolicyOid("2.23.140.1.1", "SSL.com EV Root Certification Authority ECC","US","Houston","Texas","SSL Corporation").
-ev:evPolicyOid("2.23.140.1.1", "SSL.com EV Root Certification Authority RSA R2","US","Houston","Texas","SSL Corporation").
-ev:evPolicyOid("2.23.140.1.1", "UCA Extended Validation Root","CN","","","UniTrust").
-ev:evPolicyOid("2.23.140.1.1", "Hongkong Post Root CA 3","HK","Hong Kong","Hong Kong","Hongkong Post").
-ev:evPolicyOid("2.23.140.1.1", "emSign Root CA - G1","IN","","","eMudhra Technologies Limited").
-ev:evPolicyOid("2.23.140.1.1", "emSign ECC Root CA - G3","IN","","","eMudhra Technologies Limited").
-ev:evPolicyOid("2.23.140.1.1", "emSign Root CA - C1","US","","","eMudhra Inc").
-ev:evPolicyOid("2.23.140.1.1", "emSign ECC Root CA - C3","US","","","eMudhra Inc").
-
-
 onecrl:onecrl("D2D1DA9C14F62D97465F337D26788C079EE5450A42D3DADB00AD0EB20F18EC49").
 onecrl:onecrl("F66FB7A934E56ECACC65CCB73E6C2BE75EC58B8DFE35564B3D6741032AF8AAF6").
 onecrl:onecrl("859D8C0FE55EDAF50D54C90C28772FD52CA106B785EDA0380DFC3A10CECB21F5").
@@ -1715,42 +1592,36 @@ firefox:notRevoked(Cert) :-
   \+firefox:ocspRevoked(Cert).
 
 firefox:stapledResponseError(Cert) :-
-  certs:stapled_ocsp_response_invalid(Cert).
+  certs:stapledOcspValid(Cert, false).
 
 firefox:stapledResponseError(Cert) :-
-  certs:stapled_ocsp_response_expired(Cert).
+  certs:stapledOcspExpired(Cert, true).
 
 firefox:stapledResponseError(Cert) :-
-  certs:stapled_ocsp_response_not_verified(Cert).
+  certs:stapledOcspVerified(Cert, false).
 
 firefox:ocspResponseError(Cert) :-
-  certs:ocsp_response_expired(Cert, R).
+  certs:ocspExpired(Cert, R, true).
 
 firefox:ocspResponseError(Cert) :-
-  certs:ocsp_response_invalid(Cert, R).
+  certs:ocspValid(Cert, R, false).
 
 firefox:ocspResponseError(Cert) :-
-  certs:ocsp_response_not_verified(Cert, R).
+  certs:ocspVerified(Cert, R, false).
 
 firefox:ocspRevoked(Cert) :-
-  certs:ocsp_response_valid(Cert, Responder),
-  certs:ocsp_response_verified(Cert, Responder),
-  certs:ocsp_response_not_expired(Cert, Responder),
-  certs:ocsp_status_revoked(Cert, Responder).
+  certs:ocspStatus(Cert, Responder, revoked).
 
 firefox:ocspRevoked(Cert) :-
-  certs:ocsp_response_valid(Cert, Responder),
-  certs:ocsp_response_verified(Cert, Responder),
-  certs:ocsp_response_not_expired(Cert, Responder),
-  certs:ocsp_status_unknown(Cert, Responder).
+  certs:ocspStatus(Cert, Responder, unknown).
 
 firefox:ocspRevoked(Cert) :-
-  certs:no_ocsp_responders(Cert),
-  firefox:stapledResponseError(Cert).
+  firefox:stapledResponseError(Cert),
+  \+certs:ocspResponder(Cert, R).
 
 firefox:ocspRevoked(Cert) :-
   ev:isEV(Cert),
-  certs:no_ocsp_responders(Cert).
+  \+certs:ocspResponder(Cert, R).
 
 firefox:ocspRevoked(Cert) :-
   firefox:ocspResponseError(Cert),
@@ -1771,55 +1642,6 @@ firefox:shortLived(Cert) :-
 firefox:notInOneCRL(Cert) :-
   certs:fingerprint(Cert, Fingerprint),
   \+onecrl:onecrl(Fingerprint).
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  certs:no_ocsp_responders(Cert).
-
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  certs:ocsp_response_valid(Cert, Responder),
-  certs:ocsp_response_verified(Cert, Responder),
-  certs:ocsp_response_not_expired(Cert, Responder),
-  certs:ocsp_status_good(Cert, Responder).
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:no_stapled_ocsp_response(Cert),
-  certs:ocsp_response_invalid(Cert, R).
-
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:no_stapled_ocsp_response(Cert),
-  certs:ocsp_response_not_verified(Cert, R).
-
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:no_stapled_ocsp_response(Cert),
-  certs:ocsp_response_expired(Cert, R).
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:stapled_ocsp_response_valid(Cert),
-  certs:stapled_ocsp_response_verified(Cert),
-  certs:stapled_ocsp_response_not_expired(Cert),
-  certs:ocsp_response_invalid(Cert, R).
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:stapled_ocsp_response_valid(Cert),
-  certs:stapled_ocsp_response_verified(Cert),
-  certs:stapled_ocsp_response_not_expired(Cert),
-  certs:ocsp_response_not_verified(Cert, R).
-
-
-firefox:notOCSPRevokedCheck(Cert) :-
-  \+ev:isEV(Cert),
-  certs:stapled_ocsp_response_valid(Cert),
-  certs:stapled_ocsp_response_verified(Cert),
-  certs:stapled_ocsp_response_not_expired(Cert),
-  certs:ocsp_response_expired(Cert, R).
 
 firefox:checkKeyUsage(Cert) :-
   std:isCA(Cert),
