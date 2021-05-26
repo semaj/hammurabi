@@ -185,8 +185,12 @@ prolog = OneOrMore(sentence)
 if __name__ == "__main__":
     # read input file
     # sys.argv = ["", "./datalog/impute/input.pl"]
-    with open(sys.argv[1]) as f:
-        toparse = comment.transformString(f.read())
+    toparse = []
+    for file in sys.argv[1:]:
+        with open(file) as f:
+            toparse.append(comment.transformString(f.read()))
+
+    toparse = "\n".join(toparse)
 
     code = prolog.parseString(toparse, parseAll=True).asDict()
     # exit()
