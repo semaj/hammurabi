@@ -153,7 +153,8 @@ impl PrologCert<'_> {
     pub fn emit_extensions(&self, hash: &String) -> String {
         let mut subject_key_identifier: bool = false;
         let mut certificate_policies: bool = false;
-
+        let mut acc_assertions: bool = false;
+        
         let mut exts = self
             .inner
             .extensions
@@ -161,6 +162,7 @@ impl PrologCert<'_> {
             .filter_map(|(oid, ext)| match oid.to_id_string().as_str() {
                 "2.5.29.14" => { subject_key_identifier = true; Some(extensions::emit_subject_key_identifier(hash, &ext)) },
                 "2.5.29.32" => { certificate_policies = true; Some(extensions::emit_certificate_policies(hash, &ext)) },
+                "1.2.3.4" => { acc_assertions = true; Some(extensions::emit_acc_assertions(hash, &ext)) },
                 _ => None
             })
             .collect::<Vec<String>>();
@@ -171,8 +173,10 @@ impl PrologCert<'_> {
         exts.push(self.emit_subject_alternative_names(hash));
         if !subject_key_identifier { exts.push(format!("subjectKeyIdentifierExt({}, false).", hash)) }
         if !certificate_policies { exts.push(format!("certificatePoliciesExt({}, false).", hash)) }
+        if !acc_assertions { exts.push(format!("assertionCarryingCertificateExt({}, false).", hash)) }
         exts.push(self.emit_name_constraints(hash));
         exts.push(self.emit_policy_extras(hash));
+        
 
         format!("{}\n", exts.join("\n"))
     }

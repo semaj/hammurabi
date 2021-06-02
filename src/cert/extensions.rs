@@ -56,3 +56,17 @@ pub fn emit_certificate_policies(hash: &String, extension: &X509Extension) -> St
         }
     }
 }
+
+pub fn emit_acc_assertions(hash: &String, extension: &X509Extension) -> String {
+    match parse_der(extension.value) {
+        Ok(v) => {
+            let assertions: String = match std::str::from_utf8(v.1.as_slice().unwrap()) {
+                Ok(objects) => format!("{}", objects),
+                Err(e) => format!("{:?}", e),
+            };
+
+            str::replace(&assertions, "!!!", hash)
+        }
+        Err(_) => format!("extensionExists({}, \"Assertion\", false).", hash)
+    }
+}
