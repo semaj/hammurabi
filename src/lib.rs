@@ -21,8 +21,9 @@ const DATALOG_GEN_DIR: &'static str = "datalog/gen";
 pub fn verify_prolog(
     chain: &mut Vec<X509>,
     dns_name: &str,
-    stapled_ocsp_response: Option<&[u8]>,
+    _stapled_ocsp_response: Option<&[u8]>,
     check_ocsp: bool,
+    staple: bool,
 ) -> Result<(), Error> {
     let start = Instant::now();
 
@@ -85,6 +86,9 @@ pub fn verify_prolog(
     let separator = "-----END CERTIFICATE-----";
     let root_chain = fs::read_to_string("assets/roots.pem").unwrap();
     let mut found_issuer = false;
+    if chain.len() == 0 {
+        chain.push(leaf.clone());
+    }
     for part in root_chain.split(separator) {
         if part.trim().is_empty() {
             continue;
@@ -93,6 +97,7 @@ pub fn verify_prolog(
         let cert_pem = [part, separator].join("");
         let temp = parse_x509_pem(cert_pem.as_bytes()).unwrap().1.contents;
         let root_x509 = X509::from_der(&temp).unwrap();
+        //println!("ROOT: {:?}", root_x509.subject_name());
         for intermediate_x509 in chain.iter() {
             root_fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
@@ -121,29 +126,31 @@ pub fn verify_prolog(
     if !found_issuer {
         eprintln!("NO ISSUER FOUND");
     }
-    let issuer_x509 = &chain[0];
-    let subject_x509 = leaf;
-   
-
     let store = store_builder.build();
+    let subject_x509 = leaf;
 
-    repr.push_str(
-        &revocation::ocsp_stapling(
-            stapled_ocsp_response,
-            &store,
-            &subject_x509,
-            issuer_x509,
-            &stack,
-        )
-        .join("\n"),
-    );
-    repr.push_str("\n\n");
+    //let issuer_x509 = &chain[0];
+    //repr.push_str(
+        //&revocation::ocsp_stapling(
+            //stapled_ocsp_response,
+            //&store,
+            //&subject_x509,
+            //issuer_x509,
+            //&stack,
+        //)
+        //.join("\n"),
+    //);
+    //repr.push_str("\n\n");
 
     let mut subject_ref = subject_x509.as_ref();
     let mut cert_index = 0;
     for intermediate_ref in stack.iter() {
+        let mut should_staple = staple;
+        if cert_index != 0 {
+            should_staple = false;
+        }
         repr.push_str(
-            &revocation::check_ocsp(cert_index, &store, subject_ref, intermediate_ref, &stack, check_ocsp)
+            &revocation::check_ocsp(cert_index, &store, subject_ref, intermediate_ref, &stack, check_ocsp, should_staple)
                 .join("\n"),
         );
         repr.push_str("\n\n");
@@ -152,7 +159,7 @@ pub fn verify_prolog(
     }
 
     let elapsed = start.elapsed().as_millis();
-    println!("Rust/OpenSSL execution time (ms): {}", elapsed);
+    println!("Rust/OpenSSL execution time: {}ms", elapsed);
 
     let key = "JOBINDEX";
     let jobindex = env::var(key).unwrap_or("".to_string());

@@ -11,3 +11,4 @@ certViolatesNameConstraint(Cert):-
 verified(Cert) :-
   \+certViolatesNameConstraint(Cert).
 
+% Query: verified(cert_0)?

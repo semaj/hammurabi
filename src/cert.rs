@@ -5,6 +5,7 @@ use x509_parser::x509::X509Version;
 use x509_parser::parse_x509_certificate;
 use x509_parser::extensions::GeneralName;
 use std::net::Ipv4Addr;
+use std::fs;
 
 mod extensions;
 
@@ -154,16 +155,23 @@ impl PrologCert<'_> {
         let mut subject_key_identifier: bool = false;
         let mut certificate_policies: bool = false;
         let mut acc_assertions: bool = false;
-        
+
         let mut exts = self
             .inner
             .extensions
             .iter()
-            .filter_map(|(oid, ext)| match oid.to_id_string().as_str() {
+            .filter_map(|(oid, ext)|
+                match oid.to_id_string().as_str() {
                 "2.5.29.14" => { subject_key_identifier = true; Some(extensions::emit_subject_key_identifier(hash, &ext)) },
                 "2.5.29.32" => { certificate_policies = true; Some(extensions::emit_certificate_policies(hash, &ext)) },
-                "1.2.3.4" => { acc_assertions = true; Some(extensions::emit_acc_assertions(hash, &ext)) },
-                _ => None
+                "1.3.3.7" => {
+                    fs::write("datalog/static/tmp.pl", extensions::emit_acc_assertions(hash, &ext)).unwrap();
+                    acc_assertions = true;
+                    None
+                },
+                _ => {
+                    None
+                }
             })
             .collect::<Vec<String>>();
 
@@ -176,7 +184,7 @@ impl PrologCert<'_> {
         if !acc_assertions { exts.push(format!("assertionCarryingCertificateExt({}, false).", hash)) }
         exts.push(self.emit_name_constraints(hash));
         exts.push(self.emit_policy_extras(hash));
-        
+
 
         format!("{}\n", exts.join("\n"))
     }
@@ -343,7 +351,7 @@ impl PrologCert<'_> {
                 answer.push(format!("extendedKeyUsageExt({}, true).", hash));
                 answer.push(format!("extendedKeyUsageCritical({}, {}).", hash, is_critical));
                 let prefix: String = format!("extendedKeyUsage({},", hash);
-                if eku.server_auth { 
+                if eku.server_auth {
                 answer.push(format!("{} serverAuth).", prefix));
                 }
                 if eku.client_auth {
@@ -369,7 +377,7 @@ impl PrologCert<'_> {
                     answer.push(format!("{} hasOther).", prefix));
                 }
             }
-            None => answer.push(format!("extendedKeyUsageExt({}, false).", hash)) 
+            None => answer.push(format!("extendedKeyUsageExt({}, false).", hash))
         }
         return answer.join("\n");
     }

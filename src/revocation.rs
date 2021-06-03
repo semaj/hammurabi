@@ -14,6 +14,7 @@ pub fn check_ocsp(
     issuer: &X509Ref,
     certs: &Stack<X509>,
     check_ocsp: bool,
+    staple: bool,
 ) -> Vec<String> {
     let mut output_facts: Vec<String> = Vec::new();
     let hash = format!("cert_{}", cert_index);
@@ -59,7 +60,6 @@ pub fn check_ocsp(
             return output_facts;
         }
     };
-
     let elapsed = before.elapsed().as_millis();
     eprintln!("OCSP request time: {}ms", elapsed);
     let bytes = match res.bytes() {
@@ -70,6 +70,9 @@ pub fn check_ocsp(
             return output_facts;
         }
     };
+    if staple {
+        return ocsp_stapling(Some(&bytes), &store, subject, issuer, certs);
+    }
     let ocsp_response_result = OcspResponse::from_der(&bytes);
     if ocsp_response_result.is_err() {
         output_facts.push(format!("ocspValid({}, false).", hash));
@@ -135,8 +138,8 @@ pub fn check_ocsp(
 pub fn ocsp_stapling(
     stapled_ocsp_response: Option<&[u8]>,
     store: &X509Store,
-    subject: &X509,
-    issuer: &X509,
+    subject: &X509Ref,
+    issuer: &X509Ref,
     certs: &Stack<X509>,
 ) -> Vec<String> {
     let hash = "cert_0".to_string();

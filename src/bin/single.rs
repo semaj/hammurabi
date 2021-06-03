@@ -11,7 +11,7 @@ Verifies certificate at <path> for host <hostname>.
 <path> should be an absolute path, because rustls has some silly behavior regarding paths.
 
 Usage:
-  single [options] <path> <hostname> [--ocsp]
+  single [options] <path> <hostname> [--ocsp] [--staple]
   single (--version | -v)
   single (--help | -h)
 
@@ -25,6 +25,7 @@ struct Args {
     arg_path: String,
     arg_hostname: String,
     flag_ocsp: bool,
+    flag_staple: bool,
 }
 
 fn main() {
@@ -37,7 +38,7 @@ fn main() {
     let chain_raw = fs::read(&args.arg_path).unwrap();
     let mut chain = X509::stack_from_pem(&chain_raw).unwrap();
     let domain = &args.arg_hostname.to_lowercase();
-    match acclib::verify_prolog(&mut chain, &domain, None, args.flag_ocsp) {
+    match acclib::verify_prolog(&mut chain, &domain, None, args.flag_ocsp, args.flag_staple) {
         Ok(_) => println!("OK"),
         Err(e) => println!("Error: {:?}", e),
     }
