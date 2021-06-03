@@ -32,4 +32,4 @@ File.open("/tmp/tmp.pem", "w") do |f|
   #f.puts(intermediates)
   f.puts(cert.to_pem)
 end
-system("./scripts/custom.sh /tmp/tmp.pem jameslarisch.com tmp")
+system("./scripts/custom.sh /tmp/tmp.pem jameslarisch.com tmp --staple")
