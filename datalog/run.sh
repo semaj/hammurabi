@@ -21,9 +21,10 @@ elif [[ $CLIENT == "firefox" ]]; then
   BROWSER=firefox.pl
   BROWSER_SPECIFIC=onecrl.pl
 else
-  CLIENT="test"
-  BROWSER=test.pl
+  #CLIENT="test"
+  BROWSER=$CLIENT.pl
   BROWSER_SPECIFIC=chrome_env.pl
+  echo $BROWSER
 fi
 
 GEN_FILES="$CHECKS $CERTS"

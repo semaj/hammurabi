@@ -53,7 +53,8 @@ pub fn check_ocsp(
     let before = Instant::now();
     let res = match client.post(&format!("{}", ocsp_uri)).body(req_der.clone()).send() {
         Ok(r) => r,
-        Err(_) => {
+        Err(e) => {
+            eprintln!("OCSP request error: {}", e);
             output_facts.push(format!("ocspValid({}, false).", hash));
             return output_facts;
         }
@@ -80,7 +81,8 @@ pub fn check_ocsp(
             output_facts.push(format!("ocspValid({}, true).", hash));
             basic_response
         }
-        Err(_) => {
+        Err(e) => {
+            eprintln!("OCSP response error: {}, error code: {}", e, ocsp_response.status().as_raw());
             // See: https://tools.ietf.org/html/rfc6960#section-4.2.1 for status codes
             if ocsp_response.status() != OcspResponseStatus::INTERNAL_ERROR
                 && ocsp_response.status() != OcspResponseStatus::TRY_LATER
