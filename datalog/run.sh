@@ -13,6 +13,7 @@ CERTS=certs$JOBINDEX.pl
 DIR=gen/job$JOBINDEX
 mkdir -p $DIR
 rm $DIR/* 2> /dev/null
+gen_start_time=$(date +%s%N)
 
 if [[ $CLIENT == "chrome" ]]; then
   BROWSER=chrome.pl
@@ -47,6 +48,7 @@ done
 
 
 echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > $DIR/query.pl
+echo "Gen execution time: $((($(date +%s%N) - $gen_start_time)/1000000))ms"
 
 start_time=$(date +%s%N)
 $DATALOG $(echo $ARGS) > /dev/null

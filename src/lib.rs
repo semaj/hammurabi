@@ -25,7 +25,8 @@ pub fn verify_prolog(
     check_ocsp: bool,
     staple: bool,
 ) -> Result<(), Error> {
-    let start = Instant::now();
+    let mut translation_time = 0;
+    let mut start = Instant::now();
 
     let mut counter = 0;
     let leaf = chain.remove(0);
@@ -39,9 +40,10 @@ pub fn verify_prolog(
     let mut repr: String = cert.emit_all(&format!("cert_{}", counter));
     let sha256 = hex::encode(leaf.digest(MessageDigest::sha256()).unwrap());
     repr.push_str(&format!(
-        "fingerprint(cert_0, \"{}\").\n",
-        sha256.to_uppercase()
+            "fingerprint(cert_0, \"{}\").\n",
+            sha256.to_uppercase()
     ));
+    translation_time += start.elapsed().as_millis();
 
     let mut root_fingerprints: Vec<String> = Vec::new();
 
@@ -58,6 +60,7 @@ pub fn verify_prolog(
                 return Err(Error::OpenSSLFailed);
             }
         }
+        start = Instant::now();
         recursive_subject = intermediate_x509.clone();
 
         let intermediate_der = intermediate_x509.to_der().unwrap();
@@ -69,15 +72,16 @@ pub fn verify_prolog(
         };
         repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
         repr.push_str(&format!(
-            "fingerprint(cert_{}, \"{}\").\n",
-            counter,
-            hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
+                "fingerprint(cert_{}, \"{}\").\n",
+                counter,
+                hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
         ));
         repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter - 1, counter));
         stack.push(intermediate_x509.clone()).unwrap();
         // We just assume (for now) that intermediates
         // do not have stapled ocsp responses.
         repr.push_str(&format!("no_stapled_ocsp_response(cert_{}).\n", counter));
+        translation_time += start.elapsed().as_millis();
     }
 
     let mut store_builder = X509StoreBuilder::new().unwrap();
@@ -103,6 +107,7 @@ pub fn verify_prolog(
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
                 counter += 1;
                 found_issuer = true;
+                start = Instant::now();
                 let root_x509_for_stack = X509::from_der(&temp).unwrap();
                 stack.push(root_x509_for_stack).unwrap();
                 repr.push_str(&format!(
@@ -118,6 +123,7 @@ pub fn verify_prolog(
                 };
                 repr.push_str(&v.emit_all(&format!("cert_{}", counter)));
                 repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter - 1, counter));
+                translation_time += start.elapsed().as_millis();
             }
         }
 
@@ -131,14 +137,14 @@ pub fn verify_prolog(
 
     //let issuer_x509 = &chain[0];
     //repr.push_str(
-        //&revocation::ocsp_stapling(
-            //stapled_ocsp_response,
-            //&store,
-            //&subject_x509,
-            //issuer_x509,
-            //&stack,
-        //)
-        //.join("\n"),
+    //&revocation::ocsp_stapling(
+    //stapled_ocsp_response,
+    //&store,
+    //&subject_x509,
+    //issuer_x509,
+    //&stack,
+    //)
+    //.join("\n"),
     //);
     //repr.push_str("\n\n");
 
@@ -151,15 +157,13 @@ pub fn verify_prolog(
         }
         repr.push_str(
             &revocation::check_ocsp(cert_index, &store, subject_ref, intermediate_ref, &stack, check_ocsp, should_staple)
-                .join("\n"),
+            .join("\n"),
         );
         repr.push_str("\n\n");
         subject_ref = intermediate_ref;
         cert_index += 1;
     }
-
-    let elapsed = start.elapsed().as_millis();
-    println!("Rust/OpenSSL execution time: {}ms", elapsed);
+    println!("Translation time: {}ms", translation_time);
 
     let key = "JOBINDEX";
     let jobindex = env::var(key).unwrap_or("".to_string());
@@ -268,7 +272,7 @@ ocsp_response_expired(hack, hack).
 ocsp_status_revoked(hack, hack).
 ocsp_status_unknown(hack, hack).
 ocsp_status_good(hack, hack).\n\n"
-    )
+)
 }
 
 fn emit_env_preamble() -> String {

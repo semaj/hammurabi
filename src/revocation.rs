@@ -2,6 +2,7 @@ use openssl::hash::MessageDigest;
 use openssl::ocsp::{
     OcspCertId, OcspCertStatus, OcspFlag, OcspRequest, OcspResponse, OcspResponseStatus,
 };
+use std::{fs, env};
 use openssl::stack::Stack;
 use openssl::x509::store::X509Store;
 use openssl::x509::{X509Ref, X509};
@@ -26,9 +27,27 @@ pub fn check_ocsp(
     if responders.len() == 0 {
         return output_facts;
     }
-
-    let cert_id = OcspCertId::from_cert(MessageDigest::sha1(), subject, issuer).unwrap();
-    let verify_cert_id = OcspCertId::from_cert(MessageDigest::sha1(), subject, issuer).unwrap();
+    let mock = env::var("MOCK").unwrap_or("".to_string());
+    //let ints = fs::read("/tmp/real-issuer.pem").unwrap_or("".to_string());
+    let chain;
+    let mut stack;
+    let mut actual_subject = subject;
+    let mut actual_issuer = issuer;
+    let mut actual_certs = certs;
+    if mock == "true" {
+        // This is needed because when testing our own "frankencerts",
+        // OCSP requests will be invalid. We need to use the real
+        // subject and issuer
+        let ints = fs::read("/tmp/real.pem").unwrap();
+        chain = X509::stack_from_pem(&ints).unwrap();
+        actual_subject = &chain[0];
+        actual_issuer = &chain[1];
+        stack = Stack::new().unwrap();
+        stack.push(chain[1].clone()).unwrap();
+        actual_certs = &stack;
+    }
+    let cert_id = OcspCertId::from_cert(MessageDigest::sha1(), actual_subject, actual_issuer).unwrap();
+    let verify_cert_id = OcspCertId::from_cert(MessageDigest::sha1(), actual_subject, actual_issuer).unwrap();
 
     let mut req = OcspRequest::new().unwrap();
     req.add_id(cert_id).unwrap();
@@ -61,7 +80,7 @@ pub fn check_ocsp(
         }
     };
     let elapsed = before.elapsed().as_millis();
-    eprintln!("OCSP request time: {}ms", elapsed);
+    println!("OCSP request time: {}ms", elapsed);
     let bytes = match res.bytes() {
         Ok(b) => b,
         Err(_) => {
@@ -71,7 +90,7 @@ pub fn check_ocsp(
         }
     };
     if staple {
-        return ocsp_stapling(Some(&bytes), &store, subject, issuer, certs);
+        return ocsp_stapling(Some(&bytes), &store, actual_subject, actual_issuer, actual_certs);
     }
     let ocsp_response_result = OcspResponse::from_der(&bytes);
     if ocsp_response_result.is_err() {
@@ -98,7 +117,7 @@ pub fn check_ocsp(
             return output_facts;
         }
     };
-    match ocsp_basic_response.verify(certs.as_ref(), store, OcspFlag::empty()) {
+    match ocsp_basic_response.verify(actual_certs.as_ref(), store, OcspFlag::empty()) {
         Ok(_) => output_facts.push(format!("ocspVerified({}, true).", hash)),
         Err(error_stack) => {
             eprintln!("Verification failed for URI {}. Error stack: {}", ocsp_uri, error_stack);
