@@ -72,8 +72,8 @@ isTimeValid(Cert):-
 
 % time validity check. between Lower and Upper
 isTimeValid(Cert):-
-    ext:equal(T, 1618246820),
-    % ext:now(T),
+  % ext:equal(T, 1618246820),
+    ext:now(T),
     certs:notBefore(Cert, Lower),
     certs:notAfter(Cert, Upper),
     ext:larger(T, Lower),
