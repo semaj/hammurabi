@@ -1,6 +1,11 @@
 require 'descriptive_statistics'
 require 'openssl'
 
+# Non-benchmarking Usage:
+# ruby scripts/acc-test.rb <short name of acc script>
+# where <short name of acc script> would be `tmp` corresponding to
+# the datalog file `datalog/static/tmp.pl`.
+
 SCRIPT_NAME = ARGV[0] || "tmp"
 SHOULD_BENCHMARK = ARGV[1] || false
 
