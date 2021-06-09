@@ -1,13 +1,20 @@
 require 'descriptive_statistics'
 require 'openssl'
 
+SCRIPT_NAME = ARGV[0] || "tmp"
+SHOULD_BENCHMARK = ARGV[1] || false
+
 ORIGINAL = "certs/79c40d605e887f46b6cf9089cfadbb76881314ba3fd05ee7b67fe0894503ef2c.pem"
 CA_KEY = "assets/rootCA-key.pem"
 CA = "assets/rootCA.pem"
 NEW = %w(basicConstraints authorityKeyIdentifier subjectKeyIdentifier)
 
-#acc_short = ARGV[0]
-%w(name-constraints fresh-staple lifetime).each do |acc_short|
+if SHOULD_BENCHMARK == "true"
+  accs = %w(name-constraints fresh-staple lifetime)
+else
+  accs = [SCRIPT_NAME]
+end
+accs.each do |acc_short|
 
   puts acc_short
   acc = File.read("datalog/static/#{acc_short}.pl")
@@ -36,16 +43,17 @@ NEW = %w(basicConstraints authorityKeyIdentifier subjectKeyIdentifier)
     f.puts(cert.to_pem)
   end
   system("cp #{ORIGINAL} /tmp/real.pem")
-  #File.open("/tmp/real-issuer.pem", "w") do |f|
-  #f.puts(intermediates)
-  #end
-  #system("./scripts/custom.sh /tmp/tmp.pem jameslarisch.com tmp --staple")
-  translation_times = []
-  datalog_times = []
-  50.times do
-    output = `MOCK=true ./scripts/custom.sh /tmp/tmp.pem jameslarisch.com tmp --staple`
-    datalog_times << output.match(/Datalog execution time: (\d+)ms/)[1].to_i
-    translation_times << output.match(/Translation time: (\d+)ms/)[1].to_i
+
+  if SHOULD_BENCHMARK == "true"
+    translation_times = []
+    datalog_times = []
+    50.times do
+      output = `MOCK=true ./scripts/custom.sh /tmp/tmp.pem jameslarisch.com #{SCRIPT_NAME} --staple`
+      datalog_times << output.match(/Datalog execution time: (\d+)ms/)[1].to_i
+      translation_times << output.match(/Translation time: (\d+)ms/)[1].to_i
+    end
+    puts "#{datalog_times.mean}, #{translation_times.mean}"
+  else
+    system("MOCK=true ./scripts/custom.sh /tmp/tmp.pem jameslarisch.com #{SCRIPT_NAME} --staple")
   end
-  puts "#{datalog_times.mean}, #{translation_times.mean}"
 end
