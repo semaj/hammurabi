@@ -22,4 +22,4 @@ else
 fi
 
 
-$DATALOG -l $LUA_EXTS $DIR/$CHECKS $DIR/env.pl $DIR/std.pl $DIR/$BROWSER $DIR/$CERTS $DIR/$BROWSER_SPECIFIC $DIR/query.pl
+$DATALOG -l $LUA_EXTS $DIR/$CHECKS $DIR/env.pl $DIR/std.pl $DIR/$BROWSER $DIR/$CERTS $DIR/$BROWSER_SPECIFIC $DIR/query.pl $DIR/lifetime.pl $DIR/name-constrains.pl

@@ -8,7 +8,7 @@ certViolatesNameConstraint(Cert):-
   certs:san(Cert, Name),
   \+ext:s_endswith(Name, Suffix).
 
-verified(Cert) :-
+check(Cert) :-
   \+certViolatesNameConstraint(Cert).
 
 % Query: verified(cert_0)?

@@ -12,7 +12,8 @@
     ipToNumber/6,
     hostInNetwork/2,
     basicsWork/1,
-    isCert/1
+    isCert/1,
+    stringMatch/2
 ]).
 
 :- use_module(env).
@@ -151,4 +152,25 @@ descendant(Cert, Y):-
     certs:issuer(Cert, Y),
     ext:unequal(Cert, Z),
     descendant(Z, Y).
+
+% The following functions are taken from zlint
+% specifically the cabf_br tests  
+% but reimplemented using Datalog 
+% See www.github.com/zmap/zlint for more information 
+
+% Checks whether or not the common 
+% name is missing
+caCommonNameMissing(Cert) :- 
+    certs:commonName(Cert, Name),
+    ext:equal(Name, ""). 
+
+% Basic Constraints checks
+% CA bit set
+caIsCa(Cert) :-
+    certs:isCA(Cert, true).
+
+caCrlSignNotSet(Cert) :-  
+    certs:keyUsageExt(Cert, true). 
+
+
 

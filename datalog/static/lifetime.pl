@@ -1,7 +1,7 @@
 % Max validity period (Ballot SC22): 398 days
-maxLifetime(34387200).
+maxLifetime(15000000000).
 
-verified(Cert):-
+check(Cert):-
   maxLifetime(MaxDuration),
   certs:notBefore(Cert, NotBeforeTime),
   certs:notAfter(Certs, NotAfterTime),

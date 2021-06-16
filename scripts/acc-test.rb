@@ -29,8 +29,8 @@ accs.each do |acc_short|
   raw = File.read(ORIGINAL)
   intermediates = raw.split("-----END CERTIFICATE-----\n").reverse.drop(1).reverse.join("-----END CERTIFICATE-----\n") +  "-----END CERTIFICATE-----\n"
   cert = OpenSSL::X509::Certificate.new(raw)
-  cert.not_before = Time.now
-  cert.not_after = Time.now + 365 * 24 * 60 * 60
+  cert.not_before = Time.new(2002)
+  cert.not_after = Time.new(2003)
   cert.issuer = ca.subject
 
   ef = OpenSSL::X509::ExtensionFactory.new
