@@ -39,6 +39,7 @@ impl PrologCert<'_> {
                 self.emit_serial(&hash),
                 self.emit_validity(&hash),
                 self.emit_common_name(&hash),
+                self.emit_country(&hash),
                 // self.emit_subject(&hash),
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
@@ -101,6 +102,19 @@ impl PrologCert<'_> {
             }
         });
         format!("commonName({}, \"{}\").", hash, cn)
+    }
+
+    fn emit_country(&self, hash: &String) -> String { 
+        let mut country: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.6" => {
+                    country = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("country({}, \"{}\").", hash, country)
     }
 
     pub fn emit_validity(&self, hash: &String) -> String {
