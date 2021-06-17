@@ -10,11 +10,11 @@ caKeyUsagePresent(Cert) :-
 	certs:keyUsageExt(Certs, true),
 	certs:keyUsageCritical(Certs, true).
 
-caKeyUsagePresent(Cert) :-
-	\+certs:isCA(Cert).
+%caKeyUsagePresent(Cert) :-
+%	\+certs:isCA(Cert).
 
 %cert policies must be present and not marked critical (39)
-%checkes subCA for certificate policies and uf they are marked critical
+%checkes subCA for certificate policies and if they are marked critical
 subCaCertPoliciesNotMarkedCritical(Cert) :-
 	certs:certificatePoliciesExt(Cert, true),
 	certs:certificatePoliciesCritical(Cert, false).
@@ -40,17 +40,22 @@ rootPathLenNotPresent(Cert) :-
 rootPathLenNotPresent(Cert) :-
 	\+std:isRoot(Cert).
 
+%checks that root certificate extended key usage is not present (24)
+rootExtKeyUseNotPresent(Cert) :-
+	certs:extendedKeyUsageExt(Cert, false).
 
 %rules are tested here
 verified(Cert) :-
 	std:isCert(Cert),
-	rootPathLenNotPresent(Cert).
+	rootExtKeyUseNotPresent(Cert).
+	%caKeyUsagePresent(Cert).
+	%rootPathLenNotPresent(Cert).
 
 	%basicConstraintsCritical(Cert).
 	%certs:isCA(Cert).
 	%subCaCertPoliciesNotMarkedCritical(Cert).
 
-	%caKeyUsagePresent(Cert).
+	
 	%nameConstraintEmpty(Cert).
 
 	%certs:san(Cert, Name),
