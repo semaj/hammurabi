@@ -5,7 +5,7 @@
 
 %checks if rule is applicable
 caKeyUsageCriticalApplies(Cert) :-
-	certs:isCA(Cert).
+	certs:isCA(Cert, true).
 
 %if not applicable pass
 caKeyUsageCritical(Cert) :-
@@ -21,7 +21,7 @@ caKeyUsageCritical(Cert) :-
 %cert policies must be present and not marked critical (39)
 %checkes subCA for certificate policies and if they are marked critical
 isSubCA(Cert) :-
-	certs:isCA(Cert),
+	certs:isCA(Cert, true),
 	\+std:isRoot(Cert).
 
 subCaCertPoliciesNotMarkedCritical(Cert) :-
@@ -35,7 +35,7 @@ subCaCertPoliciesNotMarkedCritical(Cert) :-
 %Root ca: basic constraint must appear as critical extension (18)
 %Checks that root CA basic constraints are critical
 rootApplies(Cert) :-
-	certs:isCA(Cert),
+	certs:isCA(Cert, true),
 	std:isRoot(Cert).
 
 basicConstraintsCritical(Cert) :-
@@ -64,9 +64,9 @@ rootExtKeyUseNotPresent(Cert) :-
 %rules are tested here
 verified(Cert) :-
 	std:isCert(Cert),
-	%caKeyUsageCritical(Cert).
+	caKeyUsageCritical(Cert).
 
-	rootExtKeyUseNotPresent(Cert).
+	%rootExtKeyUseNotPresent(Cert).
 	%rootPathLenNotPresent(Cert).
 	%basicConstraintsCritical(Cert).
 	%certs:isCA(Cert).
