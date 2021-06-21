@@ -24,25 +24,31 @@ isSubCA(Cert) :-
 	certs:isCA(Cert, true),
 	\+std:isRoot(Cert).
 
+subCaCertPoliciesExtPresent(Cert) :-
+	certs:certificatePoliciesExt(Cert, true).
+
+subCaCertPoliciesExtPresent(Cert) :-
+	\+isSubCA(Cert).
+
 subCaCertPoliciesNotMarkedCritical(Cert) :-
-	certs:certificatePoliciesExt(Cert, true),
 	certs:certificatePoliciesCritical(Cert, false).
 
 subCaCertPoliciesNotMarkedCritical(Cert) :-
 	\+isSubCA(Cert).
 
+%checks if cert is a root certificate
+%Need to fix this - only roots in env.pl trusted
+rootApplies(Cert) :-
+	%certs:isCA(Cert, true),
+	std:isRoot(Cert).
 
 %Root ca: basic constraint must appear as critical extension (18)
 %Checks that root CA basic constraints are critical
-rootApplies(Cert) :-
-	certs:isCA(Cert, true),
-	std:isRoot(Cert).
-
-basicConstraintsCritical(Cert) :-
+rootBasicConstraintsCritical(Cert) :-
 	certs:basicConstraintsExt(Cert, true),
 	certs:basicConstraintsCritical(Cert, true).
 
-basicConstraintsCritical(Cert) :-
+rootBasicConstraintsCritical(Cert) :-
 	\+rootApplies(Cert).
 
 
@@ -54,6 +60,7 @@ rootPathLenNotPresent(Cert) :-
 rootPathLenNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
+
 %checks that root certificate extended key usage is not present (24)
 rootExtKeyUseNotPresent(Cert) :-
 	certs:extendedKeyUsageExt(Cert, false).
@@ -61,16 +68,47 @@ rootExtKeyUseNotPresent(Cert) :-
 rootExtKeyUseNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
+
+%Root Cert: Certificate Policies should not be present (23)
+rootCertPoliciesNotPresent(Cert) :-
+	certs:certificatePoliciesExt(Cert, false).
+
+rootCertPoliciesNotPresent(Cert) :-
+	\+rootApplies(Cert).
+
+%check for if it is a sub certificate
+isSubCert(Cert) :-
+	\+isCA(Cert).
+
+%subscriber cert: Extended key usage values allowed
+subCertEkuValuesAllowed(Cert) :-
+	certs:extendedKeyUsage(Cert, serverAuth),
+	certs:extendedKeyUsage(Cert, clientAuth).
+
+subCertEkuValuesAllowed(Cert) :-
+	certs:extendedKeyUsage(Cert, serverAuth).
+
+subCertEkuValuesAllowed(Cert) :-
+	certs:extendedKeyUsage(Cert, clientAuth).
+
+subCertEkuValuesAllowed(Cert) :-
+	\+isSubCert(Cert).
+
 %rules are tested here
 verified(Cert) :-
 	std:isCert(Cert),
-	caKeyUsageCritical(Cert).
+	rootCertPoliciesNotPresent(Cert).
 
 	%rootExtKeyUseNotPresent(Cert).
 	%rootPathLenNotPresent(Cert).
-	%basicConstraintsCritical(Cert).
-	%certs:isCA(Cert).
+	%rootBasicConstraintsCritical(Cert).
+
+	%subCaCertPoliciesExtPresent(Cert),
 	%subCaCertPoliciesNotMarkedCritical(Cert).
+	%caKeyUsageCritical(Cert).
+
+	%certs:isCA(Cert).
+	
 
 	%certs:san(Cert, Name),
 	%certs:isCA(Cert, Boolean),
