@@ -40,6 +40,11 @@ impl PrologCert<'_> {
                 self.emit_validity(&hash),
                 self.emit_common_name(&hash),
                 self.emit_country(&hash),
+                self.emit_organization(&hash),
+                self.emit_given_name(&hash), 
+                self.emit_surname(&hash),
+                self.emit_state_or_prov(&hash), 
+                self.emit_locality(&hash),
                 // self.emit_subject(&hash),
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
@@ -115,6 +120,66 @@ impl PrologCert<'_> {
             }
         });
         format!("country({}, \"{}\").", hash, country)
+    }
+    fn emit_organization(&self, hash: &String) -> String { 
+        let mut org: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.10" => {
+                    org = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("organizationName({}, \"{}\").", hash, org)
+    }
+    fn emit_given_name(&self, hash: &String) -> String { 
+        let mut given: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.42" => {
+                    given = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("givenName({}, \"{}\").", hash, given)
+    }
+    fn emit_surname(&self, hash: &String) -> String { 
+        let mut surname: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.4" => {
+                    surname = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("surname({}, \"{}\").", hash, surname)
+    }
+    fn emit_state_or_prov(&self, hash: &String) -> String { 
+        let mut loc: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.8" => {
+                    loc = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("stateOrProvinceName({}, \"{}\").", hash, loc)
+    }
+    fn emit_locality(&self, hash: &String) -> String { 
+        let mut loc: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.7" => {
+                    loc = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("localityName({}, \"{}\").", hash, loc)
     }
 
     pub fn emit_validity(&self, hash: &String) -> String {
