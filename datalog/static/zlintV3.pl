@@ -12,6 +12,7 @@ basicConstaintsMustBeCritical(Cert) :-
   certs:basicConstraintsCritical(Cert, true).
   
 % sub_ca_cert: crl DistPoint MUST be present & NOT marked critical.
-  certs:fingerprint(Cert, Fingerprint),
-  crl_set(Fingerprint).
+
+%   certs:fingerprint(Cert, Fingerprint),
+%   crl_set(Fingerprint).
   
