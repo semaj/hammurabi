@@ -130,7 +130,7 @@ pub fn verify_prolog(
         store_builder.add_cert(root_x509).unwrap();
     }
     if !found_issuer {
-        eprintln!("NO ISSUER FOUND");
+       // eprintln!("NO ISSUER FOUND");
     }
     let store = store_builder.build();
     let subject_x509 = leaf;
@@ -172,11 +172,17 @@ pub fn verify_prolog(
         .map(|name| format!("\ntrusted_roots(\"{}\").", name))
         .collect::<String>()
         .to_string();
+    // let countries: String = country_isos
+    //     .iter()
+    //     .map(|name| format!("\nval_country(\"{}\").", name))
+    //     .collect::<String>()
+    //     .to_string();
     let name = format!("{}/env.pl", DATALOG_GEN_DIR);
     let mut kb_env = fs::File::create(name).expect("failed to create file"); kb_env
         .write_all(emit_env_preamble().as_bytes())
         .expect("failed to write message");
     kb_env.write_all(roots.as_bytes()).expect("failed to write message");
+   // kb_env.write_all(countries.as_bytes()).expect("failed to write message");
     kb_env.sync_all().unwrap();
 
     let name = format!("{}/certs{}.pl", DATALOG_GEN_DIR, jobindex);

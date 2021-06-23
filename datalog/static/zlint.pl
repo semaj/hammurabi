@@ -102,15 +102,19 @@ certPolicyOvRequires(Cert) :-
   \+stateOrProvinceNameMissing(Cert), 
   \+caCountryNameMissing(Cert).
 
+% SAN must appear 
+extSanMissing(Cert) :- 
+  certs:san(Cert, Name), 
+  ext:equal(Name, ""). 
+
+extSanMissing(Cert) :- 
+  certs:sanExt(Cert, Value), 
+  ext:equal(Value, false).
+
 % Basic Constraints checks
 % CA bit set
 caIsCa(Cert) :-
     certs:isCA(Cert, true).
-
-% The part below is used for testing 
-verified(Cert) :- 
-  std:isCert(Cert), 
-  countryNameMustNotAppear(Cert).
 
 % All of the helper methods will be posted below 
 organizationNameMissing(Cert) :- 
@@ -131,9 +135,7 @@ stateOrProvinceNameMissing(Cert) :-
 
 localityNameMissing(Cert) :- 
   certs:localityName(Cert, Name),
-  ext:equal(Name, "")
-
-
+  ext:equal(Name, "").
 
 
 % Below is the list of valid countries from a CA 
@@ -388,4 +390,12 @@ val_country("ZA").
 val_country("ZM").
 val_country("ZW").
 val_country("XX").
+
+% The part below is used for testing 
+% Currently verified is being autogened 
+% by a script
+
+%verified(Cert) :- 
+  %std:isCert(Cert), 
+  %caCountryNameMissing(Cert).
 

@@ -1,0 +1,4 @@
+caCountryNameMissing,testdata/caBlankCountry.pem,OK
+caCountryNameMissing,testdata/caValCountry.pem,Error: UnknownError
+caCountryNameInvalid,testdata/caInvalCountryCode.pem,OK
+caCountryNameInvalid,testdata/caValCountry.pem,Error: UnknownError
