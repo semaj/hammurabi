@@ -31,6 +31,7 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
 
 
 /* 
+  sub_cert: 
   localityName MUST appear if organizationName, givenName, 
   or surname are present but stateOrProvinceName is absent.
 */
@@ -49,6 +50,11 @@ subCertLocalityNameMustAppear(Cert) :-
   \+stateOrProvinceNameIsPresent(Cert),
   localityNameIsPresent(Cert).
   
+  
+% sub_cert: MUST contain one or more policy identifiers.
+subCertCertPolicyEmpty(Cert) :-
+  certs:certificatePolicies(Cert, Oid).
+ 
   
 /***** helper methods *****/
 givenNameIsPresent(Cert) :-
