@@ -5,9 +5,12 @@
 
 
 % sub_ca_cert: ca field MUST be set to true.
-caIsCa(Cert) :-
+subCaIsCa(Cert) :-
   certs:isCA(Cert, true).
-  
+
+% root_ca_cert: ca field MUST be set to true.
+rootCaIsCa(Cert) :-
+  certs:isCA(Cert, true).
   
 % sub_ca_cert: basicConstraints MUST be present & marked critical.
 basicConstaintsMustBeCritical(Cert) :-
