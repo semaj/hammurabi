@@ -77,6 +77,20 @@ subCertProvinceMustAppear(Cert) :-
   \+localityNameIsPresent(Cert).
 
 
+/* 
+  sub_cert: stateOrProvinceName MUST NOT appeear if 
+  organizationName, givenName, or surname are absent.
+*/
+subCertProvinceMustNotAppear(Cert) :-
+  \+organizationNameIsPresent(Cert).
+  
+subCertProvinceMustNotAppear(Cert) :-
+  \+givenNameIsPresent(Cert).
+ 
+subCertProvinceMustNotAppear(Cert) :-
+  \+surnameIsPresent(Cert).
+ 
+
   
 /***** helper methods *****/
 givenNameIsPresent(Cert) :-
