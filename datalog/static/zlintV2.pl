@@ -4,7 +4,7 @@
 
 %includes zlint tests made into prolog rules
 
-%checks if rule is applicable
+%checks if caKeyUsageCritical rule is applicable
 caKeyUsageCriticalApplies(Cert) :-
 	certs:isCA(Cert, true).
 
@@ -20,7 +20,7 @@ caKeyUsageCritical(Cert) :-
 
 
 %cert policies must be present and not marked critical (39)
-%checkes subCA for certificate policies and if they are marked critical
+%checks subCA for certificate policies and that they are marked not critical
 isSubCA(Cert) :-
 	certs:isCA(Cert, true),
 	\+std:isRoot(Cert).
@@ -91,35 +91,84 @@ allowed_EKU(clientAuth).
 allowed_EKU(emailProtection).
 
 %helper function: checks for not allowed EKU
-subCertEkuValuesNotAllowed(Cert) :-
+subCertEkuValidFields(Cert) :-
 	certs:extendedKeyUsage(Cert, Value),
 	\+allowed_EKU(Value).
 
 %subscriber cert: Extended key usage values allowed
-subCertEkuValuesAllowed(Cert) :-
+subCertEkuValidFields(Cert) :-
 	certs:extendedKeyUsage(Cert, serverAuth),
 	\+subCertEkuValuesNotAllowed(Cert).
 
-subCertEkuValuesAllowed(Cert) :-
+subCertEkuValidFields(Cert) :-
 	certs:extendedKeyUsage(Cert, clientAuth),
 	\+subCertEkuValuesNotAllowed(Cert).
 
-subCertEkuValuesAllowed(Cert) :-
+subCertEkuValidFields(Cert) :-
 	\+isSubCert(Cert).
 
 %sub CA must include EKU extension
-%lint_sub_ca_eku_missing_test.go
 subCaEkuPresent(Cert) :-
 	certs:extendedKeyUsageExt(Cert, true).
 
 subCaEkuPresent(Cert) :-
 	\+isSubCA(Cert).
 
+%Subordinate CA: EKU either serverAuth, clientAuth, or both MUST be present
+subCaEkuValidFields(Cert) :-
+	certs:extendedKeyUsage(Cert, serverAuth).
+
+subCaEkuValidFields(Cert) :-
+	certs:extendedKeyUsage(Cert, clientAuth).
+
+subCaEkuValidFields(Cert) :-
+	\+isSubCA(Cert).
+
+%checks sub cert for certificate policies and that they are marked not critical
+subCertCertPoliciesExtPresent(Cert) :-
+	certs:certificatePoliciesExt(Cert, true).
+
+subCertCertPoliciesExtPresent(Cert) :-
+	\+isSubCert(Cert).
+
+subCertCertPoliciesNotMarkedCritical(Cert) :-
+	certs:certificatePoliciesCritical(Cert, false).
+
+subCertCertPoliciesNotMarkedCritical(Cert) :-
+	\+isSubCert(Cert).
+
+
+%if subCA has name constraints it must be marked critical
+subCaNameConstCritApplies(Cert) :-
+	isSubCA(Cert),
+	certs:nameConstraintsExt(Cert, true).
+
+subCaNameConstrainsCritical(Cert) :-
+	certs:nameConstraintsCritical(Cert, true).
+
+subCaNameConstrainsCritical(Cert) :-
+	\+subCaNameConstCritApplies(Cert).
+
+%root CA should not contain the certificatePolicies extension
+rootCertPoliciesExtNotPresent(Cert) :-
+	certs:certificatePoliciesExt(Cert, false).
+
+rootCertPoliciesExtNotPresent(Cert) :-
+	\+rootApplies(Cert).
+
+
 %rules are tested here
 verified(Cert) :-
-	std:isCert(Cert),
-	subCertEkuValuesAllowed(Cert).
+	std:isCert(Cert).
 
+	
+	%rootCertPoliciesExtNotPresent(Cert).
+	%subCaNameConstrainsCritical(Cert).
+	%subCertCertPoliciesExtPresent(Cert).
+	%subCertCertPoliciesNotMarkedCritical(Cert).
+	%subCaEkuValidFields(Cert).
+	%subCaEkuPresent(Cert).
+	%subCertEkuValidFields(Cert).
 	%subCaCertPoliciesExtPresent(Cert),
 	%subCaCertPoliciesNotMarkedCritical(Cert).
 	%rootCertPoliciesNotPresent(Cert).
@@ -130,7 +179,6 @@ verified(Cert) :-
 	%caKeyUsageCritical(Cert).
 
 	%certs:isCA(Cert).
-	
 
 	%certs:san(Cert, Name),
 	%certs:isCA(Cert, Boolean),
