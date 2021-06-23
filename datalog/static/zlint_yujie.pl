@@ -65,6 +65,17 @@ caOrganizationNameMissing(Cert) :-
   and localityName is absent.
 */
 subCertProvinceMustAppear(Cert) :-
+  organizationNameIsPresent(Cert),
+  \+localityNameIsPresent(Cert).
+
+subCertProvinceMustAppear(Cert) :-
+  givenNameIsPresent(Cert),
+  \+localityNameIsPresent(Cert).
+
+subCertProvinceMustAppear(Cert) :-
+  surnameIsPresent(Cert),
+  \+localityNameIsPresent(Cert).
+
 
   
 /***** helper methods *****/
