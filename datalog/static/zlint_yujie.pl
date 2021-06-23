@@ -37,24 +37,35 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
 */
 subCertLocalityNameMustAppear(Cert) :-
   organizationNameIsPresent(Cert),
-  \+stateOrProvinceNameIsPresent(Cert),
-  localityNameIsPresent(Cert).
+  \+stateOrProvinceNameIsPresent(Cert).
   
 subCertLocalityNameMustAppear(Cert) :-
   givenNameIsPresent(Cert),
-  \+stateOrProvinceNameIsPresent(Cert),
-  localityNameIsPresent(Cert).
+  \+stateOrProvinceNameIsPresent(Cert).
 
 subCertLocalityNameMustAppear(Cert) :-
   surnameIsPresent(Cert),
-  \+stateOrProvinceNameIsPresent(Cert),
-  localityNameIsPresent(Cert).
+  \+stateOrProvinceNameIsPresent(Cert).
   
   
 % sub_cert: MUST contain one or more policy identifiers.
 subCertCertPolicyEmpty(Cert) :- 
   certs:certificatePoliciesExt(Cert, true).
  
+ 
+% ca_cert: organizationName MUST appear.
+caOrganizationNameMissing(Cert) :-
+  caIsCa(Cert),
+  organizationNameIsPresent(Cert).
+
+
+/* 
+  sub_cert: stateOrProvinceName MUST appeear if 
+  organizationName, givenName, or surname are present 
+  and localityName is absent.
+*/
+subCertProvinceMustAppear(Cert) :-
+
   
 /***** helper methods *****/
 givenNameIsPresent(Cert) :-
