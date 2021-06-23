@@ -58,7 +58,8 @@ subCertCertPolicyEmpty(Cert) :-
  
 % ca_cert: organizationName MUST appear.
 caOrganizationNameMissing(Cert) :-
-  caIsCa(Cert).
+  caIsCa(Cert),
+  \+organizationNameIsPresent(Cert).
 
 
 /* 
