@@ -52,8 +52,8 @@ subCertLocalityNameMustAppear(Cert) :-
   
   
 % sub_cert: MUST contain one or more policy identifiers.
-subCertCertPolicyEmpty(Cert) :-
-  certs:certificatePolicies(Cert, Oid).
+subCertCertPolicyEmpty(Cert) :- 
+  certs:certificatePoliciesExt(Cert, true).
  
   
 /***** helper methods *****/
