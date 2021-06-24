@@ -131,23 +131,27 @@ invalidCertificateVersion(Cert) :-
 
 
 
+anyPolicyOid("2.5.29.32.0").
+
+
+
 /***** helper methods *****/
 givenNameIsPresent(Cert) :-
   certs:givenName(Cert, Given),
-  \+ext:equal(Given, "").
+  ext:unequal(Given, "").
 
 surnameIsPresent(Cert) :- 
   certs:surname(Cert, Surname),
-  \+ext:equal(Surname, "").
+  ext:unequal(Surname, "").
   
 organizationNameIsPresent(Cert) :-
   certs:organizationName(Cert, Org),
-  \+ext:equal(Org, "").
+  ext:unequal(Org, "").
   
 stateOrProvinceNameIsPresent(Cert) :-
   certs:stateOrProvinceName(Cert, Sop),
-  \+ext:equal(Sop, "").
+  ext:unequal(Sop, "").
 
 localityNameIsPresent(Cert) :-
   certs:localityName(Cert, Loc),
-  \+ext:equal(Loc, "").
+  ext:unequal(Loc, "").
