@@ -128,11 +128,19 @@ signatureAlgorithmNotSupported(Cert) :-
 invalidCertificateVersion(Cert) :-
   certs:version(Cert, Ver),
   ext:unequal(Ver, 2).
-  
 
 
+% sub_ca: MUST NOT contain the anyPolicy identifier
+subCaMustNotContainAnyPolicy(Cert) :-
+  certs:certificatePoliciesExt(Cert, true),
+  certs:certificatePolicies(Cert, Oid),
+  \+anyPolicyOid(Oid).
 
 anyPolicyOid("2.5.29.32.0").
+
+
+
+
 
 
 
