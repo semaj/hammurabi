@@ -173,8 +173,9 @@ subCertCommonNameFromSanApplies(Cert) :-
 subCertCommonNameFromSan(Cert) :-
 	certs:commonName(Cert, CN),
 	certs:san(Cert, SN),
-	ext:equal(CN, SN).
-	%work on case insensitivity
+	ext:to_lower(CN, CNL),
+	ext:to_lower(SN, SNL),
+	ext:equal(CNL, SNL).
 
 %subCertCommonNameFromSan(Cert) :-
 	%certs:commonName(Cert, CN).
