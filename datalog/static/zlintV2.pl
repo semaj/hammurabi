@@ -1,6 +1,7 @@
 :- use_module(std).
 :- use_module(certs).
 :- use_module(env).
+:- use_module(ext).
 
 %includes zlint tests made into prolog rules
 
@@ -156,11 +157,37 @@ rootCertPoliciesExtNotPresent(Cert) :-
 rootCertPoliciesExtNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
+%sub cert: common name is deprecated if anything other than ""
+%Look at later
+subCertCommonNameNotIncluded(Cert) :-
+	certs:commonName(Cert, "").
+
+subCertCommonNameNotIncluded(Cert) :-
+	\+isSubCert(Cert).
+	
+%sub cert: if CommonName present must contain a single IP address or FQDN part of subjAltName
+subCertCommonNameFromSanApplies(Cert) :-
+	isSubCert(Cert),
+	\+certs:commonName(Cert, "").
+
+subCertCommonNameFromSan(Cert) :-
+	certs:commonName(Cert, CN),
+	certs:san(Cert, SN),
+	ext:equal(CN, SN).
+	%work on case insensitivity
+
+%subCertCommonNameFromSan(Cert) :-
+	%certs:commonName(Cert, CN).
+	%add ip check
+
+subCertCommonNameFromSan(Cert) :-
+	\+subCertCommonNameFromSanApplies(Cert).
+
 
 %rules are tested here
 verified(Cert) :-
-	std:isCert(Cert).
-
+	std:isCert(Cert),
+	subCertCommonNameFromSan(Cert).
 	
 	%rootCertPoliciesExtNotPresent(Cert).
 	%subCaNameConstrainsCritical(Cert).
