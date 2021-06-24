@@ -124,6 +124,15 @@ signatureAlgorithmNotSupported(Cert) :-
   \+val_sig_algo(Algo).
 
 
+/* 
+  Certificates MUST meet the following requirements for DSA algorithm 
+  type and key size: L=2048 and N=224,256 or L=3072 and N=256
+*/
+dsaImproperModulusOrDivisorSize(Cert) :-
+
+
+
+
 % Certificates MUST be of type X.509 v3.
 invalidCertificateVersion(Cert) :-
   certs:version(Cert, Ver),
