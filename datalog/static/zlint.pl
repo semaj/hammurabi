@@ -63,6 +63,10 @@ countryNameMustAppear(Cert) :-
 % (3) stateOrProvinceName
 % (4) countryName
 
+certPolicyIvApplies(Cert) :- 
+  certs:certificatePolicies(Cert, Pol), 
+  ext:equal(Pol, "2.23.140.1.2.3").
+
 certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
   \+organizationNameMissing(Cert). 
 
@@ -93,6 +97,10 @@ certPolicyIvRequiresCountry(Cert) :-
 % organizationName, localityName,
 % stateOrProvinceName, and countryName
 
+certPolicyOvApplies(Cert) :- 
+  certs:certificatePolicies(Cert, Pol), 
+  ext:equal(Pol, "2.23.140.1.2.2").
+
 certPolicyRequiresOrg(Cert) :- 
   \+organizationNameMissing(Cert). 
 
@@ -102,6 +110,35 @@ certPolicyOvRequires(Cert) :-
   \+stateOrProvinceNameMissing(Cert), 
   \+caCountryNameMissing(Cert).
 
+% Postal Code must not appear if 
+% organizationName, givenName, or 
+% surname fields are absent 
+
+postalCodeProhibtedApplies(Cert) :- 
+  organizationNameMissing(Cert).
+
+postalCodeProhibtedApplies(Cert) :- 
+  givenNameMissing(Cert).
+
+postalCodeProhibtedApplies(Cert) :- 
+  surnameMissing(Cert).
+
+postalCodeProhibted :- 
+  postalCodeMissing(Cert).
+
+% CAs must not issue certificates 
+% longer than 39 months under 
+% any circumstances 
+
+maxLifetime(102560094).
+
+validTimeTooLong(Cert) :- 
+  maxLifetime(MaxDuration),
+  certs:notBefore(Cert, NotBeforeTime),
+  certs:notAfter(Certs, NotAfterTime),
+  ext:subtract(Duration, NotAfterTime, NotBeforeTime),
+  ext:geq(Duration, MaxDuration).
+
 % SAN must appear 
 extSanMissing(Cert) :- 
   certs:san(Cert, Name), 
@@ -110,6 +147,14 @@ extSanMissing(Cert) :-
 extSanMissing(Cert) :- 
   certs:sanExt(Cert, Value), 
   ext:equal(Value, false).
+
+% The following lints relate to 
+% verifying the RSA if used
+rsaApplies(Cert) :- 
+  certs:keyAlgorithm(Cert, Algo),
+  ext:equals(Algo, "1.2.840.113549.1.1.1").
+
+
 
 % Basic Constraints checks
 % CA bit set
@@ -136,6 +181,10 @@ stateOrProvinceNameMissing(Cert) :-
 localityNameMissing(Cert) :- 
   certs:localityName(Cert, Name),
   ext:equal(Name, "").
+
+postalCodeMissing(Cert) :- 
+  certs:postalCode(Cert, Code), 
+  ext:equal(Code,  "").
 
 
 % Below is the list of valid countries from a CA 
