@@ -414,3 +414,23 @@ end
 --   end
 -- end
 -- datalog.add_iter_prim("ext:sign_valid", 4, sign_valid)
+
+--adds a to lowercase rule
+local function to_lower(literal)
+   return function(s, v)
+     if v then
+        return nil
+     else
+         local str = literal[1]
+         if str:is_const() then
+             local j = str.id
+             local l = string.lower(j)
+             return {j, l}
+         else
+             return nil
+         end
+     end
+   end
+ end
+ 
+ datalog.add_iter_prim("ext:to_lower", 2, to_lower)
