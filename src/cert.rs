@@ -45,10 +45,12 @@ impl PrologCert<'_> {
                 self.emit_surname(&hash),
                 self.emit_state_or_prov(&hash), 
                 self.emit_locality(&hash),
+                self.emit_postal_code(&hash),
                 // self.emit_subject(&hash),
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
                 self.emit_subject_public_key_algorithm(&hash),
+                self.emit_pub_key(&hash),
                 self.emit_key_len(&hash),
                 self.emit_extensions(&hash),
             ]
@@ -181,6 +183,18 @@ impl PrologCert<'_> {
         });
         format!("localityName({}, \"{}\").", hash, loc)
     }
+    fn emit_postal_code(&self, hash: &String) -> String { 
+        let mut code: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.17" => {
+                    code = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("postalCode({}, \"{}\").", hash, code)
+    }
 
     pub fn emit_validity(&self, hash: &String) -> String {
         format!(
@@ -219,6 +233,13 @@ impl PrologCert<'_> {
             "signatureAlgorithm({}, {:?}).",
             hash,
             &self.inner.signature.algorithm.to_string()
+        );
+    }
+    pub fn emit_pub_key(&self, hash: &String) -> String { 
+        return format!( 
+            "publicKey({}, {:?}).", 
+            hash, 
+            (&self.inner.subject_pki.subject_public_key.data).to_vec()
         );
     }
 
