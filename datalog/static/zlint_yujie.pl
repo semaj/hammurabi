@@ -92,9 +92,45 @@ subCertProvinceMustNotAppear(Cert) :-
  
 subCertProvinceMustNotAppear(Cert) :-
   \+surnameIsPresent(Cert).
- 
 
+
+% Any of the following x509.SignatureAlgorithms are acceptable per BRs §6.1.5
+
+sha1_sig_algo("1.2.840.113549.1.1.5"). % sha-1WithRSAEncryption
+sha1_sig_algo("1.2.840.10040.4.3"). % id-dsa-with-sha1
+sha1_sig_algo("1.2.840.10045.4.1"). % ecdsa-with-sha1
+
+sha256_sig_algo("1.2.840.113549.1.1.11"). % sha-256WithRSAEncryption
+sha256_sig_algo("2.16.840.1.101.3.4.3.2"). % id-dsa-with-sha256
+sha256_sig_algo("1.2.840.10045.4.3.2"). % ecdsa-with-sha256
+
+sha384_sig_algo("1.2.840.113549.1.1.12"). % sha-384WithRSAEncryption
+sha384_sig_algo("1.2.840.10045.4.3.3"). % ecdsa-with-sha384
+
+sha512_sig_algo("1.2.840.113549.1.1.13"). % sha-512WithRSAEncryption
+sha512_sig_algo("1.2.840.10045.4.3.4"). % ecdsa-with-sha512
+
+
+/*
+  Certificates MUST meet the following algorithm requirements: 
+  SHA-1*, SHA-256, SHA-384, SHA-512
+*/
+signatureAlgorithmNotSupported(Cert) :-
+  certs:signatureAlgorithm(Cert, Algo),
+  \+sha1_sig_algo(Algo),
+  \+sha256_sig_algo(Algo),
+  \+sha384_sig_algo(Algo),
+  \+sha512_sig_algo(Algo).
+
+
+% Certificates MUST be of type X.509 v3.
+invalidCertificateVersion(Cert) :-
+  certs:version(Cert, Ver),
+  ext:unequal(Ver, 2).
   
+
+
+
 /***** helper methods *****/
 givenNameIsPresent(Cert) :-
   certs:givenName(Cert, Given),
