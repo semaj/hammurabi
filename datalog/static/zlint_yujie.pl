@@ -129,7 +129,12 @@ signatureAlgorithmNotSupported(Cert) :-
   type and key size: L=2048 and N=224,256 or L=3072 and N=256
 */
 dsaImproperModulusOrDivisorSize(Cert) :-
+  dsaEncPKeyAlgo(Cert),
+  % size specifier
 
+dsaEncPKeyAlgo(Cert) :-
+  certs:keyAlgorithm(Cert, Algo),
+  ext:equals(Algo, "1.2.840.10040.4.1").
 
 
 /* 
