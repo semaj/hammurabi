@@ -6,7 +6,18 @@ use x509_parser::parse_x509_certificate;
 use x509_parser::extensions::GeneralName;
 use std::net::Ipv4Addr;
 use std::fs;
+// use der_parser::{
+//     ber::BerObjectContent,
+//     der::{parse_der_integer, DerObject},
+//     error::BerError,
+//     *,
+// };
+// use nom::{combinator, IResult};
+// use rsa::{BigUint, RSAPublicKey};
 
+use simple_asn1::{ASN1Block, BigUint};
+use std::fmt;
+use std::fmt::{Display, Formatter};
 mod extensions;
 
 #[derive(Debug)]
@@ -50,7 +61,7 @@ impl PrologCert<'_> {
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
                 self.emit_subject_public_key_algorithm(&hash),
-                self.emit_pub_key(&hash),
+                self.emit_rsa_pub_key(&hash),
                 self.emit_key_len(&hash),
                 self.emit_extensions(&hash),
             ]
@@ -235,12 +246,26 @@ impl PrologCert<'_> {
             &self.inner.signature.algorithm.to_string()
         );
     }
-    pub fn emit_pub_key(&self, hash: &String) -> String { 
+    pub fn emit_rsa_pub_key(&self, hash: &String) -> String { 
+        if self.inner.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
+           let bytes = &self.inner.subject_pki.subject_public_key.data;
+           let (n, e) = public_key_from_der(&bytes).unwrap();
+            return format!( 
+                "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).", 
+                    hash, 
+                    BigUint::from_bytes_be(&n),
+                    hash, 
+                    BigUint::from_bytes_be(&e)
+                );
+        }
         return format!( 
-            "publicKey({}, {:?}).", 
-            hash, 
-            (&self.inner.subject_pki.subject_public_key.data).to_vec()
-        );
+            "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).", 
+                hash, 
+                "NA",
+                hash, 
+                "NA"
+            );
+         
     }
 
     pub fn emit_key_len(&self, hash: &String) -> String {
@@ -512,3 +537,79 @@ fn emit_general_name(name: &GeneralName) -> (String, String) {
     }
 }
 
+
+/* The following code was taken from https://github.com/caelunshun/rsa-der
+    but modified slightly to work with BitStringObjects as returned by the parser */
+    
+#[derive(Debug, Clone, PartialEq)]
+pub enum Error {
+    /// Indicates that a DER decoding error occurred.
+    InvalidDer(simple_asn1::ASN1DecodeErr),
+    /// Indicates that the RSA ASN.1 sequence was not found.
+    SequenceNotFound,
+    /// Indicates that the RSA modulus value was not found.
+    ModulusNotFound,
+    /// Indicates that the RSA exponent value was not found.
+    ExponentNotFound,
+    /// Indicates that the RSA ASN.1 sequence did not contain exactly two values (one
+    /// for `n` and one for `e`).
+    InvalidSequenceLength,
+}
+
+type StdResult<T, E> = std::result::Result<T, E>;
+
+/// Result type for `rsa-der`. This type
+/// is equivalent to `std::result::Result<T, rsa_der::Error>`.
+pub type RsaResult<T> = StdResult<T, Error>;
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> StdResult<(), fmt::Error> {
+        match self {
+            Error::InvalidDer(e) => e.fmt(f)?,
+            Error::SequenceNotFound => f.write_str("ASN.1 sequence not found")?,
+            Error::ModulusNotFound => f.write_str("ASN.1 public key modulus not found")?,
+            Error::ExponentNotFound => f.write_str("ASN.1 public key exponent not found")?,
+            Error::InvalidSequenceLength => {
+                f.write_str("ASN.1 sequence did not contain exactly two values")?
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::InvalidDer(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+pub fn public_key_from_der(bit_string: &[u8]) -> RsaResult<(Vec<u8>, Vec<u8>)> {
+
+    let inner_asn = simple_asn1::from_der(bit_string).map_err(Error::InvalidDer)?;
+
+    let (n, e) = match &inner_asn[0] {
+        ASN1Block::Sequence(_, blocks) => {
+            if blocks.len() != 2 {
+                return Err(Error::InvalidSequenceLength);
+            }
+
+            let n = match &blocks[0] {
+                ASN1Block::Integer(_, n) => n,
+                _ => return Err(Error::ModulusNotFound),
+            };
+
+            let e = match &blocks[1] {
+                ASN1Block::Integer(_, e) => e,
+                _ => return Err(Error::ExponentNotFound),
+            };
+
+            (n, e)
+        }
+        _ => return Err(Error::SequenceNotFound),
+    };
+
+    Ok((n.to_bytes_be().1, e.to_bytes_be().1))
+}

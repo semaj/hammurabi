@@ -1,6 +1,19 @@
 require "os"
 --opkey = require "openssl".pkey
 
+primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 
+41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 
+101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 
+157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211,
+223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 
+277, 281, 283, 293, 307, 311, 353, 359, 367, 373, 379, 
+383, 313, 317, 331, 337, 347, 349, 389, 397, 401, 409, 
+419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467,
+479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557,
+563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617,
+619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 
+691, 701, 709, 719, 727, 733, 739, 743, 751}
+
 local function unequal(literal)
   return function(s, v)
     if v then
@@ -186,6 +199,79 @@ local function subtract(literal)
   end
 end
 datalog.add_iter_prim("ext:subtract", 3, subtract)
+
+local function mod(literal)
+   return function(s, v)
+     if v then
+        return nil
+     else
+        local x = literal[1]
+        local y = literal[2]
+        local z = literal[3]
+        if y:is_const() and z:is_const() then
+           local j = tonumber(y.id)
+           local k = tonumber(z.id)
+           if j and k then
+              return {j % k, j, k}
+           else
+              return nil
+           end
+        else
+           return nil
+        end
+     end
+  end
+end
+datalog.add_iter_prim("ext:mod", 3, mod)
+
+local function divides(literal)
+   return function(s, v)
+     if v then
+        return nil
+     else
+        local x = literal[1]
+        local y = literal[2]
+        if x:is_const() and y:is_const() then
+           local j = tonumber(x.id)
+           local k = tonumber(y.id)
+           if j and k and j % k == 0 then
+              return {j, k}
+           else
+              return nil
+           end
+        else
+           return nil
+        end
+     end
+  end
+end
+datalog.add_iter_prim("ext:divides", 2, divides)
+
+local function divides_by_prime_752(literal)
+   return function(s, v)
+     if v then
+        return nil
+     else
+        local x = literal[1]
+        if x:is_const() then
+           local j = tonumber(x.id)
+           if j then
+               for key,value in ipairs(primes) 
+               do
+                  if j % value == 0 then 
+                     return {j}
+                  end
+               end
+           else
+              return nil
+           end
+        else
+           return nil
+        end
+     end
+  end
+end
+datalog.add_iter_prim("ext:divides_by_prime_752", 1, divides_by_prime_752)
 
 
 

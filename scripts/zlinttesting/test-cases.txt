@@ -2,3 +2,13 @@ caCountryNameMissing,testdata/caBlankCountry.pem,OK
 caCountryNameMissing,testdata/caValCountry.pem,Error: UnknownError
 caCountryNameInvalid,testdata/caInvalCountryCode.pem,OK
 caCountryNameInvalid,testdata/caValCountry.pem,Error: UnknownError
+rsaModFactorsSmallerThan752,testdata/evenRsaMod.pem,OK
+rsaModFactorsSmallerThan752,testdata/goodRsaExp.pem,Error: UnknownError
+rsaModNotOdd,testdata/oddRsaMod.pem,Error: UnknownError
+rsaModNotOdd,testdata/evenRsaMod.pem,OK
+rsaPublicExponentNotInRange,testdata/badRsaExp.pem,OK
+rsaPublicExponentNotInRange,testdata/validRsaExpRange.pem,Error: UnknownError
+rsaPublicExponentNotOdd,testdata/badRsaExp.pem,OK
+rsaPublicExponentNotOdd,testdata/goodRsaExp.pem,Error: UnknownError
+rsaPublicExponentTooSmall,testdata/badRsaExpLength.pem,OK
+rsaPublicExponentTooSmall,testdata/goodRsaExpLength.pem,Error: UnknownError
