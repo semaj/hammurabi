@@ -57,6 +57,37 @@ pub fn emit_certificate_policies(hash: &String, extension: &X509Extension) -> St
     }
 }
 
+pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) -> String {
+    match parse_der(extension.value) {
+        Ok(v) => {
+            let crl_distribution_points: Vec<BerObject> = match v.1.as_sequence() {
+                Ok(objects) => objects.to_vec(),
+                Err(..) => vec![]
+            };
+            let result: String = crl_distribution_points
+                .iter()
+                .enumerate()
+                .filter_map(|(_, policy): (usize, &BerObject<'_>)| match &policy.content {
+                    BerObjectContent::Sequence(policy_info) => Some(                   
+                        match &policy_info[0].content {
+                            BerObjectContent::PrintableString(policy_oid) => format!("\nCRLDistributionPoints({}, \"{}\").", hash, policy_oid),
+                            _ => String::from("")
+                        }
+                    ),
+                    _ => None
+                })
+            .collect::<Vec<String>>()
+                .join("");
+
+            format!("CRLDistributionPointsExt({}, true).\nCRLDistributionPointsCritical({}, {}). {}", hash, hash, extension.critical, result)
+        }
+        Err(e) => {
+            println!("{:?}", e);
+            format!("CRLDistributionPointsExt({}, false).\nCRLDistributionPointsCritical({}, {}).", hash, hash, extension.critical)
+        }
+    }
+}
+
 pub fn emit_acc_assertions(hash: &String, extension: &X509Extension) -> String {
     let mut assertions = std::str::from_utf8(extension.value).unwrap().to_string();
     assertions = str::replace(&assertions, "!!!", hash);

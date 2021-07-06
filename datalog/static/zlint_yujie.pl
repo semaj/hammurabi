@@ -129,9 +129,30 @@ signatureAlgorithmNotSupported(Cert) :-
   type and key size: L=2048 and N=224,256 or L=3072 and N=256
 */
 dsaImproperModulusOrDivisorSize(Cert) :-
+  dsaEncPKeyAlgo(Cert),
+  % size specifier
+
+dsaEncPKeyAlgo(Cert) :-
+  certs:keyAlgorithm(Cert, Algo),
+  ext:equals(Algo, "1.2.840.10040.4.1").
 
 
+/* 
+  Certificates MUST meet the following requirements for algorithm 
+  type and key size: ECC NIST P-256(65), P-384(97), or P-521(133)
+*/
+ecImproperCurves(Cert) :-
+  \+ecProperCurves(Cert).
 
+ecProperCurves(Cert) :-
+  idecPKeyAlgo(Cert),
+  certs:keyLen(Cert, Len),
+  ext:geq(Len, 65).
+
+idecPKeyAlgo(Cert) :-
+  certs:keyAlgorithm(Cert, Algo),
+  ext:equals(Algo, "1.2.840.10045.2.1").
+  
 
 % Certificates MUST be of type X.509 v3.
 invalidCertificateVersion(Cert) :-
