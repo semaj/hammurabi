@@ -67,12 +67,20 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
             let result: String = crl_distribution_points
                 .iter()
                 .enumerate()
-                .filter_map(|(_, policy): (usize, &BerObject<'_>)| match &policy.content {
-                    BerObjectContent::Sequence(policy_info) => Some(                   
-                        match &policy_info[0].content {
-                            BerObjectContent::PrintableString(policy_oid) => format!("\nCRLDistributionPoints({}, \"{}\").", hash, policy_oid),
+                .filter_map(|(_, point_syntax): (usize, &BerObject<'_>)| match &point_syntax.content {
+                    BerObjectContent::Sequence(distribution_point) => Some(
+                        match &distribution_point[0].content {
+                            BerObjectContent::Sequence(dp_names) => format!("\nCRLDistributionPointName({}, {:?}).", hash, &dp_names[0].content),
                             _ => String::from("")
                         }
+                            
+                                   
+                        //match &distribution_point[0].content {
+
+                            //choice not oid or other
+                            //BerObjectContent::PrintableString(url) => format!("\nCRLDistributionPoints({}, \"{}\").", hash, url),
+                            //_ => String::from("")
+                        //}
                     ),
                     _ => None
                 })
