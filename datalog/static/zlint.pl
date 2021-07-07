@@ -179,7 +179,9 @@ rsaModFactorsSmallerThan752(Cert) :-
   certs:rsaModulus(Cert, Modulus),
   ext:divides_by_prime_752(Modulus).
 
-
+rsaModLessThan2048Bits(Cert) :- 
+  certs:rsaModLength(Cert, Length), 
+  \+ext:geq(Length, 2048).
 
 
 

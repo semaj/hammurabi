@@ -251,18 +251,22 @@ impl PrologCert<'_> {
            let bytes = &self.inner.subject_pki.subject_public_key.data;
            let (n, e) = public_key_from_der(&bytes).unwrap();
             return format!( 
-                "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).", 
+                "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).\nrsaModLength({}, {:?}).", 
                     hash, 
                     BigUint::from_bytes_be(&n),
                     hash, 
-                    BigUint::from_bytes_be(&e)
+                    BigUint::from_bytes_be(&e),
+                    hash, 
+                    BigUint::from_bytes_be(&n).bits()
                 );
         }
         return format!( 
-            "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).", 
+            "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).\nrsaModLength({}, {:?}).", 
                 hash, 
                 "NA",
                 hash, 
+                "NA",
+                hash,
                 "NA"
             );
          

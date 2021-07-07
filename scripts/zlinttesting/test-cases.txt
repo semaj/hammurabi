@@ -12,3 +12,5 @@ rsaPublicExponentNotOdd,testdata/badRsaExp.pem,OK
 rsaPublicExponentNotOdd,testdata/goodRsaExp.pem,Error: UnknownError
 rsaPublicExponentTooSmall,testdata/badRsaExpLength.pem,OK
 rsaPublicExponentTooSmall,testdata/goodRsaExpLength.pem,Error: UnknownError
+rsaModLessThan2048Bits,testdata/yesRsaLength.pem,Error: UnknownError
+rsaModLessThan2048Bits,testdata/noRsaLength.pem,OK
