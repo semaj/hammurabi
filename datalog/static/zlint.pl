@@ -154,11 +154,43 @@ rsaApplies(Cert) :-
   certs:keyAlgorithm(Cert, Algo),
   ext:equals(Algo, "1.2.840.113549.1.1.1").
 
+% RSA: Public Exponent must be odd
+rsaPublicExponentNotOdd(Cert) :- 
+  certs:rsaExponent(Cert, Exp), 
+  ext:mod(0, Exp, 2).
+
+rsaPublicExponentTooSmall(Cert) :- 
+  certs:rsaExponent(Cert, Exp),
+  \+ext:geq(Exp, 3).
+
+rsaPublicExponentNotInRange(Cert) :- 
+  certs:rsaExponent(Cert, Exp),
+  \+ext:geq(Exp, 65537). 
+
+rsaPublicExponentNotInRange(Cert) :- 
+  certs:rsaExponent(Cert, Exp),
+  ext:geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
+
+rsaModNotOdd(Cert) :- 
+  certs:rsaModulus(Cert, Mod), 
+  ext:mod(0, Mod, 2).
+
+rsaModFactorsSmallerThan752(Cert) :- 
+  certs:rsaModulus(Cert, Modulus),
+  ext:divides_by_prime_752(Modulus).
+
+
+
+
+
+% Root CA Certificate: Bit positions for
+% keyCertSign and cRLSign must be set
+
 
 
 % Basic Constraints checks
 % CA bit set
-caIsCa(Cert) :-
+isCa(Cert) :-
     certs:isCA(Cert, true).
 
 % All of the helper methods will be posted below 
@@ -440,11 +472,147 @@ val_country("ZM").
 val_country("ZW").
 val_country("XX").
 
+% The numbers below are prime nums 
+prime_num(2).
+prime_num(3).
+prime_num(5).
+prime_num(7).
+prime_num(11).
+prime_num(13).
+prime_num(17).
+prime_num(19).
+prime_num(23).
+prime_num(29).
+prime_num(31).
+prime_num(37).
+prime_num(41).
+prime_num(43).
+prime_num(47).
+prime_num(53).
+prime_num(59).
+prime_num(61).
+prime_num(67).
+prime_num(71).
+prime_num(73).
+prime_num(79).
+prime_num(83).
+prime_num(89).
+prime_num(97).
+prime_num(101).
+prime_num(103).
+prime_num(107).
+prime_num(109).
+prime_num(113).
+prime_num(127).
+prime_num(131).
+prime_num(137).
+prime_num(139).
+prime_num(149).
+prime_num(151).
+prime_num(157).
+prime_num(163).
+prime_num(167).
+prime_num(173).
+prime_num(179).
+prime_num(181).
+prime_num(191).
+prime_num(193).
+prime_num(197).
+prime_num(199).
+prime_num(211).
+prime_num(223).
+prime_num(227).
+prime_num(229).
+prime_num(233).
+prime_num(239).
+prime_num(241).
+prime_num(251).
+prime_num(257).
+prime_num(263).
+prime_num(269).
+prime_num(271).
+prime_num(277).
+prime_num(281).
+prime_num(283).
+prime_num(293).
+prime_num(307).
+prime_num(311).
+prime_num(353).
+prime_num(359).
+prime_num(367).
+prime_num(373).
+prime_num(379).
+prime_num(383).
+prime_num(313).
+prime_num(317).
+prime_num(331).
+prime_num(337).
+prime_num(347).
+prime_num(349).
+prime_num(389).
+prime_num(397).
+prime_num(401).
+prime_num(409).
+prime_num(419).
+prime_num(421).
+prime_num(431).
+prime_num(433).
+prime_num(439).
+prime_num(443).
+prime_num(449).
+prime_num(457).
+prime_num(461).
+prime_num(463).
+prime_num(467).
+prime_num(479).
+prime_num(487).
+prime_num(491).
+prime_num(499).
+prime_num(503).
+prime_num(509).
+prime_num(521).
+prime_num(523).
+prime_num(541).
+prime_num(547).
+prime_num(557).
+prime_num(563).
+prime_num(569).
+prime_num(571).
+prime_num(577).
+prime_num(587).
+prime_num(593).
+prime_num(599).
+prime_num(601).
+prime_num(607).
+prime_num(613).
+prime_num(617).
+prime_num(619).
+prime_num(631).
+prime_num(641).
+prime_num(643).
+prime_num(647).
+prime_num(653).
+prime_num(659).
+prime_num(661).
+prime_num(673).
+prime_num(677).
+prime_num(683).
+prime_num(691).
+prime_num(701).
+prime_num(709).
+prime_num(719).
+prime_num(727).
+prime_num(733).
+prime_num(739).
+prime_num(743).
+prime_num(751).
+
 % The part below is used for testing 
 % Currently verified is being autogened 
 % by a script
 
-%verified(Cert) :- 
-  %std:isCert(Cert), 
-  %caCountryNameMissing(Cert).
+% verified(Cert) :- 
+%   std:isCert(Cert), 
+%   ext:mod(Mod, 5, 3), 
+%   prime_num(Mod).
 
