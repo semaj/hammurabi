@@ -416,25 +416,6 @@ impl PrologCert<'_> {
         return answer.join("\n");
     }
 
-//    pub fn emit_authority_info_access(&self, hash: &String) -> String {
-//        let mut answer: Vec<String> = Vec::new();
-//        match self.inner.authority_info_access() {
-//            Some((is_critical, aia)) => {
-//                answer.push(format!("authorityInfoAccessExt({}, true).", hash));
-//                answer.push(format!("authorityInfoAccessCritial({}, {}).", hash, is_critical));
-//                for (oid, general_names) in &aia.accessdescs {
-//                    for general_name in general_names {
-//                        answer.push(format!("authorityInfoAccess({}, \"{}\", \"{}\").", hash, oid.to_id_string(), emit_general_name(general_name)));
-//                    }
-//                }
-//            },
-//            None => {
-//                answer.push(format!("authorityInfoAccessExt({}, \"AIA\", false).", hash))
-//            }
-//        }
-//        return answer.join("\n");
-//    } 
-
     pub fn emit_basic_constraints(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.basic_constraints() {
