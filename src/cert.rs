@@ -15,6 +15,9 @@ use std::fs;
 // use nom::{combinator, IResult};
 // use rsa::{BigUint, RSAPublicKey};
 
+use der_parser::ber::BerObjectContent::Sequence;
+use der_parser::ber::BerObjectContent::Integer;
+
 use simple_asn1::{ASN1Block, BigUint};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -62,6 +65,7 @@ impl PrologCert<'_> {
                 self.emit_sign_alg(&hash),
                 self.emit_subject_public_key_algorithm(&hash),
                 self.emit_rsa_pub_key(&hash),
+                self.emit_dsa_pub_key(&hash),
                 self.emit_key_len(&hash),
                 self.emit_extensions(&hash),
             ]
@@ -272,6 +276,34 @@ impl PrologCert<'_> {
          
     }
 
+    pub fn emit_dsa_pub_key(&self, hash: &String) -> String {
+        let mut answer: Vec<String> = Vec::new();
+        let mut p = 0;
+        let mut q = 0;
+        if self.inner.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.10040.4.1") {
+            match self.inner.subject_pki.algorithm.parameters.as_ref() {
+                    Some(outer_bo) => {
+                        match &outer_bo.content {
+                            Sequence(paras) => {
+                                match paras[0].content {
+                                    Integer(v) => { p = (v.len()-1)*8 }
+                                    _ => ()
+                                }
+                                match paras[1].content {
+                                    Integer(v) => { q = (v.len()-1)*8 }
+                                    _ => ()
+                                }
+                                answer.push(format!("spkiDSAParameters({}, {}, {}).", hash, p, q));
+                            }
+                            _ => ()
+                        }
+                    }
+                    None => { answer.push(format!("Parameters Are Absent")); }
+                }
+        }
+        return answer.join("\n");
+    }
+    
     pub fn emit_key_len(&self, hash: &String) -> String {
         return format!(
             "keyLen({}, {}).",
