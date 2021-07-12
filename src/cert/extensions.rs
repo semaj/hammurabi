@@ -1,6 +1,7 @@
 use der_parser::ber::{BerObject, BerObjectContent};
 use der_parser::parse_der;
 use x509_parser::extensions::{X509Extension};
+//use x509_parser::extensions::GeneralName;
 
 pub fn emit_subject_key_identifier(hash: &String, extension: &X509Extension) -> String {
     match parse_der(extension.value) {
@@ -70,8 +71,9 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
                 .filter_map(|(_, point_syntax): (usize, &BerObject<'_>)| match &point_syntax.content {
                     BerObjectContent::Sequence(distribution_point) => Some(
                         match &distribution_point[0].content {
-                            BerObjectContent::Sequence(dp_names) => format!("\nCRLDistributionPointName({}, {:?}).", hash, &dp_names[0].content),
-                            _ => String::from("")
+                            BerObjectContent::Unknown(url, url2) => format!("\nCRLDistributionPointName({}, {:?}, \"{:?}\").", hash, url, url2),
+                            _ => String::from("This still doesn't work")//, print!()
+                            //_ => String::from("This match doesn't work")
                         }
                             
                                    
@@ -81,8 +83,9 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
                             //BerObjectContent::PrintableString(url) => format!("\nCRLDistributionPoints({}, \"{}\").", hash, url),
                             //_ => String::from("")
                         //}
+                        //println!("{:?}", distribution_point)
                     ),
-                    _ => None
+                    _ => None //Some(String::from("The first match did not work"))//println!("The first match did not work") 
                 })
             .collect::<Vec<String>>()
                 .join("");
