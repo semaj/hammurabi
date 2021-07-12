@@ -129,14 +129,24 @@ signatureAlgorithmNotSupported(Cert) :-
   type and key size: L=2048 and N=224,256 or L=3072 and N=256
 */
 dsaImproperModulusOrDivisorSize(Cert) :-
-  dsaEncPKeyAlgo(Cert),
-  % size specifier
+  certs:spkiDSAParameters(cert_0, L, N),
+  ext:equals(L, 2048),
+  ext:equals(N, 224).
 
-dsaEncPKeyAlgo(Cert) :-
-  certs:keyAlgorithm(Cert, Algo),
-  ext:equals(Algo, "1.2.840.10040.4.1").
+dsaImproperModulusOrDivisorSize(Cert) :-
+  certs:spkiDSAParameters(cert_0, L, N),
+  ext:equals(L, 2048),
+  ext:equals(N, 256).
 
+dsaImproperModulusOrDivisorSize(Cert) :-
+  certs:spkiDSAParameters(cert_0, L, N),
+  ext:equals(L, 3072),
+  ext:equals(N, 256).
 
+dsaImproperModulusOrDivisorSize(Cert) :-
+  \+certs:spkiDSAParameters(cert_0, L, N).
+  
+  
 /* 
   Certificates MUST meet the following requirements for algorithm 
   type and key size: ECC NIST P-256(65), P-384(97), or P-521(133)
