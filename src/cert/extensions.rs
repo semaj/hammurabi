@@ -71,8 +71,8 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
                 .filter_map(|(_, point_syntax): (usize, &BerObject<'_>)| match &point_syntax.content {
                     BerObjectContent::Sequence(distribution_point) => Some(
                         match &distribution_point[0].content {
-                            BerObjectContent::Unknown(url, url2) => format!("\nCRLDistributionPointName({}, {:?}).", hash, String::from_utf8_lossy(url2)),
-                            _ => String::from("This still doesn't work")
+                            BerObjectContent::Unknown(_bertag, url) => format!("\nCRLDistributionPoint({}, {:?}).", hash, String::from_utf8_lossy((url.split_at(4)).1)),
+                            _ => String::from("")
                         }
                     ),
                     _ => None 
