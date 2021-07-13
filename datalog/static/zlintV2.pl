@@ -177,18 +177,27 @@ subCertCommonNameFromSan(Cert) :-
 	ext:to_lower(SN, SNL),
 	ext:equal(CNL, SNL).
 
-%subCertCommonNameFromSan(Cert) :-
-	%certs:commonName(Cert, CN).
-	%add ip check
-
 subCertCommonNameFromSan(Cert) :-
 	\+subCertCommonNameFromSanApplies(Cert).
 
+%subCA cRL Disctribution Points must be present and not marked critical
+%fix this once parser is better
+subCAcRLDistPointsPresent(Cert) :-
+	certs:CRLDistributionPointsExt(Cert, true).
+
+subCAcRLDistPointsPresent(Cert) :-
+	\+subCA(Cert).
+
+subCAcRLDistPointsNotMarkedCritical(Cert) :-
+	certs:CRLDistributionPointsCritical(Cert, false).
+
+subCAcRLDistPointsNotMarkedCritical(Cert) :-
+	\+subCA(Cert).
 
 %rules are tested here
 verified(Cert) :-
-	std:isCert(Cert),
-	subCertCommonNameFromSan(Cert).
+	std:isCert(Cert).
+	%subCertCommonNameFromSan(Cert).
 	
 	%rootCertPoliciesExtNotPresent(Cert).
 	%subCaNameConstrainsCritical(Cert).

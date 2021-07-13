@@ -71,21 +71,11 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
                 .filter_map(|(_, point_syntax): (usize, &BerObject<'_>)| match &point_syntax.content {
                     BerObjectContent::Sequence(distribution_point) => Some(
                         match &distribution_point[0].content {
-                            BerObjectContent::Unknown(url, url2) => format!("\nCRLDistributionPointName({}, {:?}, \"{:?}\").", hash, url, url2),
-                            _ => String::from("This still doesn't work")//, print!()
-                            //_ => String::from("This match doesn't work")
+                            BerObjectContent::Unknown(url, url2) => format!("\nCRLDistributionPointName({}, {:?}).", hash, String::from_utf8_lossy(url2)),
+                            _ => String::from("This still doesn't work")
                         }
-                            
-                                   
-                        //match &distribution_point[0].content {
-
-                            //choice not oid or other
-                            //BerObjectContent::PrintableString(url) => format!("\nCRLDistributionPoints({}, \"{}\").", hash, url),
-                            //_ => String::from("")
-                        //}
-                        //println!("{:?}", distribution_point)
                     ),
-                    _ => None //Some(String::from("The first match did not work"))//println!("The first match did not work") 
+                    _ => None 
                 })
             .collect::<Vec<String>>()
                 .join("");
