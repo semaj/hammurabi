@@ -84,7 +84,7 @@ rootCertPoliciesNotPresent(Cert) :-
 
 %check for if it is a sub certificate
 isSubCert(Cert) :-
-	\+isCA(Cert).
+	certs:isCA(Cert, false).
 
 %ExtendedKeyUsage extensions allowed
 allowed_EKU(serverAuth).
@@ -180,25 +180,61 @@ subCertCommonNameFromSan(Cert) :-
 subCertCommonNameFromSan(Cert) :-
 	\+subCertCommonNameFromSanApplies(Cert).
 
-%subCA cRL Disctribution Points must be present and not marked critical
+%subCA CRL Disctribution Points must be present and not marked critical
 %fix this once parser is better
-subCAcRLDistPointsPresent(Cert) :-
-	certs:CRLDistributionPointsExt(Cert, true).
+subCaCrlDistributionPointsPresent(Cert) :-
+	certs:CRLDistributionPointsExt(Cert, true),
+	\+certs:CRLDistributionPoints(Cert, false).
 
-subCAcRLDistPointsPresent(Cert) :-
-	\+subCA(Cert).
+subCaCrlDistributionPointsPresent(Cert) :-
+	\+isSubCA(Cert).
 
-subCAcRLDistPointsNotMarkedCritical(Cert) :-
+subCaCrlDistPointsNotMarkedCritical(Cert) :-
 	certs:CRLDistributionPointsCritical(Cert, false).
 
-subCAcRLDistPointsNotMarkedCritical(Cert) :-
-	\+subCA(Cert).
+subCaCrlDistPointsNotMarkedCritical(Cert) :-
+	\+isSubCA(Cert).
+
+%subCA cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service.
+subCaCrlDistPointContainsHttpUrl(Cert) :-
+	certs:CRLDistributionPoint(Cert, Url),
+	ext:s_startswith(Url, "http://").
+
+subCaCrlDistPointContainsHttpUrl(Cert) :-
+	\+isSubCA(Cert).
+
+%sub cert: cRLDistributionPoints MAY be present
+%not considered in valid scope
+subCertCrlDistributionPointsPresent(Cert) :-
+	certs:CRLDistributionPointsExt(Cert, true),
+	\+certs:CRLDistributionPoints(Cert, false).
+
+subCertCrlDistributionPointsPresent(Cert) :-
+	\+isSubCert(Cert).
+
+%sub cert: cRLDistributionPoints MUST NOT be marked critical
+subCertCrlDistPointsNotMarkedCritical(Cert) :-
+	certs:CRLDistributionPointsCritical(Cert, false).
+
+subCertCrlDistPointsNotMarkedCritical(Cert) :-
+	\+isSubCert(Cert).
+
+%sub cert: cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service
+subCertCrlDistPointContainsHttpUrl(Cert) :-
+	certs:CRLDistributionPoint(Cert, Url),
+	ext:s_startswith(Url, "http://").
+
+subCertCrlDistPointContainsHttpUrl(Cert) :-
+	\+isSubCert(Cert).
+
 
 %rules are tested here
 verified(Cert) :-
 	std:isCert(Cert).
+
+	%subCaCrlDistPointsNotMarkedCritical(Cert).
+	%subCaCrlDistPointContainsHttpUrl(Cert).
 	%subCertCommonNameFromSan(Cert).
-	
 	%rootCertPoliciesExtNotPresent(Cert).
 	%subCaNameConstrainsCritical(Cert).
 	%subCertCertPoliciesExtPresent(Cert).
