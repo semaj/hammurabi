@@ -3,25 +3,25 @@
 :- use_module(env).
 :- use_module(ext).
 
-%includes zlint tests made into prolog rules
+% includes zlint tests made into prolog rules
 
-%checks if caKeyUsageCritical rule is applicable
+% checks if caKeyUsageCritical rule is applicable
 caKeyUsageCriticalApplies(Cert) :-
 	certs:isCA(Cert, true).
 
-%if not applicable pass
+% if not applicable pass
 caKeyUsageCritical(Cert) :-
 	\+caKeyUsageCriticalApplies(Cert).
 
-%All CA Cert: keyUsage ext must be present and marked critical (21,35)
-%checked CA certs for keyUsage extension and that it is marked critical
+% All CA Cert: keyUsage ext must be present and marked critical (21,35)
+% checked CA certs for keyUsage extension and that it is marked critical
 caKeyUsageCritical(Cert) :-
 	certs:keyUsageExt(Cert, true),
 	certs:keyUsageCritical(Cert, true).
 
 
-%cert policies must be present and not marked critical (39)
-%checks subCA for certificate policies and that they are marked not critical
+% cert policies must be present and not marked critical (39)
+% checks subCA for certificate policies and that they are marked not critical
 isSubCA(Cert) :-
 	certs:isCA(Cert, true),
 	\+std:isRoot(Cert).
@@ -38,17 +38,15 @@ subCaCertPoliciesNotMarkedCritical(Cert) :-
 subCaCertPoliciesNotMarkedCritical(Cert) :-
 	\+isSubCA(Cert).
 
-%checks if cert is a root certificate
-%Need to fix this - only roots in env.pl trusted
-%start adding at 3591
+% checks if cert is a root certificate
 rootApplies(Cert) :-
 	%certs:isCA(Cert, true),
 	%std:isRoot(Cert).
 	certs:fingerprint(Cert, Fingerprint),
     trusted_roots(Fingerprint).
 
-%Root ca: basic constraint must appear as critical extension (18)
-%Checks that root CA basic constraints are critical
+% Root ca: basic constraint must appear as critical extension (18)
+% Checks that root CA basic constraints are critical
 rootBasicConstraintsCritical(Cert) :-
 	certs:basicConstraintsExt(Cert, true),
 	certs:basicConstraintsCritical(Cert, true).
@@ -57,8 +55,8 @@ rootBasicConstraintsCritical(Cert) :-
 	\+rootApplies(Cert).
 
 
-%Root CA: path length constraint field should not be present (20)
-%Checks root CA for no length constraint
+% Root CA: path length constraint field should not be present (20)
+% Checks root CA for no length constraint
 rootPathLenNotPresent(Cert) :-
 	certs:pathLimit(Cert, none).
 
@@ -66,7 +64,7 @@ rootPathLenNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
 
-%checks that root certificate extended key usage is not present (24)
+% checks that root certificate extended key usage is not present (24)
 rootExtKeyUseNotPresent(Cert) :-
 	certs:extendedKeyUsageExt(Cert, false).
 
@@ -74,7 +72,7 @@ rootExtKeyUseNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
 
-%Root Cert: Certificate Policies should not be present (23)
+% Root Cert: Certificate Policies should not be present (23)
 rootCertPoliciesNotPresent(Cert) :-
 	certs:certificatePoliciesExt(Cert, false).
 
@@ -82,21 +80,21 @@ rootCertPoliciesNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
 
-%check for if it is a sub certificate
+% check for if it is a subscriber certificate
 isSubCert(Cert) :-
 	certs:isCA(Cert, false).
 
-%ExtendedKeyUsage extensions allowed
+% ExtendedKeyUsage extensions allowed
 allowed_EKU(serverAuth).
 allowed_EKU(clientAuth).
 allowed_EKU(emailProtection).
 
-%helper function: checks for not allowed EKU
+% helper function: checks for not allowed EKU
 subCertEkuValidFields(Cert) :-
 	certs:extendedKeyUsage(Cert, Value),
 	\+allowed_EKU(Value).
 
-%subscriber cert: Extended key usage values allowed
+% subscriber cert: Extended key usage values allowed
 subCertEkuValidFields(Cert) :-
 	certs:extendedKeyUsage(Cert, serverAuth),
 	\+subCertEkuValuesNotAllowed(Cert).
@@ -108,14 +106,14 @@ subCertEkuValidFields(Cert) :-
 subCertEkuValidFields(Cert) :-
 	\+isSubCert(Cert).
 
-%sub CA must include EKU extension
+% sub CA must include EKU extension
 subCaEkuPresent(Cert) :-
 	certs:extendedKeyUsageExt(Cert, true).
 
 subCaEkuPresent(Cert) :-
 	\+isSubCA(Cert).
 
-%Subordinate CA: EKU either serverAuth, clientAuth, or both MUST be present
+% Subordinate CA: EKU either serverAuth, clientAuth, or both MUST be present
 subCaEkuValidFields(Cert) :-
 	certs:extendedKeyUsage(Cert, serverAuth).
 
@@ -125,7 +123,7 @@ subCaEkuValidFields(Cert) :-
 subCaEkuValidFields(Cert) :-
 	\+isSubCA(Cert).
 
-%checks sub cert for certificate policies and that they are marked not critical
+% checks sub cert for certificate policies and that they are marked not critical
 subCertCertPoliciesExtPresent(Cert) :-
 	certs:certificatePoliciesExt(Cert, true).
 
@@ -139,7 +137,7 @@ subCertCertPoliciesNotMarkedCritical(Cert) :-
 	\+isSubCert(Cert).
 
 
-%if subCA has name constraints it must be marked critical
+% if subCA has name constraints it must be marked critical
 subCaNameConstCritApplies(Cert) :-
 	isSubCA(Cert),
 	certs:nameConstraintsExt(Cert, true).
@@ -150,22 +148,22 @@ subCaNameConstrainsCritical(Cert) :-
 subCaNameConstrainsCritical(Cert) :-
 	\+subCaNameConstCritApplies(Cert).
 
-%root CA should not contain the certificatePolicies extension
+% root CA should not contain the certificatePolicies extension
 rootCertPoliciesExtNotPresent(Cert) :-
 	certs:certificatePoliciesExt(Cert, false).
 
 rootCertPoliciesExtNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
-%sub cert: common name is deprecated if anything other than ""
-%Look at later
+% sub cert: common name is deprecated if anything other than ""
+% Look at later
 subCertCommonNameNotIncluded(Cert) :-
 	certs:commonName(Cert, "").
 
 subCertCommonNameNotIncluded(Cert) :-
 	\+isSubCert(Cert).
 	
-%sub cert: if CommonName present must contain a single IP address or FQDN part of subjAltName
+% sub cert: if CommonName present must contain a single IP address or FQDN part of subjAltName
 subCertCommonNameFromSanApplies(Cert) :-
 	isSubCert(Cert),
 	\+certs:commonName(Cert, "").
@@ -180,8 +178,7 @@ subCertCommonNameFromSan(Cert) :-
 subCertCommonNameFromSan(Cert) :-
 	\+subCertCommonNameFromSanApplies(Cert).
 
-%subCA CRL Disctribution Points must be present and not marked critical
-%fix this once parser is better
+% subCA CRL Disctribution Points must be present and not marked critical
 subCaCrlDistributionPointsPresent(Cert) :-
 	certs:CRLDistributionPointsExt(Cert, true),
 	\+certs:CRLDistributionPoints(Cert, false).
@@ -195,16 +192,22 @@ subCaCrlDistPointsNotMarkedCritical(Cert) :-
 subCaCrlDistPointsNotMarkedCritical(Cert) :-
 	\+isSubCA(Cert).
 
-%subCA cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service.
+% subCA cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service.
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, Url),
 	ext:s_startswith(Url, "http://").
 
+% another scenario for if there are ldap points before the http
+subCaCrlDistPointContainsHttpUrl(Cert) :-
+	certs:CRLDistributionPoint(Cert, Url),
+	ext:s_occurrences(Url, "http://", N),
+	ext:equal(N, 1).
+
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCA(Cert).
 
-%sub cert: cRLDistributionPoints MAY be present
-%not considered in valid scope
+% sub cert: cRLDistributionPoints MAY be present
+% not considered in valid scope
 subCertCrlDistributionPointsPresent(Cert) :-
 	certs:CRLDistributionPointsExt(Cert, true),
 	\+certs:CRLDistributionPoints(Cert, false).
@@ -212,28 +215,43 @@ subCertCrlDistributionPointsPresent(Cert) :-
 subCertCrlDistributionPointsPresent(Cert) :-
 	\+isSubCert(Cert).
 
-%sub cert: cRLDistributionPoints MUST NOT be marked critical
+% sub cert: cRLDistributionPoints MUST NOT be marked critical
 subCertCrlDistPointsNotMarkedCritical(Cert) :-
 	certs:CRLDistributionPointsCritical(Cert, false).
 
 subCertCrlDistPointsNotMarkedCritical(Cert) :-
+	certs:CRLDistributionPoint(Cert, false).
+
+subCertCrlDistPointsNotMarkedCritical(Cert) :-
 	\+isSubCert(Cert).
 
-%sub cert: cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service
+% sub cert: cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service
 subCertCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, Url),
 	ext:s_startswith(Url, "http://").
 
 subCertCrlDistPointContainsHttpUrl(Cert) :-
+	certs:CRLDistributionPoint(Cert, Url),
+	ext:s_occurrences(Url, "http://", N),
+	ext:equal(N, 1).
+
+subCertCrlDistPointContainsHttpUrl(Cert) :-
+	certs:CRLDistributionPoint(Cert, false).
+
+subCertCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCert(Cert).
 
 
-%rules are tested here
+% Rules are tested here
 verified(Cert) :-
-	std:isCert(Cert).
+	std:isCert(Cert),
+	subCaCrlDistPointContainsHttpUrl(Cert).
+
+	%subCertCrlDistPointContainsHttpUrl(Cert).
+	%subCertCrlDistPointsNotMarkedCritical(Cert).
+	%subCertCrlDistributionPointsPresent(Cert).
 
 	%subCaCrlDistPointsNotMarkedCritical(Cert).
-	%subCaCrlDistPointContainsHttpUrl(Cert).
 	%subCertCommonNameFromSan(Cert).
 	%rootCertPoliciesExtNotPresent(Cert).
 	%subCaNameConstrainsCritical(Cert).

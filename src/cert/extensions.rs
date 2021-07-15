@@ -89,6 +89,20 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
     }
 }
 
+
+pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> String {
+    match parse_der(extension.value) {
+        Ok(v) => {
+            format!("authorityInfoAccessExt({}, true).\nauthorityInfoAccessCritical({}, {}).", hash, hash, extension.critical)
+        }
+        Err(e) => {
+            println!("{:?}", e);
+            format!("authorityInfoAccessExt({}, false).\nauthorityInfoAccessCritical({}, {}).", hash, hash, extension.critical)
+        }
+    }
+}
+
+
 pub fn emit_acc_assertions(hash: &String, extension: &X509Extension) -> String {
     let mut assertions = std::str::from_utf8(extension.value).unwrap().to_string();
     assertions = str::replace(&assertions, "!!!", hash);
