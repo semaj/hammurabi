@@ -93,6 +93,25 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
 pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> String {
     match parse_der(extension.value) {
         Ok(v) => {
+            let authority_info_access_syntax: Vec<BerObject> = match v.1.as_sequence() {
+                Ok(objects) => objects.to_vec(),
+                Err(..) => vec![]
+            };
+            let _result: String = authority_info_access_syntax
+                .iter()
+                .enumerate()
+                .filter_map(|(_, point_syntax): (usize, &BerObject<'_>)| match &point_syntax.content {
+                    BerObjectContent::Sequence(access_description) => Some(
+                        match &access_description[0].content {
+                            BerObjectContent::Unknown(_bertag, general_name) => format!("\nauthorityInfoAccessLocation({}, {:?}).", hash, String::from_utf8_lossy(general_name)),
+                            _ => String::from("Doesn't get to location")
+                        }
+                    ),
+                    _ => Some(String::from("Doesn't match the point syntax")) //None 
+                })
+            .collect::<Vec<String>>()
+                .join("This isn't working");
+
             format!("authorityInfoAccessExt({}, true).\nauthorityInfoAccessCritical({}, {}).", hash, hash, extension.critical)
         }
         Err(e) => {
