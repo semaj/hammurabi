@@ -58,6 +58,7 @@ impl PrologCert<'_> {
                 self.emit_given_name(&hash), 
                 self.emit_surname(&hash),
                 self.emit_state_or_prov(&hash), 
+                self.emit_street_address(&hash), 
                 self.emit_locality(&hash),
                 self.emit_postal_code(&hash),
                 // self.emit_subject(&hash),
@@ -185,6 +186,18 @@ impl PrologCert<'_> {
             }
         });
         format!("stateOrProvinceName({}, \"{}\").", hash, loc)
+    }
+    fn emit_street_address(&self, hash: &String) -> String { 
+        let mut loc: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.9" => {
+                    street = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("streetAddress({}, \"{}\").", hash, street)
     }
     fn emit_locality(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
