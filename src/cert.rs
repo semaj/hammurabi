@@ -347,7 +347,6 @@ impl PrologCert<'_> {
         if !crl_distribution_points { exts.push(format!("CRLDistributionPoints({}, false).", hash)) }
         if !acc_assertions { exts.push(format!("assertionCarryingCertificateExt({}, false).", hash)) }
         exts.push(self.emit_name_constraints(hash));
-        exts.push(self.emit_authority_info_access(hash));
         exts.push(self.emit_policy_extras(hash));
 
 
@@ -469,19 +468,19 @@ impl PrologCert<'_> {
         return answer.join("\n");
     }
 
-    pub fn emit_authority_info_access(&self, hash: &String) -> String {
-        let mut answer: Vec<String> = Vec::new();
-        match self.inner.authority_info_access() {
-            Some((is_critical, aia)) => {
-                answer.push(format!("authorityInfoAccessExt({}, true).", hash));
-                answer.push(format!("authorityInfoAccessCritical({}, {}).", hash, is_critical));
-            },
-            None => {
-                answer.push(format!("authorityInfoAccessExt({}, false).", hash));
-            }
-        }
-        return answer.join("\n");
-    }
+//     pub fn emit_authority_info_access(&self, hash: &String) -> String {
+//         let mut answer: Vec<String> = Vec::new();
+//         match self.inner.authority_info_access() {
+//             Some((is_critical, aia)) => {
+//                 answer.push(format!("authorityInfoAccessExt({}, true).", hash));
+//                 answer.push(format!("authorityInfoAccessCritical({}, {}).", hash, is_critical));
+//             },
+//             None => {
+//                 answer.push(format!("authorityInfoAccessExt({}, false).", hash));
+//             }
+//         }
+//         return answer.join("\n");
+//     }
     
     pub fn emit_key_usage(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
