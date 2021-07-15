@@ -58,6 +58,7 @@ impl PrologCert<'_> {
                 self.emit_given_name(&hash), 
                 self.emit_surname(&hash),
                 self.emit_state_or_prov(&hash), 
+                self.emit_street_address(&hash), 
                 self.emit_locality(&hash),
                 self.emit_postal_code(&hash),
                 // self.emit_subject(&hash),
@@ -186,6 +187,18 @@ impl PrologCert<'_> {
         });
         format!("stateOrProvinceName({}, \"{}\").", hash, loc)
     }
+    fn emit_street_address(&self, hash: &String) -> String { 
+        let mut loc: String = String::from("");
+        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.9" => {
+                    loc = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("streetAddress({}, \"{}\").", hash, loc)
+    }
     fn emit_locality(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
         &self.inner.subject.rdn_seq.iter().for_each(|f| {
@@ -298,10 +311,10 @@ impl PrologCert<'_> {
                             _ => ()
                         }
                     }
-                    None => { answer.push(format!("Parameters Are Absent")); }
+                    None => { answer.push(format!("DSAParameters Are Absent")); }
                 }
         }
-        return answer.join("\n");
+        return answer.join("");
     }
     
     pub fn emit_key_len(&self, hash: &String) -> String {
@@ -468,6 +481,20 @@ impl PrologCert<'_> {
         return answer.join("\n");
     }
 
+//     pub fn emit_authority_info_access(&self, hash: &String) -> String {
+//         let mut answer: Vec<String> = Vec::new();
+//         match self.inner.authority_info_access() {
+//             Some((is_critical, aia)) => {
+//                 answer.push(format!("authorityInfoAccessExt({}, true).", hash));
+//                 answer.push(format!("authorityInfoAccessCritical({}, {}).", hash, is_critical));
+//             },
+//             None => {
+//                 answer.push(format!("authorityInfoAccessExt({}, false).", hash));
+//             }
+//         }
+//         return answer.join("\n");
+//     }
+    
     pub fn emit_key_usage(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
         match self.inner.key_usage() {

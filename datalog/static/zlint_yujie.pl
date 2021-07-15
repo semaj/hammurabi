@@ -4,16 +4,25 @@
 :- use_module(ext).
 
 
-% sub_ca_cert: ca field MUST be set to true.
-subCaIsCa(Cert) :-
-  certs:isCA(Cert, true).
+isSubCA(Cert) :-
+	certs:isCA(Cert, true),
+	\+std:isRoot(Cert).
+  
+isSubCert(Cert) :-
+  certs:isCA(Cert, false).
 
-% root_ca_cert: ca field MUST be set to true.
+% sub_ca: ca field MUST be set to true.
+subCaIsCa(Cert) :-
+  isSubCA(Cert).
+
+% root_ca: ca field MUST be set to true.
 rootCaIsCa(Cert) :-
-  certs:isCA(Cert, true).
+  certs:isCA(Cert, true),
+  std:isRoot(Cert).
   
 % sub_ca_cert: basicConstraints MUST be present & marked critical.
 basicConstaintsMustBeCritical(Cert) :-
+  isSubCA(Cert),
   certs:basicConstraintsExt(Cert, true),
   certs:basicConstraintsCritical(Cert, true).
 
@@ -23,11 +32,13 @@ basicConstaintsMustBeCritical(Cert) :-
   MUST contain the (2.23.140.1.2.3) certPolicy OID.
 */
 subCertGivenOrSurnameHasCorrectPolicy(Cert) :- 
+  isSubCert(Cert),
   givenNameIsPresent(Cert),
   certs:certificatePolicies(Cert, Oid),
   ext:equal(Oid, "2.23.140.1.2.3").
 
 subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
+  isSubCert(Cert),
   surnameIsPresent(Cert),
   certs:certificatePolicies(Cert, Oid),
   ext:equal(Oid, "2.23.140.1.2.3").
@@ -39,27 +50,30 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
   or surname are present but stateOrProvinceName is absent.
 */
 subCertLocalityNameMustAppear(Cert) :-
+  isSubCert(Cert),
   organizationNameIsPresent(Cert),
   \+stateOrProvinceNameIsPresent(Cert).
   
 subCertLocalityNameMustAppear(Cert) :-
+  isSubCert(Cert),
   givenNameIsPresent(Cert),
   \+stateOrProvinceNameIsPresent(Cert).
 
 subCertLocalityNameMustAppear(Cert) :-
+  isSubCert(Cert),
   surnameIsPresent(Cert),
   \+stateOrProvinceNameIsPresent(Cert).
   
   
 % sub_cert: MUST contain one or more policy identifiers.
 subCertCertPolicyEmpty(Cert) :- 
-  certs:isCA(Cert, false),
+  isSubCert(Cert),
   certs:certificatePoliciesExt(Cert, false).
  
  
 % ca_cert: organizationName MUST appear.
 caOrganizationNameMissing(Cert) :-
-  caIsCa(Cert),
+  certs:isCA(Cert, true),
   \+organizationNameIsPresent(Cert).
 
 
@@ -69,14 +83,17 @@ caOrganizationNameMissing(Cert) :-
   and localityName is absent.
 */
 subCertProvinceMustAppear(Cert) :-
+  isSubCert(Cert),
   organizationNameIsPresent(Cert),
   \+localityNameIsPresent(Cert).
 
 subCertProvinceMustAppear(Cert) :-
+  isSubCert(Cert),
   givenNameIsPresent(Cert),
   \+localityNameIsPresent(Cert).
 
 subCertProvinceMustAppear(Cert) :-
+  isSubCert(Cert),
   surnameIsPresent(Cert),
   \+localityNameIsPresent(Cert).
 
@@ -86,12 +103,15 @@ subCertProvinceMustAppear(Cert) :-
   organizationName, givenName, or surname are absent.
 */
 subCertProvinceMustNotAppear(Cert) :-
+  isSubCert(Cert),
   \+organizationNameIsPresent(Cert).
   
 subCertProvinceMustNotAppear(Cert) :-
+  isSubCert(Cert),
   \+givenNameIsPresent(Cert).
  
 subCertProvinceMustNotAppear(Cert) :-
+  isSubCert(Cert),
   \+surnameIsPresent(Cert).
 
 
@@ -173,6 +193,7 @@ invalidCertificateVersion(Cert) :-
 
 % sub_ca: MUST NOT contain the anyPolicy identifier
 subCaMustNotContainAnyPolicy(Cert) :-
+  isSubCA(Cert),
   certs:certificatePoliciesExt(Cert, true),
   certs:certificatePolicies(Cert, Oid),
   \+anyPolicyOid(Oid).
@@ -182,6 +203,7 @@ anyPolicyOid("2.5.29.32.0").
 
 % sub_cert: subjAltName MUST contain at least one entry.
 extSanNoEntries(Cert) :-
+  isSubCert(Cert),
   certs:sanExt(Cert, true),
   \+certs:san(Cert, Name).
 
@@ -206,23 +228,37 @@ cabDvConflictsApplies(Cert) :-
   
 cabDvConflictsWithLocality(Cert) :- 
   cabDvConflictsApplies(Cert),
-  certs:localityName(Cert, Locality).
+  localityNameIsPresent(Cert).
 
 cabDvConflictsWithOrg(Cert) :- 
   cabDvConflictsApplies(Cert),
-  certs:organizationName(Cert, Org).
+  organizationNameIsPresent(Cert).
 
 cabDvConflictsWithPostal(Cert) :- 
   cabDvConflictsApplies(Cert),
-  certs:postalCode(Cert, Postal).
+  postalCodeIsPresent(Cert).
 
 cabDvConflictsWithProvince(Cert) :- 
   cabDvConflictsApplies(Cert),
-  certs:stateOrProvinceName(Cert, Province).
+  stateOrProvinceNameIsPresent(Cert).
 
 cabDvConflictsWithStreet(Cert) :- 
   cabDvConflictsApplies(Cert),
-  certs:streetAddress(Cert, Street).
+  streetAddressIsPresent(Cert).
+ 
+
+% sub_ca: authorityInformationAccess MUST be present, 
+%         with the exception of stapling.  
+subCaAiaMissing(Cert) :-
+  isSubCA(Cert),
+  
+  
+
+
+
+% sub_ca: authorityInformationAccess MUST NOT be marked critical
+subCaAiaMarkedCritical(Cert) :-
+  isSubCA(Cert),
   
 
 
@@ -248,3 +284,12 @@ stateOrProvinceNameIsPresent(Cert) :-
 localityNameIsPresent(Cert) :-
   certs:localityName(Cert, Loc),
   ext:unequal(Loc, "").
+  
+streetAddressIsPresent(Cert) :-
+  certs:streetAddress(Cert, Street),
+  ext:unequal(Street, "").
+  
+postalCodeIsPresent(Cert) :-
+  certs:postalCode(Cert, Code),
+  ext:unequal(Code, "").
+  
