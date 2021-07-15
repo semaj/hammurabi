@@ -245,7 +245,28 @@ cabDvConflictsWithProvince(Cert) :-
 cabDvConflictsWithStreet(Cert) :- 
   cabDvConflictsApplies(Cert),
   streetAddressIsPresent(Cert).
- 
+
+
+
+% sub_cert: streetAddress MUST NOT appear if organizationName, 
+% 	    givenName, and surname fields are absent.
+subCertStreetAddressShouldNotExist(Cert) :-
+  isSubCert(Cert),
+  \+organizationNameIsPresent(Cert),
+  \+givenNameIsPresent(Cert),
+  \+surnameIsPresent(Cert),
+  \+streetAddressIsPresent(Cert).
+  
+
+% sub_cert: localityName MUST NOT appear if organizationName, 
+%	    givenName, and surname fields are absent.
+subCertLocalityNameMustNotAppear(Cert) :-
+  isSubCert(Cert),
+  \+organizationNameIsPresent(Cert),
+  \+givenNameIsPresent(Cert),
+  \+surnameIsPresent(Cert),
+  \+localityNameIsPresent(Cert).
+
 
 % sub_ca: authorityInformationAccess MUST be present, 
 %         with the exception of stapling.  
@@ -254,7 +275,7 @@ subCaAiaMissing(Cert) :-
 
 
 % sub_cert: authorityInformationAccess MUST be present, 
-% 	  with the exception of stapling.  
+% 	    with the exception of stapling.  
 subCertAiaMissing(Cert) :-
   isSubCert(Cert).
 
