@@ -53,6 +53,7 @@ subCertLocalityNameMustAppear(Cert) :-
   
 % sub_cert: MUST contain one or more policy identifiers.
 subCertCertPolicyEmpty(Cert) :- 
+  certs:isCA(Cert, false),
   certs:certificatePoliciesExt(Cert, false).
  
  
@@ -63,7 +64,7 @@ caOrganizationNameMissing(Cert) :-
 
 
 /* 
-  sub_cert: stateOrProvinceName MUST appeear if 
+  sub_cert: stateOrProvinceName MUST appeear if
   organizationName, givenName, or surname are present 
   and localityName is absent.
 */
@@ -179,7 +180,50 @@ subCaMustNotContainAnyPolicy(Cert) :-
 anyPolicyOid("2.5.29.32.0").
 
 
+% sub_cert: subjAltName MUST contain at least one entry.
+extSanNoEntries(Cert) :-
+  certs:sanExt(Cert, true),
+  \+certs:san(Cert, Name).
 
+
+% sub_cert: basicContrainsts cA field MUST NOT be true.
+subCertIsNotCa(Cert) :- 
+  certs:keyUsageExt(Cert, true),
+  certs:keyUsage(Cert, keyCertSign),
+  certs:basicConstraintsExt(Cert, true),
+  certs:isCA(Cert, false).
+
+
+/* 
+  If the Certificate asserts the policy identifier of 2.23.140.1.2.1, 
+  then it MUST NOT include organizationName, streetAddress, localityName,
+  stateOrProvinceName, or postalCode in the Subject field.
+*/
+cabDvConflictsApplies(Cert) :-
+  certs:isCA(Cert, false),
+  certs:certificatePolicies(Cert, Oid),
+  ext:equals(Oid, "2.23.140.1.2.1").
+  
+cabDvConflictsWithLocality(Cert) :- 
+  cabDvConflictsApplies(Cert),
+  certs:localityName(Cert, Locality).
+
+cabDvConflictsWithOrg(Cert) :- 
+  cabDvConflictsApplies(Cert),
+  certs:organizationName(Cert, Org).
+
+cabDvConflictsWithPostal(Cert) :- 
+  cabDvConflictsApplies(Cert),
+  certs:postalCode(Cert, Postal).
+
+cabDvConflictsWithProvince(Cert) :- 
+  cabDvConflictsApplies(Cert),
+  certs:stateOrProvinceName(Cert, Province).
+
+cabDvConflictsWithStreet(Cert) :- 
+  cabDvConflictsApplies(Cert),
+  certs:streetAddress(Cert, Street).
+  
 
 
 
