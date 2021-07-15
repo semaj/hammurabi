@@ -97,22 +97,22 @@ pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> S
                 Ok(objects) => objects.to_vec(),
                 Err(..) => vec![]
             };
-            let _result: String = authority_info_access_syntax
+            let result: String = authority_info_access_syntax
                 .iter()
                 .enumerate()
                 .filter_map(|(_, point_syntax): (usize, &BerObject<'_>)| match &point_syntax.content {
                     BerObjectContent::Sequence(access_description) => Some(
-                        match &access_description[0].content {
+                        match &access_description[1].content {
                             BerObjectContent::Unknown(_bertag, general_name) => format!("\nauthorityInfoAccessLocation({}, {:?}).", hash, String::from_utf8_lossy(general_name)),
                             _ => String::from("Doesn't get to location")
                         }
                     ),
-                    _ => Some(String::from("Doesn't match the point syntax")) //None 
+                    _ => Some(String::from("Doesn't match the sequence")) //None 
                 })
             .collect::<Vec<String>>()
-                .join("This isn't working");
+                .join("");
 
-            format!("authorityInfoAccessExt({}, true).\nauthorityInfoAccessCritical({}, {}).", hash, hash, extension.critical)
+            format!("authorityInfoAccessExt({}, true).\nauthorityInfoAccessCritical({}, {}). {}", hash, hash, extension.critical, result)
         }
         Err(e) => {
             println!("{:?}", e);
