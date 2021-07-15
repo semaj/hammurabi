@@ -306,12 +306,12 @@ impl PrologCert<'_> {
                                     Integer(v) => { q = (v.len()-1)*8 }
                                     _ => ()
                                 }
-                                answer.push(format!("spkiDSAParameters({}, {}, {}).\n", hash, p, q));
+                                answer.push(format!("spkiDSAParameters({}, {}, {}).", hash, p, q));
                             }
                             _ => ()
                         }
                     }
-                    None => { answer.push(format!("DSAParameters Are Absent\n")); }
+                    None => { answer.push(format!("DSAParameters Are Absent")); }
                 }
         }
         return answer.join("");
