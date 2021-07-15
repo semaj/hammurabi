@@ -93,7 +93,7 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
 pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> String {
     match parse_der(extension.value) {
         Ok(v) => {
-            format!("authorityInfoAccessExt({}, true).\ncertificatePoliciesCritical({}, {}). {}", hash, hash, extension.critical)
+            format!("authorityInfoAccessExt({}, true).\ncertificatePoliciesCritical({}, {}).", hash, hash, extension.critical)
         }
         Err(e) => {
             println!("{:?}", e);
