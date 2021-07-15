@@ -306,15 +306,15 @@ impl PrologCert<'_> {
                                     Integer(v) => { q = (v.len()-1)*8 }
                                     _ => ()
                                 }
-                                answer.push(format!("spkiDSAParameters({}, {}, {}).", hash, p, q));
+                                answer.push(format!("spkiDSAParameters({}, {}, {}).\n", hash, p, q));
                             }
                             _ => ()
                         }
                     }
-                    None => { answer.push(format!("Parameters Are Absent")); }
+                    None => { answer.push(format!("DSAParameters Are Absent\n")); }
                 }
         }
-        return answer.join("\n");
+        return answer.join("");
     }
     
     pub fn emit_key_len(&self, hash: &String) -> String {
