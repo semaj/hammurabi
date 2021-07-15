@@ -251,15 +251,20 @@ cabDvConflictsWithStreet(Cert) :-
 %         with the exception of stapling.  
 subCaAiaMissing(Cert) :-
   isSubCA(Cert).
-  
 
+
+% sub_cert: authorityInformationAccess MUST be present, 
+% 	  with the exception of stapling.  
+subCertAiaMissing(Cert) :-
+  isSubCert(Cert).
 
 
 % sub_ca: authorityInformationAccess MUST NOT be marked critical
 subCaAiaMarkedCritical(Cert) :-
   isSubCA(Cert),
   certs:authorityInfoAccessExt(Cert, true),
-  \+certs:authorityInfoAccessCritical(Cert, false).
+  certs:authorityInfoAccessCritical(Cert, true).
+
 
 
 
