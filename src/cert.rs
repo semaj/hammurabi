@@ -192,12 +192,12 @@ impl PrologCert<'_> {
         &self.inner.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.9" => {
-                    street = PrologCert::str_from_rdn(f)
+                    loc = PrologCert::str_from_rdn(f)
                 }
                 _ => (),
             }
         });
-        format!("streetAddress({}, \"{}\").", hash, street)
+        format!("streetAddress({}, \"{}\").", hash, loc)
     }
     fn emit_locality(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
