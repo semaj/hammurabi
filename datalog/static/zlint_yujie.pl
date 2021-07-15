@@ -258,8 +258,8 @@ subCaAiaMissing(Cert) :-
 % sub_ca: authorityInformationAccess MUST NOT be marked critical
 subCaAiaMarkedCritical(Cert) :-
   isSubCA(Cert),
-  certs:authorityInfoAccessExt(Cert, true).
-  certs:authorityInfoAccessCritical(Cert, false).
+  certs:authorityInfoAccessExt(Cert, true),
+  \+certs:authorityInfoAccessCritical(Cert, false).
 
 
 
