@@ -271,13 +271,15 @@ subCertLocalityNameMustNotAppear(Cert) :-
 % sub_ca: authorityInformationAccess MUST be present, 
 %         with the exception of stapling.  
 subCaAiaMissing(Cert) :-
-  isSubCA(Cert).
+  isSubCA(Cert),
+  certs:authorityInfoAccessExt(Cert, false).
 
 
 % sub_cert: authorityInformationAccess MUST be present, 
 % 	    with the exception of stapling.  
 subCertAiaMissing(Cert) :-
-  isSubCert(Cert).
+  isSubCert(Cert),
+  certs:authorityInfoAccessExt(Cert, false).
 
 
 % sub_ca: authorityInformationAccess MUST NOT be marked critical
