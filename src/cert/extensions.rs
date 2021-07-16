@@ -91,8 +91,9 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
 
 
 pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> String {
-    let mut p = String::from("");
-    let mut q = String::from("");
+    let mut pid = String::from("");
+    let mut location = String::from("");
+    let mut access_method = String::from("");
     match parse_der(extension.value) {
         Ok(v) => {
             let authority_info_access_syntax: Vec<BerObject> = match v.1.as_sequence() {
@@ -110,31 +111,21 @@ pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> S
                                 match &access_description[0].content {
                                     // OCSP 1.3.6.1.5.5.7.48.1
                                     // CA Issuer 1.3.6.1.5.5.7.48.2
-                                    BerObjectContent::OID(policy_oid) => { p = policy_oid.to_owned().to_string()},
+                                    BerObjectContent::OID(policy_oid) => { pid = policy_oid.to_owned().to_string(); 
+                                        if pid == "1.3.6.1.5.5.7.48.2" {access_method = "CA Issuers".to_string();} 
+                                        else if pid == "1.3.6.1.5.5.7.48.1" {access_method = "OCSP".to_string();}
+                                    },
                                     _ => ()
                                 }
                                 match &access_description[1].content {
-                                    BerObjectContent::Unknown(_bertag, general_name) => { q = String::from_utf8_lossy(general_name).to_string()},
+                                    BerObjectContent::Unknown(_bertag, general_name) => { location = String::from_utf8_lossy(general_name).to_string()},
                                     _ => ()
                                 }
-                                format!("\nauthorityInfoAccessLocation({}, \"{}\", {:?}).", hash, p, q)
+                                format!("\nauthorityInfoAccessLocation({}, \"{}\", {:?}).", hash, access_method, location)
                             }
-                            _ => String::from("Please match")
+                            _ => String::from("Content didn't match")
                         }
                     ),
-                    // BerObjectContent::Sequence(access_description) => Some(
-
-                    //     match &access_description[0].content {
-                    //         // OCSP 1.3.6.1.5.5.7.48.1
-                    //         // CA Issuer 1.3.6.1.5.5.7.48.2
-                    //         BerObjectContent::OID(policy_oid) => format!("\nauthorityInfoAccessMethod({}, \"{}\").", hash, policy_oid.to_owned().to_string()),
-                    //         _ => String::from("Doesn't get to access method")
-                    //     }
-                    //     //match &access_description[1].content {
-                    //     //    BerObjectContent::Unknown(_bertag, general_name) => format!("\nauthorityInfoAccessLocation({}, {:?}).", hash, String::from_utf8_lossy(general_name)),
-                    //     //    _ => String::from("Doesn't get to location")
-                    //     //}
-                    // ),
                     _ => Some(String::from("Doesn't match the sequence")) //None 
                 })
             .collect::<Vec<String>>()
