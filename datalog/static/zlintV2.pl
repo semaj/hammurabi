@@ -241,12 +241,57 @@ subCertCrlDistPointContainsHttpUrl(Cert) :-
 subCertCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCert(Cert).
 
+% Subscriber Certificate: authorityInformationAccess MUST NOT be marked critical
+subCertAIANotMarkedCritical(Cert) :-
+	certs:authorityInfoAccessCritical(Cert, false).
+
+subCertAIANotMarkedCritical(Cert) :-
+	\+isSubCert(Cert).
+
+% Subscriber Certificate: authorityInformationAccess MUST contain the 
+% HTTP URL of the Issuing CAs OCSP responder.
+subCertAIAContainsOCSPUrl(Cert) :-
+	certs:authorityInfoAccessLocation(Cert, "OCSP", Url),
+	ext:s_startswith(Url, "http://").
+
+subCertAIAContainsOCSPUrl(Cert) :-
+	\+isSubCert(Cert).
+
+%I have not tested this yet
+% Subordinate CA Certificate: authorityInformationAccess MUST contain the
+% HTTP URL of the Issuing CAss OCSP responder.
+subCAAIAContainsOCSPUrl(Cert) :-
+	certs:authorityInfoAccessLocation(Cert, "OCSP", Url),
+	ext:s_startswith(Url, "http://").
+
+subCAAIAContainsOCSPUrl(Cert) :-
+	\+isSubCA(Cert).
+
+% Subordinate CA Certificate: authorityInformationAccess SHOULD also
+% contain the HTTP URL of the Issuing CAs certificate.
+subCAAIAContainsIssuingCAUrl(Cert) :-
+	certs:authorityInfoAccessLocation(Cert, "CA Issuers", Url),
+	ext:s_startswith(Url, "http://").
+
+subCAAIAContainsIssuingCAUrl(Cert) :-
+	\+isSubCA(Cert).
+
+% check common name and subject alternate name
+% Subordinate CA: If includes id-kp-serverAuth EKU,
+% then it MUST include Name constraints w/ 
+% constraints on DNSName, IPAddress, and DirectoryName
+subCAEkuNameConstraints(Cert) :-
+	\+isSubCA(Cert).
+
 
 % Rules are tested here
 verified(Cert) :-
 	std:isCert(Cert),
-	subCaCrlDistPointContainsHttpUrl(Cert).
+	subCAAIAContainsIssuingCAUrl(Cert).
 
+	%subCertAIAContainsOCSPUrl(Cert).
+	%subCertAIANotMarkedCritical(Cert).
+	%subCaCrlDistPointContainsHttpUrl(Cert).
 	%subCertCrlDistPointContainsHttpUrl(Cert).
 	%subCertCrlDistPointsNotMarkedCritical(Cert).
 	%subCertCrlDistributionPointsPresent(Cert).
