@@ -371,6 +371,49 @@ end
 
 datalog.add_iter_prim("ext:s_containstldwildcard", 1, s_containstldwildcard)
 
+local function s_match_pattern(literal)
+   return function(s, v)
+     if v then
+        return nil
+     else
+         local w = literal[1]
+         local v = literal[2]
+         if w:is_const() and v:is_const() then
+             local j = w.id
+             local k = v.id
+             -- Imagine we matched on all public suffixes here.
+             if string.match(j, k) then
+               return {j,k}
+             else
+               return nil
+             end
+         else
+             return nil
+         end
+     end
+   end
+ end
+ 
+ datalog.add_iter_prim("ext:s_match_pattern", 2, s_match_pattern)
+
+ local function s_length(literal)
+   return function(s, v)
+     if v then
+        return nil
+     else
+         local w = literal[1]
+         if w:is_const() then
+             local j = w.id
+             return {j, #j}
+         else
+             return nil
+         end
+     end
+   end
+ end
+ 
+ datalog.add_iter_prim("ext:s_length", 2, s_length)
+
 
 local function s_substring(literal)
   return function(s, v)
@@ -520,3 +563,5 @@ local function to_lower(literal)
  end
  
  datalog.add_iter_prim("ext:to_lower", 2, to_lower)
+
+ 

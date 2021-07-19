@@ -189,6 +189,48 @@ rsaModLessThan2048Bits(Cert) :-
 % keyCertSign and cRLSign must be set
 
 
+% CAs MUST NOT issue any new Subscriber 
+% certificates or Subordinate CA certificates 
+% using SHA-1 after 1 January 2016
+subCertOrSubCaUsingSha1(Cert) :- 
+  certs:keyAlgorithm(Cert, Algo),
+  ext:equals(Algo, "1.2.840.113549.1.1.5").
+
+subCertOrSubCaUsingSha1(Cert) :- 
+  certs:keyAlgorithm(Cert, Algo),
+  ext:equals(Algo, "1.3.14.3.2.27").
+
+subCertOrSubCaUsingSha1(Cert) :- 
+  certs:keyAlgorithm(Cert, Algo),
+  ext:equals(Algo, "1.2.840.10045.4.1").
+
+% The following are lints for the dnsName 
+% under subject alternative name 
+dnsNameApplies(Cert) :- 
+  \+caCommonNameMissing(Cert).
+
+dnsNameNoBadChar(Cert) :- 
+  certs:commonName(Cert, Name).
+
+dnsNameLeftLabelWildcardCorrect(Cert) :- 
+  certs:san(Cert, Label), 
+  ext:s_startswith(Label, "*.").
+
+dnsNameTooLong(Cert) :- 
+  certs:commonName(Cert, Label), 
+  ext:s_length(Label, Length), 
+  ext:geq(Length, 64).
+
+dnsNameTooLong(Cert) :- 
+  certs:san(Cert, Label), 
+  ext:s_length(Label, Length), 
+  ext:geq(Length, 64).
+
+dnsNameContainsEmptyLabel(Cert) :- 
+  certs:san(Cert, Label), 
+  ext:equal(Label, ""). 
+
+
 
 % Basic Constraints checks
 % CA bit set
@@ -474,6 +516,73 @@ val_country("ZM").
 val_country("ZW").
 val_country("XX").
 
+% Acceptable Characters in DNS Name 
+acceptable("A").
+acceptable("B").
+acceptable("C").
+acceptable("D").
+acceptable("E").
+acceptable("F").
+acceptable("G").
+acceptable("H").
+acceptable("I").
+acceptable("J").
+acceptable("K").
+acceptable("L").
+acceptable("M").
+acceptable("N").
+acceptable("O").
+acceptable("P").
+acceptable("Q").
+acceptable("R").
+acceptable("S").
+acceptable("T").
+acceptable("U").
+acceptable("V").
+acceptable("W").
+acceptable("X").
+acceptable("Y").
+acceptable("Z").
+acceptable("a").
+acceptable("b").
+acceptable("c").
+acceptable("d").
+acceptable("e").
+acceptable("f").
+acceptable("g").
+acceptable("h").
+acceptable("i").
+acceptable("j").
+acceptable("k").
+acceptable("l").
+acceptable("m").
+acceptable("n").
+acceptable("o").
+acceptable("p").
+acceptable("q").
+acceptable("r").
+acceptable("s").
+acceptable("t").
+acceptable("u").
+acceptable("v").
+acceptable("w").
+acceptable("x").
+acceptable("y").
+acceptable("z").
+acceptable("0").
+acceptable("1").
+acceptable("2").
+acceptable("3").
+acceptable("4").
+acceptable("5").
+acceptable("6").
+acceptable("7").
+acceptable("8").
+acceptable("9").
+acceptable("-").
+acceptable("_").
+acceptable("*").
+
 % The numbers below are prime nums 
 prime_num(2).
 prime_num(3).
@@ -613,8 +722,19 @@ prime_num(751).
 % Currently verified is being autogened 
 % by a script
 
-% verified(Cert) :- 
-%   std:isCert(Cert), 
-%   ext:mod(Mod, 5, 3), 
-%   prime_num(Mod).
+word("AABAA").
+
+verified(Cert) :- 
+  std:isCert(Cert), 
+  word(Word),
+  ext:s_length(Word, Length), 
+  \+ext:geq(End, Length), 
+  ext:geq(Start, 0), 
+  ext:subtract(End, Start, Diff), 
+  ext:equal(Diff, 1), 
+  ext:s_substring(Word, Start, End, Sub), 
+  ext:equal(Sub, "A").
+  %ext:s_substring("AAAAA", Beg, End, Sub), 
+  %ext:subtract()
+
 
