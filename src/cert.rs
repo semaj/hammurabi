@@ -293,6 +293,7 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         let mut p = 0;
         let mut q = 0;
+        let mut g = 0;
         if self.inner.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.10040.4.1") {
             match self.inner.subject_pki.algorithm.parameters.as_ref() {
                     Some(outer_bo) => {
@@ -306,7 +307,11 @@ impl PrologCert<'_> {
                                     Integer(v) => { q = (v.len()-1)*8 }
                                     _ => ()
                                 }
-                                answer.push(format!("spkiDSAParameters({}, {}, {}).", hash, p, q));
+                                match paras[2].content {
+                                    Integer(v) => { g = (v.len()-1)*8 }
+                                    _ => ()
+                                }
+                                answer.push(format!("spkiDSAParameters({}, {}, {}, {}).", hash, p, q, g));
                             }
                             _ => ()
                         }
