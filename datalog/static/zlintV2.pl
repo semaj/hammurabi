@@ -90,7 +90,7 @@ allowed_EKU(clientAuth).
 allowed_EKU(emailProtection).
 
 % helper function: checks for not allowed EKU
-subCertEkuValidFields(Cert) :-
+subCertEkuValuesNotAllowed(Cert) :-
 	certs:extendedKeyUsage(Cert, Value),
 	\+allowed_EKU(Value).
 
@@ -257,7 +257,6 @@ subCertAIAContainsOCSPUrl(Cert) :-
 subCertAIAContainsOCSPUrl(Cert) :-
 	\+isSubCert(Cert).
 
-%I have not tested this yet
 % Subordinate CA Certificate: authorityInformationAccess MUST contain the
 % HTTP URL of the Issuing CAss OCSP responder.
 subCAAIAContainsOCSPUrl(Cert) :-
@@ -280,15 +279,26 @@ subCAAIAContainsIssuingCAUrl(Cert) :-
 % Subordinate CA: If includes id-kp-serverAuth EKU,
 % then it MUST include Name constraints w/ 
 % constraints on DNSName, IPAddress, and DirectoryName
+subCAEkuNameConstraintsApplies(Cert) :-
+	certs:extendedKeyUsage(Cert, serverAuth).
+
+subCAEkuNameConstraints(Cert) :-
+	certs:nameConstraintsPermitted(Cert, "DNS", Constraint).
+
+subCAEkuNameConstraints(Cert) :-
+	\+subCAEkuNameConstraintsApplies(Cert).
+
 subCAEkuNameConstraints(Cert) :-
 	\+isSubCA(Cert).
 
 
 % Rules are tested here
-verified(Cert) :-
-	std:isCert(Cert),
-	subCAAIAContainsIssuingCAUrl(Cert).
-
+%verified(Cert) :-
+%	std:isCert(Cert).
+	
+	%subCertEkuValidFields(Cert).
+	%subCAAIAContainsOCSPUrl(Cert).
+	%subCAAIAContainsIssuingCAUrl(Cert).
 	%subCertAIAContainsOCSPUrl(Cert).
 	%subCertAIANotMarkedCritical(Cert).
 	%subCaCrlDistPointContainsHttpUrl(Cert).

@@ -2,8 +2,8 @@
 
 # Format for test cases
 # [Rule],[Test File],[Expected Result]
-# Make sure to not have any trailing whitespace 
-# and to have an extra line at the bottom 
+# Trailing whitespace after Expected Result is ok
+# Make sure to have an extra line at the bottom 
 # Do not put a \+ (negation) in front of your rules
 
 # In the Zlint file, make sure to comment out 
@@ -37,7 +37,11 @@ while IFS=",", read -r rule test_file expected; do
     echo "  $rule(Cert)." >> ~/engine/datalog/static/tmpZlint.pl
     actual=`bash ~/engine/scripts/custom.sh ~/engine/$test_file domain tmpZlint | tail -1`
     rm ~/engine/datalog/static/tmpZlint.pl
-    echo "Actual Result: $actual" 
+    echo "Actual Result: $actual"
+    expected=`echo $expected | xargs`
+    # troubleshooting
+    # echo "'"$actual"'"
+    # echo "'"$expected"'"
     if [ "$actual" = "$expected" ]
     then 
         echo -e "${GREEN}Test Passed${NC}"
