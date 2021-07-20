@@ -150,24 +150,35 @@ signatureAlgorithmNotSupported(Cert) :-
   type and key size: L=2048 and N=224,256 or L=3072 and N=256
 */
 dsaImproperModulusOrDivisorSize(Cert) :-
-  certs:spkiDSAParameters(cert_0, L, N),
+  certs:spkiDSAParameters(cert_0, L, N, G),
   ext:equals(L, 2048),
   ext:equals(N, 224).
 
 dsaImproperModulusOrDivisorSize(Cert) :-
-  certs:spkiDSAParameters(cert_0, L, N),
+  certs:spkiDSAParameters(cert_0, L, N, G),
   ext:equals(L, 2048),
   ext:equals(N, 256).
 
 dsaImproperModulusOrDivisorSize(Cert) :-
-  certs:spkiDSAParameters(cert_0, L, N),
+  certs:spkiDSAParameters(cert_0, L, N, G),
   ext:equals(L, 3072),
   ext:equals(N, 256).
 
 dsaImproperModulusOrDivisorSize(Cert) :-
-  \+certs:spkiDSAParameters(cert_0, L, N).
+  \+certs:spkiDSAParameters(cert_0, L, N, G).
   
-  
+
+% Certificates MUST include all domain parameters
+dsaParamsAllPresent(Cert) :-
+  certs:spkiDSAParameters(cert_0, P, Q, G),
+  ext:unequal(P, 0),
+  ext:unequal(Q, 0),
+  ext:unequal(G, 0).
+
+dsaParamsMissing(Cert) :-
+  \+dsaParamsAllPresent(Cert).
+
+
 /* 
   Certificates MUST meet the following requirements for algorithm 
   type and key size: ECC NIST P-256(65), P-384(97), or P-521(133)
