@@ -26,11 +26,9 @@ basicConstaintsMustBeCritical(Cert) :-
   certs:basicConstraintsExt(Cert, true),
   certs:basicConstraintsCritical(Cert, true).
 
-
-/* 
-  sub_cert: A cert containing givenName or surname 
-  MUST contain the (2.23.140.1.2.3) certPolicy OID.
-*/
+ 
+% sub_cert: A cert containing givenName or surname 
+% MUST contain the (2.23.140.1.2.3) certPolicy OID.
 subCertGivenOrSurnameHasCorrectPolicy(Cert) :- 
   isSubCert(Cert),
   givenNameIsPresent(Cert),
@@ -44,11 +42,11 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
   ext:equal(Oid, "2.23.140.1.2.3").
 
 
-/* 
-  sub_cert: 
-  localityName MUST appear if organizationName, givenName, 
-  or surname are present but stateOrProvinceName is absent.
-*/
+ 
+% sub_cert: 
+% localityName MUST appear if organizationName, givenName, 
+% or surname are present but stateOrProvinceName is absent.
+
 subCertLocalityNameMustAppear(Cert) :-
   isSubCert(Cert),
   organizationNameIsPresent(Cert),
@@ -77,11 +75,10 @@ caOrganizationNameMissing(Cert) :-
   \+organizationNameIsPresent(Cert).
 
 
-/* 
-  sub_cert: stateOrProvinceName MUST appeear if
-  organizationName, givenName, or surname are present 
-  and localityName is absent.
-*/
+% sub_cert: stateOrProvinceName MUST appeear if
+% organizationName, givenName, or surname are present 
+% and localityName is absent.
+
 subCertProvinceMustAppear(Cert) :-
   isSubCert(Cert),
   organizationNameIsPresent(Cert),
@@ -98,10 +95,8 @@ subCertProvinceMustAppear(Cert) :-
   \+localityNameIsPresent(Cert).
 
 
-/* 
-  sub_cert: stateOrProvinceName MUST NOT appeear if 
-  organizationName, givenName, or surname are absent.
-*/
+% sub_cert: stateOrProvinceName MUST NOT appeear if 
+% organizationName, givenName, or surname are absent.
 subCertProvinceMustNotAppear(Cert) :-
   isSubCert(Cert),
   \+organizationNameIsPresent(Cert).
@@ -136,19 +131,16 @@ val_sig_algo("1.2.840.113549.1.1.13"). % sha-512WithRSAEncryption
 val_sig_algo("1.2.840.10045.4.3.4"). % ecdsa-with-sha512
 
 
-/*
-  Certificates MUST meet the following algorithm requirements: 
-  SHA-1*, SHA-256, SHA-384, SHA-512
-*/
+% Certificates MUST meet the following algorithm requirements: 
+% SHA-1*, SHA-256, SHA-384, SHA-512
 signatureAlgorithmNotSupported(Cert) :-
   certs:signatureAlgorithm(Cert, Algo),
   \+val_sig_algo(Algo).
 
 
-/* 
-  Certificates MUST meet the following requirements for DSA algorithm 
-  type and key size: L=2048 and N=224,256 or L=3072 and N=256
-*/
+% Certificates MUST meet the following requirements for DSA algorithm 
+% type and key size: L=2048 and N=224,256 or L=3072 and N=256
+
 dsaImproperModulusOrDivisorSize(Cert) :-
   certs:spkiDSAParameters(cert_0, L, N, G),
   ext:equals(L, 2048),
@@ -178,11 +170,10 @@ dsaParamsAllPresent(Cert) :-
 dsaParamsMissing(Cert) :-
   \+dsaParamsAllPresent(Cert).
 
+ 
+% Certificates MUST meet the following requirements for algorithm 
+% type and key size: ECC NIST P-256(65), P-384(97), or P-521(133)
 
-/* 
-  Certificates MUST meet the following requirements for algorithm 
-  type and key size: ECC NIST P-256(65), P-384(97), or P-521(133)
-*/
 ecImproperCurves(Cert) :-
   \+ecProperCurves(Cert).
 
@@ -227,11 +218,10 @@ subCertIsNotCa(Cert) :-
   certs:isCA(Cert, false).
 
 
-/* 
-  If the Certificate asserts the policy identifier of 2.23.140.1.2.1, 
-  then it MUST NOT include organizationName, streetAddress, localityName,
-  stateOrProvinceName, or postalCode in the Subject field.
-*/
+% If the Certificate asserts the policy identifier of 2.23.140.1.2.1, 
+% then it MUST NOT include organizationName, streetAddress, localityName,
+% stateOrProvinceName, or postalCode in the Subject field.
+
 cabDvConflictsApplies(Cert) :-
   certs:isCA(Cert, false),
   certs:certificatePolicies(Cert, Oid),
@@ -301,8 +291,7 @@ subCaAiaMarkedCritical(Cert) :-
 
 
 
-
-/***** helper methods *****/
+% helper methods
 givenNameIsPresent(Cert) :-
   certs:givenName(Cert, Given),
   ext:unequal(Given, "").
