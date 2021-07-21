@@ -21,30 +21,22 @@ isSubCA(Cert) :-
 isSubCert(Cert) :-
 	certs:isCA(Cert, false).
 
-/* 
-  Root CA and Subordinate CA Certificate: 
-  keyUsage extension MUST be present and MUST be marked critical.
-*/
-% checks if caKeyUsageCritical rule is applicable
+ 
+%  Root CA and Subordinate CA Certificate: 
+%  keyUsage extension MUST be present and MUST be marked critical.
 caKeyUsageCriticalApplies(Cert) :-
 	certs:isCA(Cert, true).
 
-% if not applicable pass
 caKeyUsageCritical(Cert) :-
 	\+caKeyUsageCriticalApplies(Cert).
 
-% All CA Cert: keyUsage ext must be present and marked critical (21,35)
-% checked CA certs for keyUsage extension and that it is marked critical
 caKeyUsageCritical(Cert) :-
 	certs:keyUsageExt(Cert, true),
 	certs:keyUsageCritical(Cert, true).
 
-/*
-  Subordinate CA Certificate: certificatePolicies 
-  MUST be present and SHOULD NOT be marked critical.
-*/
-% cert policies must be present and not marked critical (39)
-% checks subCA for certificate policies and that they are marked not critical
+
+%  Subordinate CA Certificate: certificatePolicies 
+%  MUST be present and SHOULD NOT be marked critical.
 subCaCertPoliciesExtPresent(Cert) :-
 	certs:certificatePoliciesExt(Cert, true).
 
@@ -57,11 +49,8 @@ subCaCertPoliciesNotMarkedCritical(Cert) :-
 subCaCertPoliciesNotMarkedCritical(Cert) :-
 	\+isSubCA(Cert).
 
-/*
-  Root CA Certificate: basicConstraints MUST appear as a critical extension
-*/
-% Root ca: basic constraint must appear as critical extension (18)
-% Checks that root CA basic constraints are critical
+
+%  Root CA Certificate: basicConstraints MUST appear as a critical extension
 rootBasicConstraintsCritical(Cert) :-
 	certs:basicConstraintsExt(Cert, true),
 	certs:basicConstraintsCritical(Cert, true).
@@ -69,10 +58,8 @@ rootBasicConstraintsCritical(Cert) :-
 rootBasicConstraintsCritical(Cert) :-
 	\+rootApplies(Cert).
 
-/*
-  Root CA Certificate: The pathLenConstraintField SHOULD NOT be present.
-*/
-% Root CA: path length constraint field should not be present (20)
+
+%  Root CA Certificate: The pathLenConstraintField SHOULD NOT be present.
 % Checks root CA for no length constraint
 rootPathLenNotPresent(Cert) :-
 	certs:pathLimit(Cert, none).
@@ -80,33 +67,29 @@ rootPathLenNotPresent(Cert) :-
 rootPathLenNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
-/*
-  Root CA Certificate: extendedKeyUsage MUST NOT be present.
-*/
-% checks that root certificate extended key usage is not present (24)
+
+%  Root CA Certificate: extendedKeyUsage MUST NOT be present.
 rootExtKeyUseNotPresent(Cert) :-
 	certs:extendedKeyUsageExt(Cert, false).
 
 rootExtKeyUseNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
-/*
-  Root CA Certificate: certificatePolicies SHOULD NOT be present.
-*/
-% Root Cert: Certificate Policies should not be present (23)
+
+%  Root CA Certificate: certificatePolicies SHOULD NOT be present.
 rootCertPoliciesNotPresent(Cert) :-
 	certs:certificatePoliciesExt(Cert, false).
 
 rootCertPoliciesNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
-/*
-  Subscriber Certificate: extKeyUsage either the value id-kp-serverAuth
-  or id-kp-clientAuth or both values MUST be present.
-  Subscriber Certificate: extKeyUsage id-kp-emailProtection MAY be present.
-  Other values SHOULD NOT be present.
-  Subscriber Certificate: extKeyUsage: Any other values SHOULD NOT be present.
-*/
+
+%  Subscriber Certificate: extKeyUsage either the value id-kp-serverAuth
+%  or id-kp-clientAuth or both values MUST be present.
+%  Subscriber Certificate: extKeyUsage id-kp-emailProtection MAY be present.
+%  Other values SHOULD NOT be present.
+%  Subscriber Certificate: extKeyUsage: Any other values SHOULD NOT be present.
+
 % ExtendedKeyUsage extensions allowed
 allowed_EKU(serverAuth).
 allowed_EKU(clientAuth).
@@ -129,21 +112,17 @@ subCertEkuValidFields(Cert) :-
 subCertEkuValidFields(Cert) :-
 	\+isSubCert(Cert).
 
-/*
-  Subordinate CA: Must include an EKU extension.
-*/
-% sub CA must include EKU extension
+
+%  Subordinate CA: Must include an EKU extension.
 subCaEkuPresent(Cert) :-
 	certs:extendedKeyUsageExt(Cert, true).
 
 subCaEkuPresent(Cert) :-
 	\+isSubCA(Cert).
 
-/*
-  Subordinate CA Certificate: extkeyUsage, either id-kp-serverAuth
-  or id-kp-clientAuth or both values MUST be present.
-*/
-% Subordinate CA: EKU either serverAuth, clientAuth, or both MUST be present
+
+%  Subordinate CA Certificate: extkeyUsage, either id-kp-serverAuth
+%  or id-kp-clientAuth or both values MUST be present.
 subCaEkuValidFields(Cert) :-
 	certs:extendedKeyUsage(Cert, serverAuth).
 
@@ -153,11 +132,9 @@ subCaEkuValidFields(Cert) :-
 subCaEkuValidFields(Cert) :-
 	\+isSubCA(Cert).
 
-/*
-  Subscriber Certificate: certificatePolicies MUST be present
-  and SHOULD NOT be marked critical.
-*/
-% checks sub cert for certificate policies and that they are marked not critical
+
+%  Subscriber Certificate: certificatePolicies MUST be present
+%  and SHOULD NOT be marked critical.
 subCertCertPoliciesExtPresent(Cert) :-
 	certs:certificatePoliciesExt(Cert, true).
 
@@ -170,10 +147,10 @@ subCertCertPoliciesNotMarkedCritical(Cert) :-
 subCertCertPoliciesNotMarkedCritical(Cert) :-
 	\+isSubCert(Cert).
 
-/*
-  Subordinate CA Certificate: NameConstraints if present,
-  SHOULD be marked critical.
-*/
+
+%  Subordinate CA Certificate: NameConstraints if present,
+%  SHOULD be marked critical.
+
 % if subCA has name constraints it must be marked critical
 subCaNameConstCritApplies(Cert) :-
 	isSubCA(Cert),
@@ -185,20 +162,18 @@ subCaNameConstrainsCritical(Cert) :-
 subCaNameConstrainsCritical(Cert) :-
 	\+subCaNameConstCritApplies(Cert).
 
-/*
-  Root CA: SHOULD NOT contain the certificatePolicies extension.
-*/
-% root CA should not contain the certificatePolicies extension
+
+%  Root CA: SHOULD NOT contain the certificatePolicies extension.
 rootCertPoliciesExtNotPresent(Cert) :-
 	certs:certificatePoliciesExt(Cert, false).
 
 rootCertPoliciesExtNotPresent(Cert) :-
 	\+rootApplies(Cert).
 
-/*
-  Subscriber Certificate: commonName is deprecated.
-  common name is deprecated if anything other than ""
-*/
+
+%  Subscriber Certificate: commonName is deprecated.
+%  common name is deprecated if anything other than ""
+
 % sub cert: common name is deprecated if anything other than ""
 % Look at later
 subCertCommonNameNotIncluded(Cert) :-
@@ -207,12 +182,10 @@ subCertCommonNameNotIncluded(Cert) :-
 subCertCommonNameNotIncluded(Cert) :-
 	\+isSubCert(Cert).
 
-/*
-  Subscriber Certificate: commonName If present,
-  the field MUST contain a single IP address or FQDN that 
-  is one of the values contained in the subjAltName extension.
-*/
-% sub cert: if CommonName present must contain a single IP address or FQDN part of subjAltName
+
+%  Subscriber Certificate: commonName If present,
+%  the field MUST contain a single IP address or FQDN that 
+%  is one of the values contained in the subjAltName extension.
 subCertCommonNameFromSanApplies(Cert) :-
 	isSubCert(Cert),
 	\+certs:commonName(Cert, "").
@@ -227,11 +200,9 @@ subCertCommonNameFromSan(Cert) :-
 subCertCommonNameFromSan(Cert) :-
 	\+subCertCommonNameFromSanApplies(Cert).
 
-/*
-  Subordinate CA Certificate: cRLDistributionPoints MUST be present 
-  and MUST NOT be marked critical.
-*/
-% subCA CRL Disctribution Points must be present and not marked critical
+
+%  Subordinate CA Certificate: cRLDistributionPoints MUST be present 
+%  and MUST NOT be marked critical.
 subCaCrlDistributionPointsPresent(Cert) :-
 	certs:CRLDistributionPointsExt(Cert, true),
 	\+certs:CRLDistributionPoints(Cert, false).
@@ -245,11 +216,9 @@ subCaCrlDistPointsNotMarkedCritical(Cert) :-
 subCaCrlDistPointsNotMarkedCritical(Cert) :-
 	\+isSubCA(Cert).
 
-/*
-  Subordinate CA Certificate: cRLDistributionPoints MUST contain
-  the HTTP URL of the CA's CRL service.
-*/
-% subCA cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service.
+
+%  Subordinate CA Certificate: cRLDistributionPoints MUST contain
+%  the HTTP URL of the CAs CRL service.
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, Url),
 	ext:s_startswith(Url, "http://").
@@ -262,10 +231,8 @@ subCaCrlDistPointContainsHttpUrl(Cert) :-
 
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCA(Cert).
-/*
-  Subscriber Certifcate: cRLDistributionPoints MAY be present.
-*/
-% sub cert: cRLDistributionPoints MAY be present
+
+%  Subscriber Certifcate: cRLDistributionPoints MAY be present.
 % not considered in valid scope
 subCertCrlDistributionPointsPresent(Cert) :-
 	certs:CRLDistributionPointsExt(Cert, true),
@@ -273,11 +240,9 @@ subCertCrlDistributionPointsPresent(Cert) :-
 
 subCertCrlDistributionPointsPresent(Cert) :-
 	\+isSubCert(Cert).
-/*
-  Subscriber Certiifcate: cRLDistributionPoints MUST NOT be marked critical,
-  and MUST contain the HTTP URL of the CA's CRL service.
-*/
-% sub cert: cRLDistributionPoints MUST NOT be marked critical
+
+%  Subscriber Certifcate: cRLDistributionPoints MUST NOT be marked critical,
+%  and MUST contain the HTTP URL of the CAs CRL service.
 subCertCrlDistPointsNotMarkedCritical(Cert) :-
 	certs:CRLDistributionPointsCritical(Cert, false).
 
@@ -302,22 +267,17 @@ subCertCrlDistPointContainsHttpUrl(Cert) :-
 
 subCertCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCert(Cert).
-/*
-  Subscriber Certificate: authorityInformationAccess MUST NOT be marked critical
-*/
-% Subscriber Certificate: authorityInformationAccess MUST NOT be marked critical
+
+%  Subscriber Certificate: authorityInformationAccess MUST NOT be marked critical
 subCertAIANotMarkedCritical(Cert) :-
 	certs:authorityInfoAccessCritical(Cert, false).
 
 subCertAIANotMarkedCritical(Cert) :-
 	\+isSubCert(Cert).
 
-/*
-  Subscriber Certificate: authorityInformationAccess MUST contain the
-  HTTP URL of the Issuing CA's OSCP responder.
-*/
-% Subscriber Certificate: authorityInformationAccess MUST contain the 
-% HTTP URL of the Issuing CAs OCSP responder.
+
+%  Subscriber Certificate: authorityInformationAccess MUST contain the
+%  HTTP URL of the Issuing CAs OSCP responder.
 subCertAIAContainsOCSPUrl(Cert) :-
 	certs:authorityInfoAccessLocation(Cert, "OCSP", Url),
 	ext:s_startswith(Url, "http://").
@@ -325,12 +285,9 @@ subCertAIAContainsOCSPUrl(Cert) :-
 subCertAIAContainsOCSPUrl(Cert) :-
 	\+isSubCert(Cert).
 
-/*
-  Subordinate CA Certificate: authorityInformationAccess MUST contain
-  the HTTP URL of the Issuing CA's OSCP responder.
-*/
-% Subordinate CA Certificate: authorityInformationAccess MUST contain the
-% HTTP URL of the Issuing CAss OCSP responder.
+
+%  Subordinate CA Certificate: authorityInformationAccess MUST contain
+%  the HTTP URL of the Issuing CAs OSCP responder.
 subCAAIAContainsOCSPUrl(Cert) :-
 	certs:authorityInfoAccessLocation(Cert, "OCSP", Url),
 	ext:s_startswith(Url, "http://").
@@ -338,12 +295,9 @@ subCAAIAContainsOCSPUrl(Cert) :-
 subCAAIAContainsOCSPUrl(Cert) :-
 	\+isSubCA(Cert).
 
-/*
-  Subordinate CA Certificate: authorityInformationAccess SHOULD
-  also contain the HTTP URL of the Issuing CA's certificate.
-*/
-% Subordinate CA Certificate: authorityInformationAccess SHOULD also
-% contain the HTTP URL of the Issuing CAs certificate.
+
+%  Subordinate CA Certificate: authorityInformationAccess SHOULD
+%  also contain the HTTP URL of the Issuing CAs certificate.
 subCAAIAContainsIssuingCAUrl(Cert) :-
 	certs:authorityInfoAccessLocation(Cert, "CA Issuers", Url),
 	ext:s_startswith(Url, "http://").
@@ -367,11 +321,10 @@ subCAAIAContainsIssuingCAUrl(Cert) :-
 %subCAEkuNameConstraints(Cert) :-
 %	\+isSubCA(Cert).
 
-/*
-  the CA MUST establish and follow a documented procedure[^pubsuffix] that
-  determines if the wildcard character occurs in the first label position to
-  the left of a “registry‐controlled” label or “public suffix”
-*/
+
+%  the CA MUST establish and follow a documented procedure[^pubsuffix] that
+%  determines if the wildcard character occurs in the first label position to
+%  the left of a “registry‐controlled” label or “public suffix”
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	certs:san(Cert, San),
 	\+ext:s_startswith(San, "*").
@@ -381,8 +334,8 @@ dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 
 % Rules are tested here
 verified(Cert) :-
-	std:isCert(Cert),
-	dnsWildcardNotLeftOfPublicSuffix(Cert).
+	std:isCert(Cert).
+	%dnsWildcardNotLeftOfPublicSuffix(Cert).
 	
 	%subCertEkuValidFields(Cert).
 	%subCAAIAContainsOCSPUrl(Cert).
