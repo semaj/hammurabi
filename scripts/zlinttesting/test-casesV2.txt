@@ -52,3 +52,6 @@ subCAAIAContainsOCSPUrl,testdata/subCAAIANotMarkedCritical.pem,Error: UnknownErr
 subCAAIAContainsOCSPUrl,testdata/subCAAIAValid.pem,OK 
 subCAAIAContainsIssuingCAUrl,testdata/subCAWBothURL.pem,OK 
 subCAAIAContainsIssuingCAUrl,testdata/subCAWOcspURL.pem,Error: UnknownError 
+dnsWildcardNotLeftOfPublicSuffix,testdata/dnsNameWildcardNotLeftOfPublicSuffix.pem,OK 
+dnsWildcardNotLeftOfPublicSuffix,testdata/dnsNameWildcardLeftOfPublicSuffix.pem,Error: UnknownError 
+
