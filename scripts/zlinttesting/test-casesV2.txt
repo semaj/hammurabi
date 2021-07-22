@@ -1,0 +1,57 @@
+caKeyUsageCritical,testdata/caKeyUsageCrit.pem,OK 
+caKeyUsageCritical,testdata/caKeyUsageMissing.pem,Error: UnknownError 
+subCaCertPoliciesExtPresent,testdata/subCAWCertPolicyNoCrit.pem,OK 
+subCaCertPoliciesExtPresent,testdata/subCAWNoCertPolicy.pem,Error: UnknownError 
+subCaCertPoliciesNotMarkedCritical,testdata/subCAWCertPolicyNoCrit.pem,OK 
+subCaCertPoliciesNotMarkedCritical,testdata/subCAWCertPolicyCrit.pem,Error: UnknownError 
+rootBasicConstraintsCritical,testdata/caBasicConstCrit.pem,OK 
+rootBasicConstraintsCritical,testdata/caBasicConstNotCrit.pem,Error: UnknownError 
+rootPathLenNotPresent,testdata/rootCaMaxPathLenMissing.pem,OK 
+rootPathLenNotPresent,testdata/rootCaMaxPathLenPresent.pem,Error: UnknownError 
+rootExtKeyUseNotPresent,testdata/rootCAValid.pem,OK 
+rootExtKeyUseNotPresent,testdata/rootCAWithEKU.pem,Error: UnknownError 
+rootCertPoliciesNotPresent,testdata/rootCAValid.pem,OK 
+rootCertPoliciesNotPresent,testdata/rootCAWithCertPolicy.pem,Error: UnknownError 
+subCertEkuValidFields,testdata/subExtKeyUsageServClientEmail.pem,OK 
+subCertEkuValidFields,testdata/subExtKeyUsageServClientEmailCodeSign.pem,Error: UnknownError 
+subCaEkuPresent,testdata/subCAWEkuCrit.pem,OK 
+subCaEkuPresent,testdata/subCAEKUMissing.pem,Error: UnknownError 
+subCaEkuValidFields,testdata/subCAEKUValidFields.pem,OK 
+subCaEkuValidFields,testdata/subCAEKUNotValidFields.pem,Error: UnknownError 
+subCertCertPoliciesExtPresent,testdata/subCertPolicyNoCrit.pem,OK 
+subCertCertPoliciesExtPresent,testdata/subCertPolicyMissing.pem,Error: UnknownError 
+subCertCertPoliciesNotMarkedCritical,testdata/subCertPolicyNoCrit.pem,OK 
+subCertCertPoliciesNotMarkedCritical,testdata/subCertPolicyCrit.pem,Error: UnknownError 
+subCaNameConstrainsCritical,testdata/subCAWNameConstCrit.pem,OK 
+subCaNameConstrainsCritical,testdata/subCAWNameConstNoCrit.pem,Error: UnknownError 
+rootCertPoliciesExtNotPresent,testdata/rootCAValid.pem,OK 
+rootCertPoliciesExtNotPresent,testdata/rootCAWithCertPolicy.pem,Error: UnknownError 
+subCertCommonNameNotIncluded,testdata/commonNamesGood.pem,OK 
+subCertCommonNameNotIncluded,testdata/commonNamesURL.pem,Error: UnknownError 
+subCertCommonNameFromSan,testdata/SANCaseNotMatchingCN.pem,OK 
+subCertCommonNameFromSan,testdata/SANRegisteredIdBeginning.pem,OK 
+subCertCommonNameFromSan,testdata/SANWithMissingCN.pem,Error: UnknownError 
+subCaCrlDistributionPointsPresent,testdata/subCAWcrlDistNoCrit.pem,OK 
+subCaCrlDistributionPointsPresent,testdata/subCAWNocrlDist.pem,Error: UnknownError 
+subCaCrlDistPointsNotMarkedCritical,testdata/subCAWcrlDistNoCrit.pem,OK 
+subCaCrlDistPointsNotMarkedCritical,testdata/subCAWcrlDistCrit.pem,Error: UnknownError 
+subCaCrlDistPointContainsHttpUrl,testdata/subCAWcrlDistNoCrit.pem,OK 
+subCaCrlDistPointContainsHttpUrl,testdata/subCAcrlDistNoURL.pem,Error: UnknownError 
+subCertCrlDistributionPointsPresent,testdata/subCrlDistCrit.pem,OK 
+subCertCrlDistributionPointsPresent,testdata/subCertWIssuerURL.pem,Error: UnknownError 
+subCertCrlDistPointsNotMarkedCritical,testdata/subCrlDistNoCrit.pem,OK 
+subCertCrlDistPointsNotMarkedCritical,testdata/subCrlDistCrit.pem,Error: UnknownError 
+subCertCrlDistPointContainsHttpUrl,testdata/subCrlDistURL.pem,OK 
+subCertCrlDistPointContainsHttpUrl,testdata/subCrlDistURLInCompoundFullName.pem,OK 
+subCertCrlDistPointContainsHttpUrl,testdata/subCrlDistNoURL.pem,Error: UnknownError 
+subCertAIANotMarkedCritical,testdata/subCertAIANotMarkedCritical.pem,OK 
+subCertAIANotMarkedCritical,testdata/subCertAIAMarkedCritical.pem,Error: UnknownError 
+subCertAIAContainsOCSPUrl,testdata/subCertWOcspURL.pem,OK 
+subCertAIAContainsOCSPUrl,testdata/subCertWIssuerURL.pem,Error: UnknownError 
+subCAAIAContainsOCSPUrl,testdata/subCAAIANotMarkedCritical.pem,Error: UnknownError 
+subCAAIAContainsOCSPUrl,testdata/subCAAIAValid.pem,OK 
+subCAAIAContainsIssuingCAUrl,testdata/subCAWBothURL.pem,OK 
+subCAAIAContainsIssuingCAUrl,testdata/subCAWOcspURL.pem,Error: UnknownError 
+dnsWildcardNotLeftOfPublicSuffix,testdata/dnsNameWildcardNotLeftOfPublicSuffix.pem,OK 
+dnsWildcardNotLeftOfPublicSuffix,testdata/dnsNameWildcardLeftOfPublicSuffix.pem,Error: UnknownError 
+
