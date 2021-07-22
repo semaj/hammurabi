@@ -3,7 +3,6 @@
 :- use_module(certs).
 :- use_module(cert_0).
 :- use_module(cert_1).
-:- use_module(ext).
 :- use_module(browser).
 :- use_module(checks).
 
@@ -62,8 +61,7 @@ countryNameMustAppear(Cert) :-
 % (4) countryName
 
 certPolicyIvApplies(Cert) :- 
-  certs:certificatePolicies(Cert, Pol), 
-  ext:equal(Pol, "2.23.140.1.2.3").
+  certs:certificatePolicies(Cert,  "2.23.140.1.2.3").
 
 certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
   \+organizationNameMissing(Cert). 
@@ -96,8 +94,7 @@ certPolicyIvRequiresCountry(Cert) :-
 % stateOrProvinceName, and countryName
 
 certPolicyOvApplies(Cert) :- 
-  certs:certificatePolicies(Cert, Pol), 
-  ext:equal(Pol, "2.23.140.1.2.2").
+  certs:certificatePolicies(Cert, "2.23.140.1.2.2").
 
 certPolicyRequiresOrg(Cert) :- 
   \+organizationNameMissing(Cert). 
@@ -134,22 +131,20 @@ validTimeTooLong(Cert) :-
   maxLifetime(MaxDuration),
   certs:notBefore(Cert, NotBeforeTime),
   certs:notAfter(Certs, NotAfterTime),
-  ext:subtract(Duration, NotAfterTime, NotBeforeTime),
-  ext:geq(Duration, MaxDuration).
+  subtract(Duration, NotAfterTime, NotBeforeTime),
+  geq(Duration, MaxDuration).
 
 % SAN must appear 
 extSanMissing(Cert) :- 
   certs:san(Cert, "").
 
 extSanMissing(Cert) :- 
-  certs:sanExt(Cert, Value), 
-  ext:equal(Value, false).
+  certs:sanExt(Cert, false).
 
 % The following lints relate to 
 % verifying the RSA if used
 rsaApplies(Cert) :- 
-  certs:keyAlgorithm(Cert, Algo),
-  ext:equals(Algo, "1.2.840.113549.1.1.1").
+  certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.1").
 
 % RSA: Public Exponent must be odd
 rsaPublicExponentNotOdd(Cert) :- 
@@ -158,15 +153,15 @@ rsaPublicExponentNotOdd(Cert) :-
 
 rsaPublicExponentTooSmall(Cert) :- 
   certs:rsaExponent(Cert, Exp),
-  \+ext:geq(Exp, 3).
+  \+geq(Exp, 3).
 
 rsaPublicExponentNotInRange(Cert) :- 
   certs:rsaExponent(Cert, Exp),
-  \+ext:geq(Exp, 65537). 
+  \+geq(Exp, 65537). 
 
 rsaPublicExponentNotInRange(Cert) :- 
   certs:rsaExponent(Cert, Exp),
-  ext:geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
+  geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
 
 rsaModNotOdd(Cert) :- 
   certs:rsaModulus(Cert, Mod), 
@@ -191,15 +186,15 @@ rsaModLessThan2048Bits(Cert) :-
 % using SHA-1 after 1 January 2016
 subCertOrSubCaUsingSha1(Cert) :- 
   certs:keyAlgorithm(Cert, Algo),
-  ext:equals(Algo, "1.2.840.113549.1.1.5").
+  :equals(Algo, "1.2.840.113549.1.1.5").
 
 subCertOrSubCaUsingSha1(Cert) :- 
   certs:keyAlgorithm(Cert, Algo),
-  ext:equals(Algo, "1.3.14.3.2.27").
+ equals(Algo, "1.3.14.3.2.27").
 
 subCertOrSubCaUsingSha1(Cert) :- 
   certs:keyAlgorithm(Cert, Algo),
-  ext:equals(Algo, "1.2.840.10045.4.1").
+  equals(Algo, "1.2.840.10045.4.1").
 
 % The following are lints for the dnsName 
 % under subject alternative name 
@@ -211,17 +206,17 @@ dnsNameNoBadChar(Cert) :-
 
 dnsNameLeftLabelWildcardCorrect(Cert) :- 
   certs:san(Cert, Label), 
-  ext:s_startswith(Label, "*.").
+  s_startswith(Label, "*.").
 
 dnsNameTooLong(Cert) :- 
   certs:commonName(Cert, Label), 
-  ext:s_length(Label, Length), 
-  ext:geq(Length, 64).
+  s_length(Label, Length), 
+  geq(Length, 64).
 
 dnsNameTooLong(Cert) :- 
   certs:san(Cert, Label), 
-  ext:s_length(Label, Length), 
-  ext:geq(Length, 64).
+  s_length(Label, Length), 
+  geq(Length, 64).
 
 dnsNameContainsEmptyLabel(Cert) :- 
   certs:san(Cert, ""). 
@@ -236,19 +231,19 @@ dnsNameContainsBareIANASuffix(Cert) :-
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:commonName(Cert, Label), 
-  ext:s_startswith(Cert, "-").
+  s_startswith(Cert, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:san(Cert, Label), 
-  ext:s_startswith(Cert, "-").
+  s_startswith(Cert, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:commonName(Cert, Label), 
-  ext:s_startswith(Cert, "-").
+  s_startswith(Cert, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:commonName(Cert, Label), 
-  ext:s_startswith(Cert, "-").
+  s_startswith(Cert, "-").
 
 % Basic Constraints checks
 % CA bit set
@@ -273,6 +268,27 @@ localityNameMissing(Cert) :-
 
 postalCodeMissing(Cert) :- 
   certs:postalCode(Cert, "").
+
+equal(X, Y):-
+    X == Y.
+
+larger(X, Y):-
+    X > Y.
+
+geq(X, Y):-
+    X >= Y.
+
+add(X, Y, Z):-
+    X = Y + Z.
+
+subtract(X, Y, Z):-
+    X = Y - Z.
+
+s_endswith(String, Suffix):-
+    string_concat(_, Suffix, String).
+
+s_startswith(String, Prefix):-
+    string_concat(Prefix, _, String).
 
 
 % Below is the list of valid countries from a CA 
