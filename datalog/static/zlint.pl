@@ -149,7 +149,7 @@ rsaApplies(Cert) :-
 % RSA: Public Exponent must be odd
 rsaPublicExponentNotOdd(Cert) :- 
   certs:rsaExponent(Cert, Exp), 
-  ext:mod(0, Exp, 2).
+  modulus(0, Exp, 2).
 
 rsaPublicExponentTooSmall(Cert) :- 
   certs:rsaExponent(Cert, Exp),
@@ -165,15 +165,16 @@ rsaPublicExponentNotInRange(Cert) :-
 
 rsaModNotOdd(Cert) :- 
   certs:rsaModulus(Cert, Mod), 
-  ext:mod(0, Mod, 2).
+  modulus(0, Mod, 2).
 
 rsaModFactorsSmallerThan752(Cert) :- 
   certs:rsaModulus(Cert, Modulus),
-  ext:divides_by_prime_752(Modulus).
+  divides(Modulus, Mod), 
+  prime_num(Mod).
 
 rsaModLessThan2048Bits(Cert) :- 
   certs:rsaModLength(Cert, Length), 
-  \+ext:geq(Length, 2048).
+  \+geq(Length, 2048).
 
 
 
@@ -283,6 +284,9 @@ add(X, Y, Z):-
 
 subtract(X, Y, Z):-
     X = Y - Z.
+
+modulus(X, Y, Z) :- 
+  X = mod(Y, Z).
 
 s_endswith(String, Suffix):-
     string_concat(_, Suffix, String).
