@@ -216,19 +216,30 @@ dnsNameHasBadChar(Cert) :-
   string_length(A, 1),
   \+acceptable(A).
 
-dnsNameLeftLabelWildcardCorrect(Cert) :- 
-  certs:san(Cert, Label), 
-  s_startswith(Label, "*.").
+dnsNameLeftLabelWildcardIncorrect(Cert) :- 
+  certs:commonName(Cert, DNSName), 
+  split_string(DNSName, ".", "", [Left | Rest]), 
+  substring("*", Left),
+  \+Left = "*". 
+
+dnsNameLeftLabelWildcardIncorrect(Cert) :- 
+  certs:san(Cert, DNSName), 
+  split_string(DNSName, ".", "", [Left | Rest]), 
+  substring("*", Left),
+  \+Left = "*". 
 
 dnsNameTooLong(Cert) :- 
   certs:commonName(Cert, Label), 
-  s_length(Label, Length), 
+  string_length(Label, Length), 
   geq(Length, 64).
 
 dnsNameTooLong(Cert) :- 
   certs:san(Cert, Label), 
-  s_length(Label, Length), 
+  string_length(Label, Length), 
   geq(Length, 64).
+
+dnsNameContainsEmptyLabel(Cert) :- 
+  certs:commonName(Cert, ""). 
 
 dnsNameContainsEmptyLabel(Cert) :- 
   certs:san(Cert, ""). 
@@ -251,11 +262,23 @@ dnsNameHyphenInSLD(Cert) :-
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:commonName(Cert, Label), 
-  s_startswith(Cert, "-").
+  s_endswith(Cert, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
-  certs:commonName(Cert, Label), 
-  s_startswith(Cert, "-").
+  certs:san(Cert, Label), 
+  s_endswith(Cert, "-").
+
+dnsNameWildCardOnlyInLeftLabel :- 
+  certs:commonName(Cert, DNSName), 
+  split_string(DNSName, ".", "", [Left | Rest]),
+  forall(member(Rest, Word), 
+  \+substring("*", Word)).
+
+dnsNameWildCardOnlyInLeftLabel :- 
+  certs:san(Cert, DNSName), 
+  split_string(DNSName, ".", "", [Left | Rest]),
+  forall(member(Rest, Word), 
+  \+substring("*", Word)).
 
 % Basic Constraints checks
 % CA bit set
@@ -304,6 +327,11 @@ s_endswith(String, Suffix):-
 
 s_startswith(String, Prefix):-
     string_concat(Prefix, _, String).
+  
+substring(X,S) :-
+  append(_,T,S) ,
+  append(X,_,T) ,
+  X \= [].
 
 isIPv4(Addr):-
     split_string(Addr, ".", "", Bytes), length(Bytes, 4),
