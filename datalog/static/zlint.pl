@@ -169,7 +169,7 @@ rsaModNotOdd(Cert) :-
 
 rsaModFactorsSmallerThan752(Cert) :- 
   certs:rsaModulus(Cert, Modulus),
-  divides(Modulus, Mod), 
+  modulus(0, Modulus, Mod), 
   prime_num(Mod).
 
 rsaModLessThan2048Bits(Cert) :- 
@@ -202,8 +202,19 @@ subCertOrSubCaUsingSha1(Cert) :-
 dnsNameApplies(Cert) :- 
   \+caCommonNameMissing(Cert).
 
-dnsNameNoBadChar(Cert) :- 
-  certs:commonName(Cert, Name).
+dnsNameHasBadChar(Cert) :- 
+  certs:commonName(Cert, DNSName),
+  string_concat(X, Y, DNSName),
+  string_concat(A, B, Y),
+  string_length(A, 1),
+  \+acceptable(A).
+
+dnsNameHasBadChar(Cert) :- 
+  certs:san(Cert, DNSName),
+  string_concat(X, Y, DNSName),
+  string_concat(A, B, Y),
+  string_length(A, 1),
+  \+acceptable(A).
 
 dnsNameLeftLabelWildcardCorrect(Cert) :- 
   certs:san(Cert, Label), 
@@ -293,6 +304,14 @@ s_endswith(String, Suffix):-
 
 s_startswith(String, Prefix):-
     string_concat(Prefix, _, String).
+
+isIPv4(Addr):-
+    split_string(Addr, ".", "", Bytes), length(Bytes, 4),
+    forall(member(B, Bytes), (
+        number_string(NB, B), 
+        NB < 256,
+        number_string(NB, SNB), B = SNB /* to avoid leading zeroes */
+    )).
 
 
 % Below is the list of valid countries from a CA 
