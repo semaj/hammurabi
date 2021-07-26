@@ -268,6 +268,14 @@ dnsNameHyphenInSLD(Cert) :-
   certs:san(Cert, Label), 
   s_endswith(Cert, "-").
 
+dnsNameUnderscoreInTRD(Cert) :- 
+  certs:commonName(Cert, DNSName), 
+  substring("_", DNSName).
+
+dnsNameUnderscoreInTRD(Cert) :- 
+  certs:san(Cert, DNSName), 
+  substring("_", DNSName).
+
 dnsNameWildCardOnlyInLeftLabel :- 
   certs:commonName(Cert, DNSName), 
   split_string(DNSName, ".", "", [Left | Rest]),
