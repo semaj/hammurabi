@@ -187,7 +187,7 @@ rsaModLessThan2048Bits(Cert) :-
 % using SHA-1 after 1 January 2016
 subCertOrSubCaUsingSha1(Cert) :- 
   certs:keyAlgorithm(Cert, Algo),
-  :equals(Algo, "1.2.840.113549.1.1.5").
+  equals(Algo, "1.2.840.113549.1.1.5").
 
 subCertOrSubCaUsingSha1(Cert) :- 
   certs:keyAlgorithm(Cert, Algo),
@@ -322,13 +322,13 @@ geq(X, Y):-
     X >= Y.
 
 add(X, Y, Z):-
-    X = Y + Z.
+    X is Y + Z.
 
 subtract(X, Y, Z):-
-    X = Y - Z.
+    X is Y - Z.
 
 modulus(X, Y, Z) :- 
-  X = mod(Y, Z).
+  X is mod(Y, Z).
 
 s_endswith(String, Suffix):-
     string_concat(_, Suffix, String).
@@ -337,9 +337,7 @@ s_startswith(String, Prefix):-
     string_concat(Prefix, _, String).
   
 substring(X,S) :-
-  append(_,T,S) ,
-  append(X,_,T) ,
-  X \= [].
+   sub_string(S, _Before, _Length, _After, X).
 
 isIPv4(Addr):-
     split_string(Addr, ".", "", Bytes), length(Bytes, 4),
@@ -2385,16 +2383,6 @@ tld("zw").
 word("AABAA").
 
 verified(Cert) :- 
-  std:isCert(Cert), 
-  word(Word),
-  ext:s_length(Word, Length), 
-  \+ext:geq(End, Length), 
-  ext:geq(Start, 0), 
-  ext:subtract(End, Start, Diff), 
-  ext:equal(Diff, 1), 
-  ext:s_substring(Word, Start, End, Sub), 
-  ext:equal(Sub, "A").
-  %ext:s_substring("AAAAA", Beg, End, Sub), 
-  %ext:subtract()
+  std:isCert(Cert).
 
 
