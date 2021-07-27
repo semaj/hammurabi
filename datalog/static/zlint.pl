@@ -118,7 +118,7 @@ postalCodeProhibtedApplies(Cert) :-
 postalCodeProhibtedApplies(Cert) :- 
   surnameMissing(Cert).
 
-postalCodeProhibted :- 
+postalCodeProhibted(Cert) :- 
   postalCodeMissing(Cert).
 
 % CAs must not issue certificates 
@@ -130,7 +130,7 @@ maxLifetime(102560094).
 validTimeTooLong(Cert) :- 
   maxLifetime(MaxDuration),
   certs:notBefore(Cert, NotBeforeTime),
-  certs:notAfter(Certs, NotAfterTime),
+  certs:notAfter(Cert, NotAfterTime),
   subtract(Duration, NotAfterTime, NotBeforeTime),
   geq(Duration, MaxDuration).
 
@@ -204,27 +204,27 @@ dnsNameApplies(Cert) :-
 
 dnsNameHasBadChar(Cert) :- 
   certs:commonName(Cert, DNSName),
-  string_concat(X, Y, DNSName),
-  string_concat(A, B, Y),
+  string_concat(_, Y, DNSName),
+  string_concat(A, _, Y),
   string_length(A, 1),
   \+acceptable(A).
 
 dnsNameHasBadChar(Cert) :- 
   certs:san(Cert, DNSName),
-  string_concat(X, Y, DNSName),
-  string_concat(A, B, Y),
+  string_concat(_, Y, DNSName),
+  string_concat(A, _, Y),
   string_length(A, 1),
   \+acceptable(A).
 
 dnsNameLeftLabelWildcardIncorrect(Cert) :- 
   certs:commonName(Cert, DNSName), 
-  split_string(DNSName, ".", "", [Left | Rest]), 
+  split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
   \+Left = "*". 
 
 dnsNameLeftLabelWildcardIncorrect(Cert) :- 
   certs:san(Cert, DNSName), 
-  split_string(DNSName, ".", "", [Left | Rest]), 
+  split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
   \+Left = "*". 
 
@@ -254,19 +254,19 @@ dnsNameContainsBareIANASuffix(Cert) :-
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:commonName(Cert, Label), 
-  s_startswith(Cert, "-").
+  s_startswith(Label, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:san(Cert, Label), 
-  s_startswith(Cert, "-").
+  s_startswith(Label, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:commonName(Cert, Label), 
-  s_endswith(Cert, "-").
+  s_endswith(Label, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
   certs:san(Cert, Label), 
-  s_endswith(Cert, "-").
+  s_endswith(Label, "-").
 
 dnsNameUnderscoreInTRD(Cert) :- 
   certs:commonName(Cert, DNSName), 
@@ -276,15 +276,15 @@ dnsNameUnderscoreInTRD(Cert) :-
   certs:san(Cert, DNSName), 
   substring("_", DNSName).
 
-dnsNameWildCardOnlyInLeftLabel :- 
+dnsNameWildCardOnlyInLeftLabel(Cert) :- 
   certs:commonName(Cert, DNSName), 
-  split_string(DNSName, ".", "", [Left | Rest]),
+  split_string(DNSName, ".", "", [_ | Rest]),
   forall(member(Rest, Word), 
   \+substring("*", Word)).
 
-dnsNameWildCardOnlyInLeftLabel :- 
+dnsNameWildCardOnlyInLeftLabel(Cert) :- 
   certs:san(Cert, DNSName), 
-  split_string(DNSName, ".", "", [Left | Rest]),
+  split_string(DNSName, ".", "", [_ | Rest]),
   forall(member(Rest, Word), 
   \+substring("*", Word)).
 
