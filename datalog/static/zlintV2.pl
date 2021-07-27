@@ -2,6 +2,7 @@
 :- use_module(certs).
 :- use_module(env).
 :- use_module(ext).
+%:- use_module(public_suffix_list).
 
 % includes zlint tests made into prolog rules
 
@@ -233,7 +234,7 @@ subCaCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCA(Cert).
 
 %  Subscriber Certifcate: cRLDistributionPoints MAY be present.
-% not considered in valid scope
+% not considered in valid scope - might delete this one
 subCertCrlDistributionPointsPresent(Cert) :-
 	certs:CRLDistributionPointsExt(Cert, true),
 	\+certs:CRLDistributionPoints(Cert, false).
@@ -325,16 +326,44 @@ subCAAIAContainsIssuingCAUrl(Cert) :-
 %  the CA MUST establish and follow a documented procedure[^pubsuffix] that
 %  determines if the wildcard character occurs in the first label position to
 %  the left of a “registry‐controlled” label or “public suffix”
+% look for * and then see what string is 
+% cant have more than one, has to be at beginning, 
+% has to be character and no more than first character, must not be public
+% suffix right after it
+% make fact list with all public suffixes in it and check against it
+containsWildcard(Cert) :-
+	certs:san(Cert, San),
+	ext:s_occurrences(San, "*", N),
+	ext:geq(N, 1).
+
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	certs:san(Cert, San),
-	\+ext:s_startswith(San, "*").
+	ext:s_occurrences(San, "*", N),
+	ext:equal(N, 1),
+	public_suffix(Pubsuff),
+	ext:s_endswith(San, Pubsuff),
+	%prolog rule below
+	string_length(Pubsuff, Length),
+	sub_string(San, Before, After, Length, Extract),
+	ext:geq(After, 4),
+	ext:s_endswith(Extract, "."),
+	ext:s_startswith(Extract, "*.").
+
+dnsWildcardNotLeftOfPublicSuffix(Cert) :-
+	\+containsWildcard(Cert).
+
+%dnsWildcardNotLeftOfPublicSuffix(Cert) :-
+%	certs:san(Cert, San),
+%	public_suffix_list:public_suffix(Pubsuff),
+%	ext:s_endswith(San, Pubsuff).
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	\+isSubCert(Cert).
 
 % Rules are tested here
 verified(Cert) :-
-	std:isCert(Cert).
+	std:isCert(Cert),
+	dnsWildcardNotLeftOfPublicSuffix(Cert).
 	%dnsWildcardNotLeftOfPublicSuffix(Cert).
 	
 	%subCertEkuValidFields(Cert).
@@ -372,10 +401,40 @@ verified(Cert) :-
 	%std:stringMatch("*.google.com", "www.google.com").
 	%ext:s_endswith(Name, ".com").
 
-%trusted roots needed for testing
+% Trusted roots needed for testing
 trusted_roots("4F39D3BB9E7FA7BFB290E9D21EBB7827D3D7F89394A3AE0F46F50D7583FFBC84").
 trusted_roots("BEC94911C2955676DB6C0A550986D76E3BA005667C442C9762B4FBB773DE228C").
 trusted_roots("001BD98347D99058CD3D1CCE175922BF032FA33A5456B7B1625B5914D0C429FB").
 trusted_roots("4CC434E240BBDF1900D4AD568B5EA48A1721CEE0397C7AE582CF6F2FFF11C711").
 trusted_roots("BEC94911C2955676DB6C0A550986D76E3BA005667C442C9762B4FBB773DE228C").
 trusted_roots("52E36BE5D0E39B7A06DC26A9A5A5B6F7DA3F313BF62BD19D967615BFD58C81CC").
+
+% Public suffixes for testing
+public_suffix("zp.ua").
+public_suffix("zt.ua").
+public_suffix("ug").
+public_suffix("co.ug").
+public_suffix("or.ug").
+public_suffix("ac.ug").
+public_suffix("sc.ug").
+public_suffix("go.ug").
+public_suffix("ne.ug").
+public_suffix("com.ug").
+public_suffix("org.ug").
+public_suffix("uk").
+public_suffix("ac.uk").
+public_suffix("co.uk").
+public_suffix("gov.uk").
+public_suffix("ltd.uk").
+public_suffix("me.uk").
+public_suffix("net.uk").
+public_suffix("nhs.uk").
+public_suffix("org.uk").
+public_suffix("plc.uk").
+public_suffix("police.uk").
+public_suffix("sch.uk").
+public_suffix("us").
+
+
+% Converts lua rules into prolog rules
+

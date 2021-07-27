@@ -51,7 +51,6 @@ impl PrologCert<'_> {
             "{}",
             vec![
                 self.emit_serial(&hash),
-                self.emit_raw_serial(&hash),
                 self.emit_validity(&hash),
                 self.emit_common_name(&hash),
                 self.emit_country(&hash),
@@ -245,10 +244,6 @@ impl PrologCert<'_> {
 
     pub fn emit_serial(&self, hash: &String) -> String {
         format!("serialNumber({}, \"{}\").", hash, self.serial)
-    }
-
-    pub fn emit_raw_serial(&self, hash: &String) -> String {
-       format!("serialNumberRaw({}, \"{:?}\").", hash, self.inner.raw_serial())
     }
 
     pub fn emit_version(&self, hash: &String) -> String {
