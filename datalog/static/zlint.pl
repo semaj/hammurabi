@@ -328,7 +328,7 @@ subtract(X, Y, Z):-
     X is Y - Z.
 
 modulus(X, Y, Z) :- 
-  X is mod(Y, Z).
+  X is Y mod Z.
 
 s_endswith(String, Suffix):-
     string_concat(_, Suffix, String).
