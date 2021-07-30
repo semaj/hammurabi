@@ -5,11 +5,12 @@
 :- use_module(cert_1).
 :- use_module(browser).
 :- use_module(checks).
-
+@:- include(certs).
 % The following functions are taken from zlint
 % specifically the cabf_br tests  
 % but reimplemented using Datalog 
 % See www.github.com/zmap/zlint for more information 
+
 
 % Checks whether or not the common 
 % name is missing

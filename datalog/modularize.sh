@@ -23,4 +23,5 @@ sed -E "s/(,*$SPACE+)(\\\\\+)?($ATOM\($TERM(,$TERM)*\))/\1\2$MODULE:\3/g;
         s/^(\\\\\+)?($ATOM\($TERM(,$TERM)*\))/\1$MODULE:\2/g;
         s/^$SPACE*$ATOM\/[0-9]+\,?$SPACE*$//g;
         s/^$SPACE*\]\)\.$//g;
-        s/^:\-.*$//g;" $1
+        s/^:\-.*$//g;
+        s/[@]:\-$SPACE$MODULE:/\:\-/g;" $1
