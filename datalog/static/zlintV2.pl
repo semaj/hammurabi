@@ -194,9 +194,9 @@ subCertCommonNameFromSanApplies(Cert) :-
 subCertCommonNameFromSan(Cert) :-
 	certs:commonName(Cert, CN),
 	certs:san(Cert, SN),
-	ext:to_lower(CN, CNL),
-	ext:to_lower(SN, SNL),
-	ext:equal(CNL, SNL).
+	string_lower(CN, CNL),
+	string_lower(SN, SNL),
+	equal(CNL, SNL).
 
 subCertCommonNameFromSan(Cert) :-
 	\+subCertCommonNameFromSanApplies(Cert).
@@ -222,13 +222,14 @@ subCaCrlDistPointsNotMarkedCritical(Cert) :-
 %  the HTTP URL of the CAs CRL service.
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, Url),
-	ext:s_startswith(Url, "http://").
+	s_startswith(Url, "http://").
 
 % another scenario for if there are ldap points before the http
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, Url),
-	ext:s_occurrences(Url, "http://", N),
-	ext:equal(N, 1).
+	substring("http://", Url).
+	%s_occurrences(Url, "http://", N),
+	%equal(N, 1).
 
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCA(Cert).
@@ -256,12 +257,12 @@ subCertCrlDistPointsNotMarkedCritical(Cert) :-
 % sub cert: cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service
 subCertCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, Url),
-	ext:s_startswith(Url, "http://").
+	s_startswith(Url, "http://").
 
 subCertCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, Url),
-	ext:s_occurrences(Url, "http://", N),
-	ext:equal(N, 1).
+	s_occurrences(Url, "http://", N),
+	equal(N, 1).
 
 subCertCrlDistPointContainsHttpUrl(Cert) :-
 	certs:CRLDistributionPoint(Cert, false).
@@ -281,7 +282,7 @@ subCertAIANotMarkedCritical(Cert) :-
 %  HTTP URL of the Issuing CAs OSCP responder.
 subCertAIAContainsOCSPUrl(Cert) :-
 	certs:authorityInfoAccessLocation(Cert, "OCSP", Url),
-	ext:s_startswith(Url, "http://").
+	s_startswith(Url, "http://").
 
 subCertAIAContainsOCSPUrl(Cert) :-
 	\+isSubCert(Cert).
@@ -291,7 +292,7 @@ subCertAIAContainsOCSPUrl(Cert) :-
 %  the HTTP URL of the Issuing CAs OSCP responder.
 subCAAIAContainsOCSPUrl(Cert) :-
 	certs:authorityInfoAccessLocation(Cert, "OCSP", Url),
-	ext:s_startswith(Url, "http://").
+	s_startswith(Url, "http://").
 
 subCAAIAContainsOCSPUrl(Cert) :-
 	\+isSubCA(Cert).
@@ -301,7 +302,7 @@ subCAAIAContainsOCSPUrl(Cert) :-
 %  also contain the HTTP URL of the Issuing CAs certificate.
 subCAAIAContainsIssuingCAUrl(Cert) :-
 	certs:authorityInfoAccessLocation(Cert, "CA Issuers", Url),
-	ext:s_startswith(Url, "http://").
+	s_startswith(Url, "http://").
 
 subCAAIAContainsIssuingCAUrl(Cert) :-
 	\+isSubCA(Cert).
@@ -333,29 +334,25 @@ subCAAIAContainsIssuingCAUrl(Cert) :-
 % make fact list with all public suffixes in it and check against it
 containsWildcard(Cert) :-
 	certs:san(Cert, San),
-	ext:s_occurrences(San, "*", N),
-	ext:geq(N, 1).
+	s_occurrences(San, '*', N),
+	geq(N, 1).
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	certs:san(Cert, San),
-	ext:s_occurrences(San, "*", N),
-	ext:equal(N, 1),
+	s_occurrences(San, '*', N),
+	equal(N, 1),
 	public_suffix(Pubsuff),
-	ext:s_endswith(San, Pubsuff),
+	s_endswith(San, Pubsuff),
 	%prolog rule below
 	string_length(Pubsuff, Length),
 	sub_string(San, Before, After, Length, Extract),
-	ext:geq(After, 4),
-	ext:s_endswith(Extract, "."),
-	ext:s_startswith(Extract, "*.").
+	geq(After, 4),
+	s_endswith(Extract, "."),
+	s_startswith(Extract, "*.").
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	\+containsWildcard(Cert).
 
-%dnsWildcardNotLeftOfPublicSuffix(Cert) :-
-%	certs:san(Cert, San),
-%	public_suffix_list:public_suffix(Pubsuff),
-%	ext:s_endswith(San, Pubsuff).
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	\+isSubCert(Cert).
@@ -437,4 +434,40 @@ public_suffix("us").
 
 
 % Converts lua rules into prolog rules
+% I need to make s_occurrences
+unequal(X, Y):-
+    X \== Y.
 
+equal(X, Y):-
+    X == Y.
+
+larger(X, Y):-
+    X > Y.
+
+geq(X, Y):-
+    X >= Y.
+
+add(X, Y, Z):-
+    X = Y + Z.
+
+subtract(X, Y, Z):-
+    X = Y - Z.
+
+s_endswith(String, Suffix):-
+    string_concat(_, Suffix, String).
+
+s_startswith(String, Prefix):-
+    string_concat(Prefix, _, String).
+
+substring(X,S) :-
+  append(_,T,S) ,
+  append(X,_,T) ,
+  X \= [].
+
+count([],_,0).
+count([X|T],X,Y):- count(T,X,Z), Y is 1+Z.
+count([_|T],X,Z):- count(T,X,Z).
+
+s_occurrences(Str, Chr, Num) :-
+    string_chars(Str, Lst),
+    count(Lst, Chr, Num).
