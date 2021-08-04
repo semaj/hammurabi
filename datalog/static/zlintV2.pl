@@ -2,7 +2,8 @@
 :- use_module(certs).
 :- use_module(env).
 :- use_module(ext).
-%:- use_module(public_suffix_list).
+%@:- include(certs).
+%@:- include(public_suffix_list).
 
 % includes zlint tests made into prolog rules
 
@@ -205,14 +206,14 @@ subCertCommonNameFromSan(Cert) :-
 %  Subordinate CA Certificate: cRLDistributionPoints MUST be present 
 %  and MUST NOT be marked critical.
 subCaCrlDistributionPointsPresent(Cert) :-
-	certs:CRLDistributionPointsExt(Cert, true),
-	\+certs:CRLDistributionPoints(Cert, false).
+	certs:crlDistributionPointsExt(Cert, true),
+	\+certs:crlDistributionPoints(Cert, false).
 
 subCaCrlDistributionPointsPresent(Cert) :-
 	\+isSubCA(Cert).
 
 subCaCrlDistPointsNotMarkedCritical(Cert) :-
-	certs:CRLDistributionPointsCritical(Cert, false).
+	certs:crlDistributionPointsCritical(Cert, false).
 
 subCaCrlDistPointsNotMarkedCritical(Cert) :-
 	\+isSubCA(Cert).
@@ -221,12 +222,12 @@ subCaCrlDistPointsNotMarkedCritical(Cert) :-
 %  Subordinate CA Certificate: cRLDistributionPoints MUST contain
 %  the HTTP URL of the CAs CRL service.
 subCaCrlDistPointContainsHttpUrl(Cert) :-
-	certs:CRLDistributionPoint(Cert, Url),
+	certs:crlDistributionPoint(Cert, Url),
 	s_startswith(Url, "http://").
 
 % another scenario for if there are ldap points before the http
 subCaCrlDistPointContainsHttpUrl(Cert) :-
-	certs:CRLDistributionPoint(Cert, Url),
+	certs:crlDistributionPoint(Cert, Url),
 	substring("http://", Url).
 	%s_occurrences(Url, "http://", N),
 	%equal(N, 1).
@@ -237,8 +238,8 @@ subCaCrlDistPointContainsHttpUrl(Cert) :-
 %  Subscriber Certifcate: cRLDistributionPoints MAY be present.
 % not considered in valid scope - might delete this one
 subCertCrlDistributionPointsPresent(Cert) :-
-	certs:CRLDistributionPointsExt(Cert, true),
-	\+certs:CRLDistributionPoints(Cert, false).
+	certs:crlDistributionPointsExt(Cert, true),
+	\+certs:crlDistributionPoints(Cert, false).
 
 subCertCrlDistributionPointsPresent(Cert) :-
 	\+isSubCert(Cert).
@@ -246,26 +247,26 @@ subCertCrlDistributionPointsPresent(Cert) :-
 %  Subscriber Certifcate: cRLDistributionPoints MUST NOT be marked critical,
 %  and MUST contain the HTTP URL of the CAs CRL service.
 subCertCrlDistPointsNotMarkedCritical(Cert) :-
-	certs:CRLDistributionPointsCritical(Cert, false).
+	certs:crlDistributionPointsCritical(Cert, false).
 
 subCertCrlDistPointsNotMarkedCritical(Cert) :-
-	certs:CRLDistributionPoint(Cert, false).
+	certs:crlDistributionPoint(Cert, false).
 
 subCertCrlDistPointsNotMarkedCritical(Cert) :-
 	\+isSubCert(Cert).
 
 % sub cert: cRLDistributionPoints MUST contain the HTTP URL of the CAs CRL service
 subCertCrlDistPointContainsHttpUrl(Cert) :-
-	certs:CRLDistributionPoint(Cert, Url),
+	certs:crlDistributionPoint(Cert, Url),
 	s_startswith(Url, "http://").
 
 subCertCrlDistPointContainsHttpUrl(Cert) :-
-	certs:CRLDistributionPoint(Cert, Url),
+	certs:crlDistributionPoint(Cert, Url),
 	s_occurrences(Url, "http://", N),
 	equal(N, 1).
 
 subCertCrlDistPointContainsHttpUrl(Cert) :-
-	certs:CRLDistributionPoint(Cert, false).
+	certs:crlDistributionPoint(Cert, false).
 
 subCertCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCert(Cert).
@@ -307,22 +308,6 @@ subCAAIAContainsIssuingCAUrl(Cert) :-
 subCAAIAContainsIssuingCAUrl(Cert) :-
 	\+isSubCA(Cert).
 
-% check common name and subject alternate name
-% Subordinate CA: If includes id-kp-serverAuth EKU,
-% then it MUST include Name constraints w/ 
-% constraints on DNSName, IPAddress, and DirectoryName
-%subCAEkuNameConstraintsApplies(Cert) :-
-%	certs:extendedKeyUsage(Cert, serverAuth).
-
-%subCAEkuNameConstraints(Cert) :-
-%	certs:nameConstraintsPermitted(Cert, "DNS", Constraint).
-
-%subCAEkuNameConstraints(Cert) :-
-%	\+subCAEkuNameConstraintsApplies(Cert).
-
-%subCAEkuNameConstraints(Cert) :-
-%	\+isSubCA(Cert).
-
 
 %  the CA MUST establish and follow a documented procedure[^pubsuffix] that
 %  determines if the wildcard character occurs in the first label position to
@@ -343,9 +328,8 @@ dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	equal(N, 1),
 	public_suffix(Pubsuff),
 	s_endswith(San, Pubsuff),
-	%prolog rule below
 	string_length(Pubsuff, Length),
-	sub_string(San, Before, After, Length, Extract),
+	sub_string(San, 0, After, Length, Extract),
 	geq(After, 4),
 	s_endswith(Extract, "."),
 	s_startswith(Extract, "*.").
@@ -434,10 +418,6 @@ public_suffix("us").
 
 
 % Converts lua rules into prolog rules
-% I need to make s_occurrences
-unequal(X, Y):-
-    X \== Y.
-
 equal(X, Y):-
     X == Y.
 
@@ -448,10 +428,13 @@ geq(X, Y):-
     X >= Y.
 
 add(X, Y, Z):-
-    X = Y + Z.
+    X is Y + Z.
 
 subtract(X, Y, Z):-
-    X = Y - Z.
+    X is Y - Z.
+
+modulus(X, Y, Z) :- 
+  X is Y mod Z.
 
 s_endswith(String, Suffix):-
     string_concat(_, Suffix, String).
@@ -464,10 +447,11 @@ substring(X,S) :-
   append(X,_,T) ,
   X \= [].
 
+s_occurrences(Str, Chr, Num) :-
+    string_chars(Str, Lst),
+    count(Lst, Chr, Num).
+
 count([],_,0).
 count([X|T],X,Y):- count(T,X,Z), Y is 1+Z.
 count([_|T],X,Z):- count(T,X,Z).
 
-s_occurrences(Str, Chr, Num) :-
-    string_chars(Str, Lst),
-    count(Lst, Chr, Num).

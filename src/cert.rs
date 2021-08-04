@@ -364,7 +364,7 @@ impl PrologCert<'_> {
         exts.push(self.emit_subject_alternative_names(hash));
         if !subject_key_identifier { exts.push(format!("subjectKeyIdentifierExt({}, false).", hash)) }
         if !certificate_policies { exts.push(format!("certificatePoliciesExt({}, false).", hash)) }
-        if !crl_distribution_points { exts.push(format!("CRLDistributionPoints({}, false).", hash)) }
+        if !crl_distribution_points { exts.push(format!("crlDistributionPoints({}, false).", hash)) }
         if !authority_info_access { exts.push(format!("authorityInfoAccessExt({}, false).", hash)) }
         if !acc_assertions { exts.push(format!("assertionCarryingCertificateExt({}, false).", hash)) }
         exts.push(self.emit_name_constraints(hash));
