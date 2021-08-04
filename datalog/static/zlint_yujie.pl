@@ -33,13 +33,13 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
   isSubCert(Cert),
   givenNameIsPresent(Cert),
   certs:certificatePolicies(Cert, Oid),
-  ext:equal(Oid, "2.23.140.1.2.3").
+  equal(Oid, "2.23.140.1.2.3").
 
 subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
   isSubCert(Cert),
   surnameIsPresent(Cert),
   certs:certificatePolicies(Cert, Oid),
-  ext:equal(Oid, "2.23.140.1.2.3").
+  equal(Oid, "2.23.140.1.2.3").
 
 
  
@@ -143,18 +143,18 @@ signatureAlgorithmNotSupported(Cert) :-
 
 dsaImproperModulusOrDivisorSize(Cert) :-
   certs:spkiDSAParameters(cert_0, L, N, G),
-  ext:equals(L, 2048),
-  ext:equals(N, 224).
+  equal(L, 2048),
+  equal(N, 224).
 
 dsaImproperModulusOrDivisorSize(Cert) :-
   certs:spkiDSAParameters(cert_0, L, N, G),
-  ext:equals(L, 2048),
-  ext:equals(N, 256).
+  equal(L, 2048),
+  equal(N, 256).
 
 dsaImproperModulusOrDivisorSize(Cert) :-
   certs:spkiDSAParameters(cert_0, L, N, G),
-  ext:equals(L, 3072),
-  ext:equals(N, 256).
+  equal(L, 3072),
+  equal(N, 256).
 
 dsaImproperModulusOrDivisorSize(Cert) :-
   \+certs:spkiDSAParameters(cert_0, L, N, G).
@@ -163,9 +163,9 @@ dsaImproperModulusOrDivisorSize(Cert) :-
 % Certificates MUST include all domain parameters
 dsaParamsAllPresent(Cert) :-
   certs:spkiDSAParameters(cert_0, P, Q, G),
-  ext:unequal(P, 0),
-  ext:unequal(Q, 0),
-  ext:unequal(G, 0).
+  unequal(P, 0),
+  unequal(Q, 0),
+  unequal(G, 0).
 
 dsaParamsMissing(Cert) :-
   \+dsaParamsAllPresent(Cert).
@@ -180,17 +180,17 @@ ecImproperCurves(Cert) :-
 ecProperCurves(Cert) :-
   idecPKeyAlgo(Cert),
   certs:keyLen(Cert, Len),
-  ext:geq(Len, 65).
+  geq(Len, 65).
 
 idecPKeyAlgo(Cert) :-
   certs:keyAlgorithm(Cert, Algo),
-  ext:equals(Algo, "1.2.840.10045.2.1").
+  equal(Algo, "1.2.840.10045.2.1").
   
 
 % Certificates MUST be of type X.509 v3.
 invalidCertificateVersion(Cert) :-
   certs:version(Cert, Ver),
-  ext:unequal(Ver, 2).
+  unequal(Ver, 2).
 
 
 % sub_ca: MUST NOT contain the anyPolicy identifier
@@ -225,7 +225,7 @@ subCertIsNotCa(Cert) :-
 cabDvConflictsApplies(Cert) :-
   certs:isCA(Cert, false),
   certs:certificatePolicies(Cert, Oid),
-  ext:equals(Oid, "2.23.140.1.2.1").
+  equal(Oid, "2.23.140.1.2.1").
   
 cabDvConflictsWithLocality(Cert) :- 
   cabDvConflictsApplies(Cert),
@@ -290,33 +290,80 @@ subCaAiaMarkedCritical(Cert) :-
   certs:authorityInfoAccessCritical(Cert, true).
 
 
+% sub_ca: MUST include one or more explicit policy identifiers that 
+%         indicates the Subordinate CA’s adherence to and compliance 
+%	  with these requirements
+subCaCertificatePoliciesMissing(Cert) :-
+  isSubCA(Cert),
+  certs:certificatePoliciesExt(Cert, false).
+
+
+% sub_ca: Bit positions for keyCertSign and cRLSign MUST be set.
+caKeyCertSignNotSet(Cert) :-
+  certs:isCA(Cert, true),
+  certs:keyUsageExt(Cert, true),
+  certs:keyUsage(Cert, keyCertSign).
+
+caCrlSignNotSet(Cert) :-
+  certs:isCA(Cert, true),
+  certs:keyUsageExt(Cert, true),
+  certs:keyUsage(Cert, cRLSign).
+
+
+
+
 
 % helper methods
+
+unequal(X, Y):-
+    X \== Y.
+
+equal(X, Y):-
+    X == Y.
+
+larger(X, Y):-
+    X > Y.
+
+geq(X, Y):-
+    X >= Y.
+
+add(X, Y, Z):-
+    X = Y + Z.
+
+subtract(X, Y, Z):-
+    X = Y - Z.
+
+s_endswith(String, Suffix):-
+    string_concat(_, Suffix, String).
+
+s_startswith(String, Prefix):-
+    string_concat(Prefix, _, String).
+    
 givenNameIsPresent(Cert) :-
   certs:givenName(Cert, Given),
-  ext:unequal(Given, "").
+  unequal(Given, "").
 
 surnameIsPresent(Cert) :- 
   certs:surname(Cert, Surname),
-  ext:unequal(Surname, "").
+  unequal(Surname, "").
   
 organizationNameIsPresent(Cert) :-
   certs:organizationName(Cert, Org),
-  ext:unequal(Org, "").
+  unequal(Org, "").
   
 stateOrProvinceNameIsPresent(Cert) :-
   certs:stateOrProvinceName(Cert, Sop),
-  ext:unequal(Sop, "").
+  unequal(Sop, "").
 
 localityNameIsPresent(Cert) :-
   certs:localityName(Cert, Loc),
-  ext:unequal(Loc, "").
+  unequal(Loc, "").
   
 streetAddressIsPresent(Cert) :-
   certs:streetAddress(Cert, Street),
-  ext:unequal(Street, "").
+  unequal(Street, "").
   
 postalCodeIsPresent(Cert) :-
   certs:postalCode(Cert, Code),
-  ext:unequal(Code, "").
+  unequal(Code, "").
   
