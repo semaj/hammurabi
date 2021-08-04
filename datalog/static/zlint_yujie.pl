@@ -310,6 +310,18 @@ caCrlSignNotSet(Cert) :-
   certs:keyUsage(Cert, cRLSign).
 
 
+% sub_cert: keyUsage if present, bit positions for keyCertSign and cRLSign MUST NOT be set.
+subCertKeyUsageCertSignBitSet(Cert) :-
+  certs:isCA(Cert, false),
+  certs:keyUsageExt(Cert, true),
+  \+certs:keyUsage(Cert, keyCertSign).
+
+subCertKeyUsageCrlSignBitSet(Cert) :-
+  certs:isCA(Cert, false),
+  certs:keyUsageExt(Cert, true),
+  \+certs:keyUsage(Cert, cRLSign).
+  
+
 
 
 
