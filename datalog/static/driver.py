@@ -8,12 +8,12 @@ def isEmpty(s):
         return False 
     return True
 
-if (len(argv) > 3): 
+applies = True
+if (len(sys.argv) > 3): 
     app_query = prolog.query(sys.argv[3] + "(X)")
     applies = not isEmpty(app_query)
     if not applies: 
         print("NA")
-        
 if applies: 
     soln = prolog.query(sys.argv[2] + "(X)")
     if not isEmpty(soln): 

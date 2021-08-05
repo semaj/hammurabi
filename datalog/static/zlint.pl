@@ -19,14 +19,17 @@ caCommonNameMissing(Cert) :-
 
 % Checks whether the country name 
 % is invalid
-caCountryNameInvalid(Cert) :- 
+caCountryNameValid(Cert) :- 
   certs:country(Cert, Country), 
-  \+val_country(Country).
+  val_country(Country).
 
 % Checks whether or not country name 
 % is missing 
 caCountryNameMissing(Cert) :- 
     certs:country(Cert, "").
+
+caCountryNamePresent(Cert) :- 
+  \+caCountryNameMissing(Cert).
 
 % countryName must not appear if 
 % the organizationName, givenName, 
@@ -42,17 +45,22 @@ countryNameMustNotAppear(Cert) :-
 % Country Name must appear if 
 % organizationName, givenName 
 % Or surname is present 
-countryNameMustAppearApplies(Cert) :- 
-  \+organizationNameMissing(Cert).
+%countryNameMustAppearApplies(Cert) :- 
+%  \+organizationNameMissing(Cert).
 
-countryNameMustAppearApplies(Cert) :- 
-  \+givenNameMissing(Cert).
+%countryNameMustAppearApplies(Cert) :- 
+%  \+givenNameMissing(Cert).
 
-countryNameMustAppearApplies(Cert) :- 
-  \+surnameMissing(Cert).
+%countryNameMustAppearApplies(Cert) :- 
+%  \+surnameMissing(Cert).
 
 countryNameMustAppear(Cert) :- 
   \+caCountryNameMissing(Cert).
+
+countryNameMustAppear(Cert) :- 
+  organizationNameMissing(Cert), 
+  givenNameMissing(Cert), 
+  surnameMissing(Cert).
 
 % If certificate asserts policy identifier 
 % 2.23.140.1.2.3 then it must include either 
@@ -293,6 +301,9 @@ dnsNameWildCardOnlyInLeftLabel(Cert) :-
 % CA bit set
 isCa(Cert) :-
     certs:isCA(Cert, true).
+
+isNotCa(Cert) :- 
+  \+isCa(Cert).
 
 % All of the helper methods will be posted below 
 organizationNameMissing(Cert) :- 

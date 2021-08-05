@@ -1,0 +1,13 @@
+isCa,caCountryNamePresent;caCountryNameValid
+isCa;caCountryNamePresent
+isNotCa;extSanMissing
+isCa;countryNameMustNotAppear 
+;certPolicyIvRequiresOrgGivenOrSurname
+;certPolicyIvRequireslocalityName
+;certPolicyIvRequiresStateOrProvinceName
+;certPolicyIvRequiresLocalityOrProvinceName
+;certPolicyIvRequiresCountry
+;rsaModNotOdd
+;rsaPublicExponentTooSmall
+;postalCodeProhibted
+;validTimeTooLong
