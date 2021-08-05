@@ -262,7 +262,6 @@ stapled_ocsp_response_valid(hack).
 stapled_ocsp_response_not_expired(hack).
 stapled_ocsp_response_not_verified(hack).
 stapled_ocsp_response_invalid(hack).
-stapled_ocsp_response_verified(hack).
 stapled_ocsp_response_expired(hack).
 stapled_ocsp_status_revoked(hack).
 stapled_ocsp_status_unknown(hack).
