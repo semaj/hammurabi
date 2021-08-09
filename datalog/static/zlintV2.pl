@@ -1,9 +1,8 @@
-:- use_module(std).
-:- use_module(certs).
-:- use_module(env).
-:- use_module(ext).
-%@:- include(certs).
-%@:- include(public_suffix_list).
+%:- use_module(std).
+%:- use_module(certs).
+%:- use_module(env).
+:- include(datalog/gen/job/certs).
+:- include(public_suffix_list).
 
 % includes zlint tests made into prolog rules
 
@@ -322,21 +321,46 @@ containsWildcard(Cert) :-
 	s_occurrences(San, '*', N),
 	geq(N, 1).
 
+%dnsWildcardNotLeftOfPublicSuffix(Cert) :-
+%	certs:san(Cert, San),
+%	s_occurrences(San, '*', N),
+%	equal(N, 1),
+%	%string_length(San, Lsan),
+%	%geq(Lsan, 5),
+%	public_suffix(Pubsuff),
+%	s_endswith(San, Pubsuff),
+%	string_length(Pubsuff, Length),
+%	sub_string(San, 0, After, Length, Extract),
+%	%geq(Length, 3),
+%	geq(After, 4),
+%	s_endswith(Extract, "."),
+%	s_startswith(Extract, "*.").
+
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	certs:san(Cert, San),
 	s_occurrences(San, '*', N),
 	equal(N, 1),
-	public_suffix(Pubsuff),
-	s_endswith(San, Pubsuff),
-	string_length(Pubsuff, Length),
+	bagof(Pubsuff, s_endswith(San, Pubsuff), Allsuffixes),
+	% make sure they are from the facts list too
+	suffix_list(Allsuffixes, Appliedpubsuff),
+	
+	%public_suffix(Pubsuff),
+	%s_endswith(San, Pubsuff),
+
+	list_max_elem(Appliedpubsuff, Max),
+	string_length(Max, Length),
 	sub_string(San, 0, After, Length, Extract),
 	geq(After, 4),
 	s_endswith(Extract, "."),
 	s_startswith(Extract, "*.").
 
+% check how many pubsuffixes match up
+% add them to a list?
+%returnLongest(EndList2, Longest) :-
+%	list_max_elem(EndList2, Max).
+
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	\+containsWildcard(Cert).
-
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	\+isSubCert(Cert).
@@ -391,30 +415,22 @@ trusted_roots("BEC94911C2955676DB6C0A550986D76E3BA005667C442C9762B4FBB773DE228C"
 trusted_roots("52E36BE5D0E39B7A06DC26A9A5A5B6F7DA3F313BF62BD19D967615BFD58C81CC").
 
 % Public suffixes for testing
-public_suffix("zp.ua").
-public_suffix("zt.ua").
-public_suffix("ug").
-public_suffix("co.ug").
-public_suffix("or.ug").
-public_suffix("ac.ug").
-public_suffix("sc.ug").
-public_suffix("go.ug").
-public_suffix("ne.ug").
-public_suffix("com.ug").
-public_suffix("org.ug").
-public_suffix("uk").
-public_suffix("ac.uk").
-public_suffix("co.uk").
-public_suffix("gov.uk").
-public_suffix("ltd.uk").
-public_suffix("me.uk").
-public_suffix("net.uk").
-public_suffix("nhs.uk").
-public_suffix("org.uk").
-public_suffix("plc.uk").
-public_suffix("police.uk").
-public_suffix("sch.uk").
-public_suffix("us").
+% public_suffix("zp.ua").
+% public_suffix("zt.ua").
+% public_suffix("ug").
+% public_suffix("co.ug").
+% public_suffix("or.ug").
+% public_suffix("ac.ug").
+% public_suffix("sc.ug").
+% public_suffix("go.ug").
+% public_suffix("ne.ug").
+% public_suffix("com.ug").
+% public_suffix("org.ug").
+% public_suffix("uk").
+% public_suffix("ac.uk").
+% public_suffix("co.uk").
+% public_suffix("gov.uk").
+% public_suffix("ltd.uk").
 
 
 % Converts lua rules into prolog rules
@@ -455,3 +471,31 @@ count([],_,0).
 count([X|T],X,Y):- count(T,X,Z), Y is 1+Z.
 count([_|T],X,Z):- count(T,X,Z).
 
+suffix_list([],[]).
+suffix_list([H|T], Supdate) :- 
+	public_suffix(Pubsuff),
+	equal(H, Pubsuff),
+	append([H], S, Supdate),
+	suffix_list(T, S).
+suffix_list([_|T], S) :- 
+	suffix_list(T, S).
+
+
+list_delete(X, [X], []).
+list_delete(X,[X|L1], L1).
+list_delete(X, [Y|L2], [Y|L1]) :- list_delete(X,L2,L1).
+
+list_insert(X,L,R) :- list_delete(X,R,L).
+
+max_of_two(X,Y,X) :- 
+	string_length(X, Lx),
+	string_length(Y, Ly),
+	Lx >= Ly.
+max_of_two(X,Y,Y) :- 
+	string_length(X, Lx),
+	string_length(Y, Ly),
+	Lx < Ly.
+list_max_elem([X],X).
+list_max_elem([X,Y|Rest],Max) :-
+   list_max_elem([Y|Rest],MaxRest),
+   max_of_two(X,MaxRest,Max).
