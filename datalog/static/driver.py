@@ -1,3 +1,8 @@
+# The following code is a python driver that 
+# can query a singlular lint rule (pass/fail) and a singular 
+# applies rule (NA) from a specific prolog file 
+# Usage: python3 driver.py [Prolog File] [Lint Rule] [Applies Rule]
+
 from pyswip import Prolog 
 import sys
 prolog = Prolog()
@@ -10,18 +15,13 @@ def isEmpty(s):
 
 applies = True
 if (len(sys.argv) > 3): 
-    app_query = prolog.query(sys.argv[3] + "(X)")
-    applies = not isEmpty(app_query)
+    #app_query = prolog.query(sys.argv[3] + "(X)")
+    applies = not isEmpty(prolog.query(sys.argv[3] + "(X)"))
     if not applies: 
         print("NA")
 if applies: 
     soln = prolog.query(sys.argv[2] + "(X)")
     if not isEmpty(soln): 
-        print("Pass")
+        print("pass")
     else: 
-        print("Fail")
-
-def isEmpty(s): 
-    for i in s: 
-        return False 
-    return True
+        print("fail")

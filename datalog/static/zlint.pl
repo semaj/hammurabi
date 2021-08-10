@@ -11,6 +11,8 @@
 % but reimplemented using Datalog 
 % See www.github.com/zmap/zlint for more information 
 
+isCert(Cert) :-
+  \+certs:serialNumber(Cert, "").
 
 % Checks whether or not the common 
 % name is missing
@@ -19,6 +21,10 @@ caCommonNameMissing(Cert) :-
 
 % Checks whether the country name 
 % is invalid
+caCountryNameValidApplies(Cert) :-
+  isCa(Cert), 
+  caCountryNamePresent(Cert). 
+
 caCountryNameValid(Cert) :- 
   certs:country(Cert, Country), 
   val_country(Country).
@@ -143,6 +149,9 @@ validTimeTooLong(Cert) :-
   subtract(Duration, NotAfterTime, NotBeforeTime),
   geq(Duration, MaxDuration).
 
+validTimeNotTooLong(Cert) :- 
+  \+validTimeTooLong(Cert).
+
 % SAN must appear 
 extSanMissing(Cert) :- 
   certs:san(Cert, "").
@@ -150,40 +159,46 @@ extSanMissing(Cert) :-
 extSanMissing(Cert) :- 
   certs:sanExt(Cert, false).
 
+extSanNotMissing(Cert) :- 
+  \+extSanMissing(Cert).
+
 % The following lints relate to 
 % verifying the RSA if used
 rsaApplies(Cert) :- 
   certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.1").
 
 % RSA: Public Exponent must be odd
-rsaPublicExponentNotOdd(Cert) :- 
+rsaPublicExponentOdd(Cert) :- 
   certs:rsaExponent(Cert, Exp), 
-  modulus(0, Exp, 2).
+  modulus(1, Exp, 2).
 
-rsaPublicExponentTooSmall(Cert) :- 
+rsaPublicExponentNotTooSmall(Cert) :- 
   certs:rsaExponent(Cert, Exp),
-  \+geq(Exp, 3).
+  geq(Exp, 3).
 
-rsaPublicExponentNotInRange(Cert) :- 
+rsaPublicExponentInRange(Cert) :- 
   certs:rsaExponent(Cert, Exp),
-  \+geq(Exp, 65537). 
+  geq(Exp, 65537). 
 
-rsaPublicExponentNotInRange(Cert) :- 
+rsaPublicExponentInRange(Cert) :- 
   certs:rsaExponent(Cert, Exp),
-  geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
+  \+geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
 
-rsaModNotOdd(Cert) :- 
+rsaModOdd(Cert) :- 
   certs:rsaModulus(Cert, Mod), 
-  modulus(0, Mod, 2).
+  modulus(1, Mod, 2).
 
 rsaModFactorsSmallerThan752(Cert) :- 
   certs:rsaModulus(Cert, Modulus),
-  modulus(0, Modulus, Mod), 
-  prime_num(Mod).
+  prime_num(Mod),
+  modulus(0, Modulus, Mod).
 
-rsaModLessThan2048Bits(Cert) :- 
+rsaModNoFactorsSmallerThan752(Cert) :- 
+  \+rsaModFactorsSmallerThan752(Cert).
+
+rsaModMoreThan2048Bits(Cert) :- 
   certs:rsaModLength(Cert, Length), 
-  \+geq(Length, 2048).
+  geq(Length, 2048).
 
 
 
@@ -194,17 +209,10 @@ rsaModLessThan2048Bits(Cert) :-
 % CAs MUST NOT issue any new Subscriber 
 % certificates or Subordinate CA certificates 
 % using SHA-1 after 1 January 2016
-subCertOrSubCaUsingSha1(Cert) :- 
-  certs:keyAlgorithm(Cert, Algo),
-  equals(Algo, "1.2.840.113549.1.1.5").
-
-subCertOrSubCaUsingSha1(Cert) :- 
-  certs:keyAlgorithm(Cert, Algo),
- equals(Algo, "1.3.14.3.2.27").
-
-subCertOrSubCaUsingSha1(Cert) :- 
-  certs:keyAlgorithm(Cert, Algo),
-  equals(Algo, "1.2.840.10045.4.1").
+subCertOrSubCaNotUsingSha1(Cert) :- 
+  \+certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.5"),
+  \+certs:keyAlgorithm(Cert, "1.3.14.3.2.27"), 
+  \+certs:keyAlgorithm(Cert, "1.2.840.10045.4.1").
 
 % The following are lints for the dnsName 
 % under subject alternative name 
@@ -300,7 +308,8 @@ dnsNameWildCardOnlyInLeftLabel(Cert) :-
 % Basic Constraints checks
 % CA bit set
 isCa(Cert) :-
-    certs:isCA(Cert, true).
+  certs:basicConstraintsExt(Cert, true),
+  certs:isCA(Cert, true).
 
 isNotCa(Cert) :- 
   \+isCa(Cert).
