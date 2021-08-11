@@ -228,8 +228,6 @@ subCaCrlDistPointContainsHttpUrl(Cert) :-
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	certs:crlDistributionPoint(Cert, Url),
 	substring("http://", Url).
-	%s_occurrences(Url, "http://", N),
-	%equal(N, 1).
 
 subCaCrlDistPointContainsHttpUrl(Cert) :-
 	\+isSubCA(Cert).
@@ -311,100 +309,27 @@ subCAAIAContainsIssuingCAUrl(Cert) :-
 %  the CA MUST establish and follow a documented procedure[^pubsuffix] that
 %  determines if the wildcard character occurs in the first label position to
 %  the left of a “registry‐controlled” label or “public suffix”
-% look for * and then see what string is 
-% cant have more than one, has to be at beginning, 
-% has to be character and no more than first character, must not be public
-% suffix right after it
-% make fact list with all public suffixes in it and check against it
-containsWildcard(Cert) :-
-	certs:san(Cert, San),
-	s_occurrences(San, '*', N),
-	geq(N, 1).
+dnsWildcardLeftOfPublicSuffix(San) :-
+	string_concat("*.", X, San),
+	public_suffix(X).
 
-%dnsWildcardNotLeftOfPublicSuffix(Cert) :-
-%	certs:san(Cert, San),
-%	s_occurrences(San, '*', N),
-%	equal(N, 1),
-%	%string_length(San, Lsan),
-%	%geq(Lsan, 5),
-%	public_suffix(Pubsuff),
-%	s_endswith(San, Pubsuff),
-%	string_length(Pubsuff, Length),
-%	sub_string(San, 0, After, Length, Extract),
-%	%geq(Length, 3),
-%	geq(After, 4),
-%	s_endswith(Extract, "."),
-%	s_startswith(Extract, "*.").
+dnsWildcardLeftOfPublicSuffix(San) :-
+	public_suffix(Pubsuff),
+	string_concat("*.", Pubsuff, NotAllowed),
+	s_endswith(San, NotAllowed).
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
 	certs:san(Cert, San),
-	s_occurrences(San, '*', N),
-	equal(N, 1),
-	bagof(Pubsuff, s_endswith(San, Pubsuff), Allsuffixes),
-	% make sure they are from the facts list too
-	suffix_list(Allsuffixes, Appliedpubsuff),
-	
-	%public_suffix(Pubsuff),
-	%s_endswith(San, Pubsuff),
+	\+dnsWildcardLeftOfPublicSuffix(San).
 
-	list_max_elem(Appliedpubsuff, Max),
-	string_length(Max, Length),
-	sub_string(San, 0, After, Length, Extract),
-	geq(After, 4),
-	s_endswith(Extract, "."),
-	s_startswith(Extract, "*.").
-
-% check how many pubsuffixes match up
-% add them to a list?
-%returnLongest(EndList2, Longest) :-
-%	list_max_elem(EndList2, Max).
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
-	\+containsWildcard(Cert).
-
-dnsWildcardNotLeftOfPublicSuffix(Cert) :-
-	\+isSubCert(Cert).
+ 	\+isSubCert(Cert).
 
 % Rules are tested here
 verified(Cert) :-
 	std:isCert(Cert),
 	dnsWildcardNotLeftOfPublicSuffix(Cert).
-	%dnsWildcardNotLeftOfPublicSuffix(Cert).
-	
-	%subCertEkuValidFields(Cert).
-	%subCAAIAContainsOCSPUrl(Cert).
-	%subCAAIAContainsIssuingCAUrl(Cert).
-	%subCertAIAContainsOCSPUrl(Cert).
-	%subCertAIANotMarkedCritical(Cert).
-	%subCaCrlDistPointContainsHttpUrl(Cert).
-	%subCertCrlDistPointContainsHttpUrl(Cert).
-	%subCertCrlDistPointsNotMarkedCritical(Cert).
-	%subCertCrlDistributionPointsPresent(Cert).
-
-	%subCaCrlDistPointsNotMarkedCritical(Cert).
-	%subCertCommonNameFromSan(Cert).
-	%rootCertPoliciesExtNotPresent(Cert).
-	%subCaNameConstrainsCritical(Cert).
-	%subCertCertPoliciesExtPresent(Cert).
-	%subCertCertPoliciesNotMarkedCritical(Cert).
-	%subCaEkuValidFields(Cert).
-	%subCaEkuPresent(Cert).
-	%subCertEkuValidFields(Cert).
-	%subCaCertPoliciesExtPresent(Cert),
-	%subCaCertPoliciesNotMarkedCritical(Cert).
-	%rootCertPoliciesNotPresent(Cert).
-	%rootExtKeyUseNotPresent(Cert).
-	%rootPathLenNotPresent(Cert).
-	%std:isRoot(Cert).
-	%rootBasicConstraintsCritical(Cert).
-	%caKeyUsageCritical(Cert).
-
-	%certs:isCA(Cert).
-
-	%certs:san(Cert, Name),
-	%certs:isCA(Cert, Boolean),
-	%std:stringMatch("*.google.com", "www.google.com").
-	%ext:s_endswith(Name, ".com").
 
 % Trusted roots needed for testing
 trusted_roots("4F39D3BB9E7FA7BFB290E9D21EBB7827D3D7F89394A3AE0F46F50D7583FFBC84").
@@ -413,24 +338,6 @@ trusted_roots("001BD98347D99058CD3D1CCE175922BF032FA33A5456B7B1625B5914D0C429FB"
 trusted_roots("4CC434E240BBDF1900D4AD568B5EA48A1721CEE0397C7AE582CF6F2FFF11C711").
 trusted_roots("BEC94911C2955676DB6C0A550986D76E3BA005667C442C9762B4FBB773DE228C").
 trusted_roots("52E36BE5D0E39B7A06DC26A9A5A5B6F7DA3F313BF62BD19D967615BFD58C81CC").
-
-% Public suffixes for testing
-% public_suffix("zp.ua").
-% public_suffix("zt.ua").
-% public_suffix("ug").
-% public_suffix("co.ug").
-% public_suffix("or.ug").
-% public_suffix("ac.ug").
-% public_suffix("sc.ug").
-% public_suffix("go.ug").
-% public_suffix("ne.ug").
-% public_suffix("com.ug").
-% public_suffix("org.ug").
-% public_suffix("uk").
-% public_suffix("ac.uk").
-% public_suffix("co.uk").
-% public_suffix("gov.uk").
-% public_suffix("ltd.uk").
 
 
 % Converts lua rules into prolog rules
@@ -471,31 +378,3 @@ count([],_,0).
 count([X|T],X,Y):- count(T,X,Z), Y is 1+Z.
 count([_|T],X,Z):- count(T,X,Z).
 
-suffix_list([],[]).
-suffix_list([H|T], Supdate) :- 
-	public_suffix(Pubsuff),
-	equal(H, Pubsuff),
-	append([H], S, Supdate),
-	suffix_list(T, S).
-suffix_list([_|T], S) :- 
-	suffix_list(T, S).
-
-
-list_delete(X, [X], []).
-list_delete(X,[X|L1], L1).
-list_delete(X, [Y|L2], [Y|L1]) :- list_delete(X,L2,L1).
-
-list_insert(X,L,R) :- list_delete(X,R,L).
-
-max_of_two(X,Y,X) :- 
-	string_length(X, Lx),
-	string_length(Y, Ly),
-	Lx >= Ly.
-max_of_two(X,Y,Y) :- 
-	string_length(X, Lx),
-	string_length(Y, Ly),
-	Lx < Ly.
-list_max_elem([X],X).
-list_max_elem([X,Y|Rest],Max) :-
-   list_max_elem([Y|Rest],MaxRest),
-   max_of_two(X,MaxRest,Max).
