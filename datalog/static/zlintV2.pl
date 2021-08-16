@@ -3,6 +3,7 @@
 %:- use_module(env).
 :- include(datalog/gen/job/certs).
 :- include(public_suffix_list).
+%:- include(std).
 
 % includes zlint tests made into prolog rules
 
@@ -234,12 +235,12 @@ subCaCrlDistPointContainsHttpUrl(Cert) :-
 
 %  Subscriber Certifcate: cRLDistributionPoints MAY be present.
 % not considered in valid scope - might delete this one
-subCertCrlDistributionPointsPresent(Cert) :-
-	certs:crlDistributionPointsExt(Cert, true),
-	\+certs:crlDistributionPoints(Cert, false).
+%subCertCrlDistributionPointsPresent(Cert) :-
+%	certs:crlDistributionPointsExt(Cert, true),
+%	\+certs:crlDistributionPoints(Cert, false).
 
-subCertCrlDistributionPointsPresent(Cert) :-
-	\+isSubCert(Cert).
+%subCertCrlDistributionPointsPresent(Cert) :-
+%	\+isSubCert(Cert).
 
 %  Subscriber Certifcate: cRLDistributionPoints MUST NOT be marked critical,
 %  and MUST contain the HTTP URL of the CAs CRL service.

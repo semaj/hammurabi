@@ -1,7 +1,8 @@
-:- use_module(certs).
-:- use_module(std).
-:- use_module(env).
-:- use_module(ext).
+%:- use_module(certs).
+%:- use_module(std).
+%:- use_module(env).
+%:- use_module(ext).
+:- include(datalog/gen/job/certs).
 
 
 isSubCA(Cert) :-
@@ -21,11 +22,13 @@ rootCaIsCa(Cert) :-
   std:isRoot(Cert).
   
 % sub_ca_cert: basicConstraints MUST be present & marked critical.
-basicConstaintsMustBeCritical(Cert) :-
+subCaBasicConstaintsMustBeCritical(Cert) :-
   isSubCA(Cert),
   certs:basicConstraintsExt(Cert, true),
   certs:basicConstraintsCritical(Cert, true).
 
+subCaBasicConstaintsMustBeCritical(Cert) :-
+  \+isSubCA(Cert).
  
 % sub_cert: A cert containing givenName or surname 
 % MUST contain the (2.23.140.1.2.3) certPolicy OID.
@@ -41,6 +44,13 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
   certs:certificatePolicies(Cert, Oid),
   equal(Oid, "2.23.140.1.2.3").
 
+subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
+  isSubCert(Cert),
+  \+givenNameIsPresent(Cert),
+  \+surnameIsPresent(Cert).
+
+subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
+  \+isSubCert(Cert).
 
  
 % sub_cert: 
@@ -50,64 +60,100 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
 subCertLocalityNameMustAppear(Cert) :-
   isSubCert(Cert),
   organizationNameIsPresent(Cert),
-  \+stateOrProvinceNameIsPresent(Cert).
+  \+stateOrProvinceNameIsPresent(Cert),
+  localityNameIsPresent(Cert).
   
 subCertLocalityNameMustAppear(Cert) :-
   isSubCert(Cert),
   givenNameIsPresent(Cert),
-  \+stateOrProvinceNameIsPresent(Cert).
+  \+stateOrProvinceNameIsPresent(Cert),
+  localityNameIsPresent(Cert).
 
 subCertLocalityNameMustAppear(Cert) :-
   isSubCert(Cert),
   surnameIsPresent(Cert),
-  \+stateOrProvinceNameIsPresent(Cert).
+  \+stateOrProvinceNameIsPresent(Cert),
+  localityNameIsPresent(Cert).
+
+subCertLocalityNameMustAppear(Cert) :-
+  stateOrProvinceNameIsPresent(Cert).
+
+subCertLocalityNameMustAppear(Cert) :-
+  \+isSubCert(Cert).
   
   
 % sub_cert: MUST contain one or more policy identifiers.
-subCertCertPolicyEmpty(Cert) :- 
+subCertContainsCertPolicy(Cert) :- 
   isSubCert(Cert),
-  certs:certificatePoliciesExt(Cert, false).
- 
+  certs:certificatePoliciesExt(Cert, true),
+  certs:certificatePolicies(Cert, _).
+
+subCertContainsCertPolicy(Cert) :- 
+  \+isSubCert(Cert).
  
 % ca_cert: organizationName MUST appear.
-caOrganizationNameMissing(Cert) :-
+caOrganizationNamePresent(Cert) :-
   certs:isCA(Cert, true),
-  \+organizationNameIsPresent(Cert).
+  organizationNameIsPresent(Cert).
 
+caOrganizationNamePresent(Cert) :-
+  certs:isCA(Cert, false).
 
-% sub_cert: stateOrProvinceName MUST appeear if
+% sub_cert: stateOrProvinceName MUST appear if
 % organizationName, givenName, or surname are present 
 % and localityName is absent.
 
 subCertProvinceMustAppear(Cert) :-
   isSubCert(Cert),
   organizationNameIsPresent(Cert),
-  \+localityNameIsPresent(Cert).
+  \+localityNameIsPresent(Cert),
+  \+certs:stateOrProvinceName(Cert, "").
 
 subCertProvinceMustAppear(Cert) :-
   isSubCert(Cert),
   givenNameIsPresent(Cert),
-  \+localityNameIsPresent(Cert).
+  \+localityNameIsPresent(Cert),
+  \+certs:stateOrProvinceName(Cert, "").
 
 subCertProvinceMustAppear(Cert) :-
   isSubCert(Cert),
   surnameIsPresent(Cert),
-  \+localityNameIsPresent(Cert).
+  \+localityNameIsPresent(Cert),
+  \+certs:stateOrProvinceName(Cert, "").
 
+subCertProvinceMustAppear(Cert) :-
+  isSubCert(Cert),
+  \+organizationNameIsPresent(Cert),
+  \+givenNameIsPresent(Cert),
+  \+surnameIsPresent(Cert).
+
+subCertProvinceMustAppear(Cert) :-
+  \+isSubCert(Cert).
 
 % sub_cert: stateOrProvinceName MUST NOT appeear if 
 % organizationName, givenName, or surname are absent.
 subCertProvinceMustNotAppear(Cert) :-
   isSubCert(Cert),
-  \+organizationNameIsPresent(Cert).
+  \+organizationNameIsPresent(Cert),
+  certs:stateOrProvinceName(cert_0, "").
   
 subCertProvinceMustNotAppear(Cert) :-
   isSubCert(Cert),
-  \+givenNameIsPresent(Cert).
+  \+givenNameIsPresent(Cert),
+  certs:stateOrProvinceName(cert_0, "").
  
 subCertProvinceMustNotAppear(Cert) :-
   isSubCert(Cert),
-  \+surnameIsPresent(Cert).
+  \+surnameIsPresent(Cert),
+  certs:stateOrProvinceName(cert_0, "").
+
+subCertProvinceMustNotAppear(Cert) :-
+  organizationNameIsPresent(Cert),
+  givenNameIsPresent(Cert),
+  surnameIsPresent(Cert).
+
+subCertProvinceMustNotAppear(Cert) :-
+  \+isSubCert(Cert).
 
 
 % Any of the following x509.SignatureAlgorithms are acceptable per BRs §6.1.5
@@ -133,30 +179,30 @@ val_sig_algo("1.2.840.10045.4.3.4"). % ecdsa-with-sha512
 
 % Certificates MUST meet the following algorithm requirements: 
 % SHA-1*, SHA-256, SHA-384, SHA-512
-signatureAlgorithmNotSupported(Cert) :-
+signatureAlgorithmSupported(Cert) :-
   certs:signatureAlgorithm(Cert, Algo),
-  \+val_sig_algo(Algo).
+  val_sig_algo(Algo).
 
 
 % Certificates MUST meet the following requirements for DSA algorithm 
 % type and key size: L=2048 and N=224,256 or L=3072 and N=256
 
-dsaImproperModulusOrDivisorSize(Cert) :-
+dsaProperModulusOrDivisorSize(Cert) :-
   certs:spkiDSAParameters(cert_0, L, N, G),
   equal(L, 2048),
   equal(N, 224).
 
-dsaImproperModulusOrDivisorSize(Cert) :-
+dsaProperModulusOrDivisorSize(Cert) :-
   certs:spkiDSAParameters(cert_0, L, N, G),
   equal(L, 2048),
   equal(N, 256).
 
-dsaImproperModulusOrDivisorSize(Cert) :-
+dsaProperModulusOrDivisorSize(Cert) :-
   certs:spkiDSAParameters(cert_0, L, N, G),
   equal(L, 3072),
   equal(N, 256).
 
-dsaImproperModulusOrDivisorSize(Cert) :-
+dsaProperModulusOrDivisorSize(Cert) :-
   \+certs:spkiDSAParameters(cert_0, L, N, G).
   
 
@@ -167,15 +213,15 @@ dsaParamsAllPresent(Cert) :-
   unequal(Q, 0),
   unequal(G, 0).
 
-dsaParamsMissing(Cert) :-
-  \+dsaParamsAllPresent(Cert).
+%dsaParamsMissing(Cert) :-
+%  \+dsaParamsAllPresent(Cert).
 
  
 % Certificates MUST meet the following requirements for algorithm 
 % type and key size: ECC NIST P-256(65), P-384(97), or P-521(133)
 
-ecImproperCurves(Cert) :-
-  \+ecProperCurves(Cert).
+%ecImproperCurves(Cert) :-
+%  \+ecProperCurves(Cert).
 
 ecProperCurves(Cert) :-
   idecPKeyAlgo(Cert),
@@ -188,9 +234,9 @@ idecPKeyAlgo(Cert) :-
   
 
 % Certificates MUST be of type X.509 v3.
-invalidCertificateVersion(Cert) :-
+validCertificateVersion(Cert) :-
   certs:version(Cert, Ver),
-  unequal(Ver, 2).
+  equal(Ver, 2).
 
 
 % sub_ca: MUST NOT contain the anyPolicy identifier
@@ -200,23 +246,31 @@ subCaMustNotContainAnyPolicy(Cert) :-
   certs:certificatePolicies(Cert, Oid),
   \+anyPolicyOid(Oid).
 
+subCaMustNotContainAnyPolicy(Cert) :-
+  \+isSubCA(Cert).
+
 anyPolicyOid("2.5.29.32.0").
 
 
 % sub_cert: subjAltName MUST contain at least one entry.
-extSanNoEntries(Cert) :-
+extSanContainsEntries(Cert) :-
   isSubCert(Cert),
   certs:sanExt(Cert, true),
-  \+certs:san(Cert, Name).
+  certs:san(Cert, _).
 
+extSanContainsEntries(Cert) :-
+  \+isSubCert(Cert).
 
 % sub_cert: basicContrainsts cA field MUST NOT be true.
 subCertIsNotCa(Cert) :- 
+  isSubCert(Cert),
   certs:keyUsageExt(Cert, true),
   certs:keyUsage(Cert, keyCertSign),
   certs:basicConstraintsExt(Cert, true),
   certs:isCA(Cert, false).
 
+subCertIsNotCa(Cert) :- 
+  \+isSubCert(Cert).
 
 % If the Certificate asserts the policy identifier of 2.23.140.1.2.1, 
 % then it MUST NOT include organizationName, streetAddress, localityName,
@@ -227,37 +281,39 @@ cabDvConflictsApplies(Cert) :-
   certs:certificatePolicies(Cert, Oid),
   equal(Oid, "2.23.140.1.2.1").
   
-cabDvConflictsWithLocality(Cert) :- 
+cabDvDoesNotConflictWithLocality(Cert) :- 
   cabDvConflictsApplies(Cert),
-  localityNameIsPresent(Cert).
+  \+localityNameIsPresent(Cert).
 
-cabDvConflictsWithOrg(Cert) :- 
+cabDvDoesNotConflictWithOrg(Cert) :- 
   cabDvConflictsApplies(Cert),
-  organizationNameIsPresent(Cert).
+  \+organizationNameIsPresent(Cert).
 
-cabDvConflictsWithPostal(Cert) :- 
+cabDvDoesNotConflictWithPostal(Cert) :- 
   cabDvConflictsApplies(Cert),
-  postalCodeIsPresent(Cert).
+  \+postalCodeIsPresent(Cert).
 
-cabDvConflictsWithProvince(Cert) :- 
+cabDvDoesNotConflictWithProvince(Cert) :- 
   cabDvConflictsApplies(Cert),
-  stateOrProvinceNameIsPresent(Cert).
+  \+stateOrProvinceNameIsPresent(Cert).
 
-cabDvConflictsWithStreet(Cert) :- 
+cabDvDoesNotConflictWithStreet(Cert) :- 
   cabDvConflictsApplies(Cert),
-  streetAddressIsPresent(Cert).
+  \+streetAddressIsPresent(Cert).
 
 
 
 % sub_cert: streetAddress MUST NOT appear if organizationName, 
 % 	    givenName, and surname fields are absent.
-subCertStreetAddressShouldNotExist(Cert) :-
+subCertStreetAddressMustNotAppear(Cert) :-
   isSubCert(Cert),
   \+organizationNameIsPresent(Cert),
   \+givenNameIsPresent(Cert),
   \+surnameIsPresent(Cert),
   \+streetAddressIsPresent(Cert).
   
+subCertStreetAddressMustNotAppear(Cert) :-
+  \+isSubCert(Cert).
 
 % sub_cert: localityName MUST NOT appear if organizationName, 
 %	    givenName, and surname fields are absent.
@@ -268,61 +324,78 @@ subCertLocalityNameMustNotAppear(Cert) :-
   \+surnameIsPresent(Cert),
   \+localityNameIsPresent(Cert).
 
+subCertLocalityNameMustNotAppear(Cert) :-
+  \+isSubCert(Cert).
 
 % sub_ca: authorityInformationAccess MUST be present, 
 %         with the exception of stapling.  
-subCaAiaMissing(Cert) :-
+subCaAiaPresent(Cert) :-
   isSubCA(Cert),
-  certs:authorityInfoAccessExt(Cert, false).
+  certs:authorityInfoAccessExt(Cert, true).
+
+subCaAiaPresent(Cert) :-
+  \+isSubCA(Cert).
 
 
 % sub_cert: authorityInformationAccess MUST be present, 
 % 	    with the exception of stapling.  
-subCertAiaMissing(Cert) :-
+subCertAiaPresent(Cert) :-
   isSubCert(Cert),
-  certs:authorityInfoAccessExt(Cert, false).
+  certs:authorityInfoAccessExt(Cert, true).
+
+subCertAiaPresent(Cert) :-
+  \+isSubCert(Cert).
 
 
 % sub_ca: authorityInformationAccess MUST NOT be marked critical
-subCaAiaMarkedCritical(Cert) :-
+subCaAiaNotMarkedCritical(Cert) :-
   isSubCA(Cert),
   certs:authorityInfoAccessExt(Cert, true),
-  certs:authorityInfoAccessCritical(Cert, true).
+  certs:authorityInfoAccessCritical(Cert, false).
 
+subCaAiaNotMarkedCritical(Cert) :-
+  \+isSubCA(Cert).
 
 % sub_ca: MUST include one or more explicit policy identifiers that 
 %         indicates the Subordinate CA’s adherence to and compliance 
 %	  with these requirements
-subCaCertificatePoliciesMissing(Cert) :-
+subCaCertificatePoliciesPresent(Cert) :-
   isSubCA(Cert),
-  certs:certificatePoliciesExt(Cert, false).
+  certs:certificatePoliciesExt(Cert, true).
 
+subCaCertificatePoliciesPresent(Cert) :-
+  \+isSubCA(Cert).
 
 % sub_ca: Bit positions for keyCertSign and cRLSign MUST be set.
-caKeyCertSignNotSet(Cert) :-
+caKeyCertSignSet(Cert) :-
   certs:isCA(Cert, true),
   certs:keyUsageExt(Cert, true),
   certs:keyUsage(Cert, keyCertSign).
 
-caCrlSignNotSet(Cert) :-
+caKeyCertSignSet(Cert) :-
+  \+isSubCA(Cert).
+
+caCrlSignSet(Cert) :-
   certs:isCA(Cert, true),
   certs:keyUsageExt(Cert, true),
   certs:keyUsage(Cert, cRLSign).
 
+caCrlSignSet(Cert) :-
+  \+isSubCA(Cert).
 
 % sub_cert: keyUsage if present, bit positions for keyCertSign and cRLSign MUST NOT be set.
-subCertKeyUsageCertSignBitSet(Cert) :-
-  certs:isCA(Cert, false),
+subCertKeyUsageCertSignBitNotSet(Cert) :-
+  isSubCert(Cert),
   certs:keyUsageExt(Cert, true),
   \+certs:keyUsage(Cert, keyCertSign).
 
-subCertKeyUsageCrlSignBitSet(Cert) :-
-  certs:isCA(Cert, false),
+subCertKeyUsageCrlSignBitNotSet(Cert) :-
+  isSubCert(Cert),
   certs:keyUsageExt(Cert, true),
   \+certs:keyUsage(Cert, cRLSign).
   
-
-
+subCertKeyUsageCrlSignBitNotSet(Cert) :-
+  \+isSubCert(Cert).
 
 
 % helper methods
