@@ -3,6 +3,8 @@
 %:- use_module(env).
 %:- use_module(ext).
 :- include(datalog/gen/job/certs).
+%:- include(datalog/gen/job/std).
+%:- include(datalog/gen/env).
 
 
 isSubCA(Cert) :-
