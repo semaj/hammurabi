@@ -233,32 +233,35 @@ dnsNameHasBadChar(Cert) :-
   string_length(A, 1),
   \+acceptable(A).
 
-dnsNameLeftLabelWildcardIncorrect(Cert) :- 
+dnsNameAllCharsAcceptable(Cert) :- 
+  \+dnsNameHasBadChar(Cert).
+
+dnsNameLeftLabelWildcardCorrect(Cert) :- 
   certs:commonName(Cert, DNSName), 
   split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
-  \+Left = "*". 
+  Left = "*". 
 
-dnsNameLeftLabelWildcardIncorrect(Cert) :- 
+dnsNameLeftLabelWildcardCorrect(Cert) :- 
   certs:san(Cert, DNSName), 
   split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
-  \+Left = "*". 
+  Left = "*". 
 
-dnsNameTooLong(Cert) :- 
+dnsNameNotTooLong(Cert) :- 
   certs:commonName(Cert, Label), 
   string_length(Label, Length), 
-  geq(Length, 64).
+  \+geq(Length, 64).
 
-dnsNameTooLong(Cert) :- 
+dnsNameNotTooLong(Cert) :- 
   certs:san(Cert, Label), 
   string_length(Label, Length), 
-  geq(Length, 64).
+  \+geq(Length, 64).
 
-dnsNameContainsEmptyLabel(Cert) :- 
-  certs:commonName(Cert, ""). 
+dnsNameIsNotEmptyLabel(Cert) :- 
+  \+certs:commonName(Cert, ""). 
 
-dnsNameContainsEmptyLabel(Cert) :- 
+dnsNameIsNotEmptyLabel(Cert) :- 
   certs:san(Cert, ""). 
 
 dnsNameContainsBareIANASuffix(Cert) :- 
