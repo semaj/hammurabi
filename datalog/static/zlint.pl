@@ -1,11 +1,11 @@
-:- use_module(std). 
-:- use_module(env).
-:- use_module(certs).
-:- use_module(cert_0).
-:- use_module(cert_1).
-:- use_module(browser).
-:- use_module(checks).
-@:- include(certs).
+%:- use_module(std). 
+%:- use_module(env).
+%:- use_module(certs).
+%:- use_module(cert_0).
+%:- use_module(cert_1).
+%:- use_module(browser).
+%:- use_module(checks).
+:- include(certs).
 % The following functions are taken from zlint
 % specifically the cabf_br tests  
 % but reimplemented using Datalog 
@@ -217,8 +217,11 @@ subCertOrSubCaNotUsingSha1(Cert) :-
 % The following are lints for the dnsName 
 % under subject alternative name 
 dnsNameApplies(Cert) :- 
-  \+caCommonNameMissing(Cert).
+  \+caCommonNameMissing(Cert), 
+  notEmptyNamesExist(Cert), 
+  \+commonNameIsIPv4(Cert).
 
+% Characters in labels of DNSNames MUST be alphanumeric, - , _ or *
 dnsNameHasBadChar(Cert) :- 
   certs:commonName(Cert, DNSName),
   string_concat(_, Y, DNSName),
@@ -236,34 +239,47 @@ dnsNameHasBadChar(Cert) :-
 dnsNameAllCharsAcceptable(Cert) :- 
   \+dnsNameHasBadChar(Cert).
 
-dnsNameLeftLabelWildcardCorrect(Cert) :- 
+% Wildcards in the left label of DNSName should only be *
+dnsNameLeftLabelWildcardIncorrect(Cert) :- 
   certs:commonName(Cert, DNSName), 
   split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
-  Left = "*". 
+  \+Left = "*". 
 
-dnsNameLeftLabelWildcardCorrect(Cert) :- 
+dnsNameLeftLabelWildcardIncorrect(Cert) :- 
   certs:san(Cert, DNSName), 
   split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
-  Left = "*". 
+  \+Left = "*". 
 
-dnsNameNotTooLong(Cert) :- 
+dnsNameLeftLabelWildcardCorrect(Cert) :- 
+  \+dnsNameLeftLabelWildcardIncorrect(Cert).
+
+% DNSName labels MUST be less than or equal to 63 characters
+dnsNameTooLong(Cert) :- 
   certs:commonName(Cert, Label), 
   string_length(Label, Length), 
-  \+geq(Length, 64).
+  geq(Length, 64).
 
-dnsNameNotTooLong(Cert) :- 
+dnsNameTooLong(Cert) :- 
   certs:san(Cert, Label), 
   string_length(Label, Length), 
-  \+geq(Length, 64).
+  geq(Length, 64).
 
-dnsNameIsNotEmptyLabel(Cert) :- 
-  \+certs:commonName(Cert, ""). 
+dnsNameNotTooLong(Cert) :- 
+  \+dnsNameTooLong(Cert).
 
-dnsNameIsNotEmptyLabel(Cert) :- 
+% DNSNames should not have an empty label.
+dnsNameIsEmptyLabel(Cert) :- 
+  certs:commonName(Cert, ""). 
+
+dnsNameIsEmptyLabel(Cert) :- 
   certs:san(Cert, ""). 
 
+dnsNameIsNotEmptyLabel(Cert) :- 
+  \+dnsNameIsEmptyLabel(Cert).
+
+% DNSNames should not contain a bare IANA suffix.
 dnsNameContainsBareIANASuffix(Cert) :- 
   certs:commonName(Cert, Label), 
   tld(Label).
@@ -272,21 +288,61 @@ dnsNameContainsBareIANASuffix(Cert) :-
   certs:san(Cert, Label), 
   tld(Label).
 
+dnsNameDoesNotContainBareIANASuffix(Cert) :- 
+  \+dnsNameContainsBareIANASuffix(Cert).
+
+% DNSName should not have a hyphen beginning or ending the SLD
 dnsNameHyphenInSLD(Cert) :- 
-  certs:commonName(Cert, Label), 
-  s_startswith(Label, "-").
+  certs:commonName(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
+  s_startswith(SLD, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
-  certs:san(Cert, Label), 
-  s_startswith(Label, "-").
+  certs:san(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
+  s_startswith(SLD, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
-  certs:commonName(Cert, Label), 
-  s_endswith(Label, "-").
+  certs:commonName(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
+  s_endswith(SLD, "-").
 
 dnsNameHyphenInSLD(Cert) :- 
-  certs:san(Cert, Label), 
-  s_endswith(Label, "-").
+  certs:san(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
+  s_endswith(SLD, "-").
+
+dnsNameNoHyphenInSLD(Cert) :- 
+  \+dnsNameHyphenInSLD(Cert).
+
+% DNSName MUST NOT contain underscore characters
+dnsNameUnderscoreInSLD(Cert) :- 
+  certs:commonName(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
+  substring("_", SLD).
+
+dnsNameUnderscoreInSLD(Cert) :- 
+  certs:san(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
+  substring("_", SLD).
+
+dnsNameNoUnderscoreInSLD(Cert) :- 
+  \+dnsNameHyphenInSLD(Cert).
+
+% DNSNames must have a valid TLD
+dnsNameRightLabelNotValidTLD(Cert) :- 
+  certs:commonName(Cert, DNSName), 
+  topLevelDomain(DNSName, TLD), 
+  \+tld(TLD).
+
+dnsNameRightLabelNotValidTLD(Cert) :- 
+  certs:san(Cert, DNSName), 
+  topLevelDomain(DNSName, TLD), 
+  \+tld(TLD).
+
+dnsNameRightLabelValidTLD(Cert) :- 
+  \+dnsNameRightLabelNotValidTLD(Cert).
+
 
 dnsNameUnderscoreInTRD(Cert) :- 
   certs:commonName(Cert, DNSName), 
@@ -363,6 +419,8 @@ s_startswith(String, Prefix):-
 substring(X,S) :-
    sub_string(S, _Before, _Length, _After, X).
 
+% The follow are helper functions for DNSName rules
+
 isIPv4(Addr):-
     split_string(Addr, ".", "", Bytes), length(Bytes, 4),
     forall(member(B, Bytes), (
@@ -370,6 +428,28 @@ isIPv4(Addr):-
         NB < 256,
         number_string(NB, SNB), B = SNB /* to avoid leading zeroes */
     )).
+
+commonNameIsIPv4(Cert) :- 
+  certs:commonName(Cert, CommonName), 
+  isIPv4(CommonName). 
+
+notEmptyNamesExist(Cert) :- 
+  \+certs:commonName(Cert, "").
+
+notEmptyNamesExist(Cert) :- 
+  \+certs:san(Cert, "").
+
+secondToLast([SLD,_], SLD). 
+secondToLast([_|Rest], SLD) :- secondToLast(Rest, SLD).
+secondLevelDomain(DNSName, SLD) :- 
+  split_string(DNSName, ".", "", Sep),
+  secondToLast(Sep, SLD).
+
+%last_element([TLD],TLD).
+%last_element([_|List], TLD) :- last_element(List, TLD).
+topLevelDomain(DNSName, TLD) :- 
+  split_string(DNSName, ".", "", Sep), 
+  last(Sep, TLD).
 
 
 % Below is the list of valid countries from a CA 
@@ -691,6 +771,7 @@ acceptable("9").
 acceptable("-").
 acceptable("_").
 acceptable("*").
+acceptable(".").
 
 % The numbers below are prime nums 
 prime_num(2).

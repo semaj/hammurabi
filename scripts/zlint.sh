@@ -17,7 +17,7 @@
 bash ~/engine/scripts/custom.sh $1 domain zlint > /dev/null
 echo -n "{"
 while IFS=";", read -r apply lint; do
-    result=`python3 ~/engine/datalog/static/driver.py ~/engine/datalog/gen/job/zlint.pl zlint:$lint zlint:$apply`
-    echo -n "\"$lint\": {\"resut\": \"$result\"},"
+    result=`python3 ~/engine/datalog/static/driver.py ~/engine/datalog/gen/job/zlint.pl $lint $apply`
+    echo -n "\"$lint\": {\"result\": \"$result\"},"
 done < ~/engine/datalog/static/applies_rules.txt
 echo -n "\"end\": \"pass\"}" # Update this in future

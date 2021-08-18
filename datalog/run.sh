@@ -34,7 +34,7 @@ else
   #CLIENT="test"
   BROWSER=$CLIENT.pl
   GEN_FILES="$CERTS"
-  STATIC_FILES="$BROWSER std.pl"
+  STATIC_FILES="$BROWSER"
   ARGS="-l $LUA_EXTS $DIR/std.pl $DIR/$BROWSER $DIR/$CERTS $DIR/query.pl"
 fi
 
@@ -43,17 +43,17 @@ for f in $GEN_FILES; do
 done
 
 for f in $STATIC_FILES; do
-    $MODULARIZE static/$f > $DIR/$f
+    cp static/$f $DIR/$f
 done
 
 
-echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > $DIR/query.pl
-echo "Gen execution time: $((($(date +%s%N) - $gen_start_time)/1000000))ms"
+#echo -e "\nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)?" > $DIR/query.pl
+#echo "Gen execution time: $((($(date +%s%N) - $gen_start_time)/1000000))ms"
 
-start_time=$(date +%s%N)
-$DATALOG $(echo $ARGS) > /dev/null
-E=$?
-if [[ $3 == "writetime" ]]; then
-  echo "Datalog execution time: $((($(date +%s%N) - $start_time)/1000000))ms"
-fi
-exit $E
+#start_time=$(date +%s%N)
+#$DATALOG $(echo $ARGS) > /dev/null
+#E=$?
+#if [[ $3 == "writetime" ]]; then
+#  echo "Datalog execution time: $((($(date +%s%N) - $start_time)/1000000))ms"
+#fi
+#exit $E
