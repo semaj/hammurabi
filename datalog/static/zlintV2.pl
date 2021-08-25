@@ -23,7 +23,7 @@ rootApplies(Cert) :-
 
 isSubCA(Cert) :-
 	certs:isCA(Cert, true),
-	\+std:isRoot(Cert).
+	\+isRoot(Cert).
 
 % check for if it is a subscriber certificate
 isSubCert(Cert) :-
@@ -32,11 +32,14 @@ isSubCert(Cert) :-
  
 %  Root CA and Subordinate CA Certificate: 
 %  keyUsage extension MUST be present and MUST be marked critical.
-caKeyUsageCriticalApplies(Cert) :-
+caKeyUsagePresentAndCriticalApplies(Cert) :-
 	certs:isCA(Cert, true).
 
-caKeyUsageCritical(Cert) :-
-	\+caKeyUsageCriticalApplies(Cert).
+caKeyUsagePresent(Cert) :-
+	certs:keyUsageExt(Cert, true).
+
+%caKeyUsageCritical(Cert) :-
+%	\+caKeyUsagePresentAndCriticalApplies(Cert).
 
 caKeyUsageCritical(Cert) :-
 	certs:keyUsageExt(Cert, true),
@@ -46,10 +49,11 @@ caKeyUsageCritical(Cert) :-
 %  Subordinate CA Certificate: certificatePolicies 
 %  MUST be present and SHOULD NOT be marked critical.
 subCaCertPoliciesExtPresent(Cert) :-
+	isSubCA(Cert),
 	certs:certificatePoliciesExt(Cert, true).
 
-subCaCertPoliciesExtPresent(Cert) :-
-	\+isSubCA(Cert).
+%subCaCertPoliciesExtPresent(Cert) :-
+%	\+isSubCA(Cert).
 
 subCaCertPoliciesNotMarkedCritical(Cert) :-
 	subCaCertPoliciesExtPresent(Cert),
@@ -121,13 +125,14 @@ subCertEkuValidFields(Cert) :-
 subCertEkuValidFields(Cert) :-
 	\+isSubCert(Cert).
 
-
+%  To be considered Technically Constrained, the
 %  Subordinate CA: Must include an EKU extension.
 subCaEkuPresent(Cert) :-
+	isSubCA(Cert),
 	certs:extendedKeyUsageExt(Cert, true).
 
-subCaEkuPresent(Cert) :-
-	\+isSubCA(Cert).
+%subCaEkuPresent(Cert) :-
+%	\+isSubCA(Cert).
 
 
 %  Subordinate CA Certificate: extkeyUsage, either id-kp-serverAuth
@@ -140,8 +145,8 @@ subCaEkuValidFields(Cert) :-
 	subCaEkuPresent(Cert),
 	certs:extendedKeyUsage(Cert, clientAuth).
 
-subCaEkuValidFields(Cert) :-
-	\+isSubCA(Cert).
+%subCaEkuValidFields(Cert) :-
+%	\+isSubCA(Cert).
 
 
 %  Subscriber Certificate: certificatePolicies MUST be present
@@ -203,14 +208,15 @@ subCertCommonNameFromSanApplies(Cert) :-
 	\+certs:commonName(Cert, "").
 
 subCertCommonNameFromSan(Cert) :-
+	certs:sanExt(Cert, true),
 	certs:commonName(Cert, CN),
 	certs:san(Cert, SN),
 	string_lower(CN, CNL),
 	string_lower(SN, SNL),
 	equal(CNL, SNL).
 
-subCertCommonNameFromSan(Cert) :-
-	\+subCertCommonNameFromSanApplies(Cert).
+%subCertCommonNameFromSan(Cert) :-
+%	\+subCertCommonNameFromSanApplies(Cert).
 
 
 %  Subordinate CA Certificate: cRLDistributionPoints MUST be present 
@@ -338,6 +344,14 @@ subCAAIAContainsIssuingCAUrl(Cert) :-
 %  the CA MUST establish and follow a documented procedure[^pubsuffix] that
 %  determines if the wildcard character occurs in the first label position to
 %  the left of a “registry‐controlled” label or “public suffix”
+dnsWildcardNotLeftOfPublicSuffixApplies(Cert) :-
+	isSubCert(Cert),
+	certs:sanExt(Cert, true).
+
+dnsWildcardNotLeftOfPublicSuffixApplies(Cert) :-
+	isSubCert(Cert),
+	\+certs:commonName(Cert, "").
+
 dnsWildcardLeftOfPublicSuffix(San) :-
 	string_concat("*.", X, San),
 	public_suffix(X).
@@ -348,9 +362,13 @@ dnsWildcardLeftOfPublicSuffix(San) :-
 	s_endswith(San, NotAllowed).
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
+	certs:sanExt(Cert, true),
 	certs:san(Cert, San),
 	\+dnsWildcardLeftOfPublicSuffix(San).
 
+dnsWildcardNotLeftOfPublicSuffix(Cert) :-
+	certs:commonName(Cert, CommonName),
+	\+dnsWildcardLeftOfPublicSuffix(CommonName).
 
 dnsWildcardNotLeftOfPublicSuffix(Cert) :-
  	\+isSubCert(Cert).
@@ -366,7 +384,7 @@ verified(Cert) :-
 %trusted_roots("001BD98347D99058CD3D1CCE175922BF032FA33A5456B7B1625B5914D0C429FB").
 %trusted_roots("4CC434E240BBDF1900D4AD568B5EA48A1721CEE0397C7AE582CF6F2FFF11C711").
 %trusted_roots("BEC94911C2955676DB6C0A550986D76E3BA005667C442C9762B4FBB773DE228C").
-%trusted_roots("52E36BE5D0E39B7A06DC26A9A5A5B6F7DA3F313BF62BD19D967615BFD58C81CC").
+
 
 
 % Converts lua rules into prolog rules
@@ -545,3 +563,5 @@ trusted_roots("F356BEA244B7A91EB35D53CA9AD7864ACE018E2D35D5F8F96DDF68A6F41AA474"
 trusted_roots("F9E67D336C51002AC054C632022D66DDA2E7E3FFF10AD061ED31D8BBB410CFB2").
 trusted_roots("FD73DAD31C644FF1B43BEF0CCDDA96710B9CD9875ECA7E31707AF3E96D522BBD").
 trusted_roots("FF856A2D251DCD88D36656F450126798CFABAADE40799C722DE4D2B5DB36A73A").
+trusted_roots("52E36BE5D0E39B7A06DC26A9A5A5B6F7DA3F313BF62BD19D967615BFD58C81CC").
+trusted_roots("4CC434E240BBDF1900D4AD568B5EA48A1721CEE0397C7AE582CF6F2FFF11C711").
