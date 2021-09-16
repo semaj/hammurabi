@@ -10,5 +10,6 @@ sudo apt-get install -yy \
 
 echo 'PATH="$HOME/.cargo/bin:$PATH"' >> ~/.profile
 source ~/.profile
+sudo gem install descriptive_statistics
 
 

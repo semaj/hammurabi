@@ -40,6 +40,10 @@ You can run these assertions over a certificate chain like so:
 0de156c55d46391bf1081fcb9acb6580ae9f8eb6e79af3206cfe8f9f792c002a.pem
 jameslarisch.com`. `jameslarisch.com` is the domain you're validating against.
 
+Similarly, `./scripts/custom.sh
+0de156c55d46391bf1081fcb9acb6580ae9f8eb6e79af3206cfe8f9f792c002a.pem
+jameslarisch.com name-constraints` will run `datalog/static/name-constraints.pl` and can be used to run other custom scripts.
+
 `OK` means the constraints were satisfied, an error means it didn't.
 
 After running, you can examine `datalog/gen/job/certs.pl` to examine the facts

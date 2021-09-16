@@ -12,13 +12,13 @@ if [ -f "$DIR/chrome_env.pl" ]; then
 fi
 
 FIREFOX_BROWSER_FILE=$DIR/firefox.pl
+CHROME_BROWSER_FILE=$DIR/chrome.pl
 if [ -f "$FIREFOX_BROWSER_FILE" ]; then
   BROWSER=firefox.pl
-fi
-
-CHROME_BROWSER_FILE=$DIR/chrome.pl
-if [ -f "$CHROME_BROWSER_FILE" ]; then
+elif [ -f "$CHROME_BROWSER_FILE" ]; then
   BROWSER=chrome.pl
+else
+  BROWSER=$1.pl
 fi
 
 

@@ -2,6 +2,7 @@ use openssl::hash::MessageDigest;
 use openssl::ocsp::{
     OcspCertId, OcspCertStatus, OcspFlag, OcspRequest, OcspResponse, OcspResponseStatus,
 };
+use std::{fs, env};
 use openssl::stack::Stack;
 use openssl::x509::store::X509Store;
 use openssl::x509::{X509Ref, X509};
@@ -14,6 +15,7 @@ pub fn check_ocsp(
     issuer: &X509Ref,
     certs: &Stack<X509>,
     check_ocsp: bool,
+    staple: bool,
 ) -> Vec<String> {
     let mut output_facts: Vec<String> = Vec::new();
     let hash = format!("cert_{}", cert_index);
@@ -25,9 +27,27 @@ pub fn check_ocsp(
     if responders.len() == 0 {
         return output_facts;
     }
-
-    let cert_id = OcspCertId::from_cert(MessageDigest::sha1(), subject, issuer).unwrap();
-    let verify_cert_id = OcspCertId::from_cert(MessageDigest::sha1(), subject, issuer).unwrap();
+    let mock = env::var("MOCK").unwrap_or("".to_string());
+    //let ints = fs::read("/tmp/real-issuer.pem").unwrap_or("".to_string());
+    let chain;
+    let mut stack;
+    let mut actual_subject = subject;
+    let mut actual_issuer = issuer;
+    let mut actual_certs = certs;
+    if mock == "true" {
+        // This is needed because when testing our own "frankencerts",
+        // OCSP requests will be invalid. We need to use the real
+        // subject and issuer
+        let ints = fs::read("/tmp/real.pem").unwrap();
+        chain = X509::stack_from_pem(&ints).unwrap();
+        actual_subject = &chain[0];
+        actual_issuer = &chain[1];
+        stack = Stack::new().unwrap();
+        stack.push(chain[1].clone()).unwrap();
+        actual_certs = &stack;
+    }
+    let cert_id = OcspCertId::from_cert(MessageDigest::sha1(), actual_subject, actual_issuer).unwrap();
+    let verify_cert_id = OcspCertId::from_cert(MessageDigest::sha1(), actual_subject, actual_issuer).unwrap();
 
     let mut req = OcspRequest::new().unwrap();
     req.add_id(cert_id).unwrap();
@@ -53,14 +73,14 @@ pub fn check_ocsp(
     let before = Instant::now();
     let res = match client.post(&format!("{}", ocsp_uri)).body(req_der.clone()).send() {
         Ok(r) => r,
-        Err(_) => {
+        Err(e) => {
+            eprintln!("OCSP request error: {}", e);
             output_facts.push(format!("ocspValid({}, false).", hash));
             return output_facts;
         }
     };
-
     let elapsed = before.elapsed().as_millis();
-    eprintln!("OCSP request time: {}ms", elapsed);
+    println!("OCSP request time: {}ms", elapsed);
     let bytes = match res.bytes() {
         Ok(b) => b,
         Err(_) => {
@@ -69,6 +89,9 @@ pub fn check_ocsp(
             return output_facts;
         }
     };
+    if staple {
+        return ocsp_stapling(Some(&bytes), &store, actual_subject, actual_issuer, actual_certs);
+    }
     let ocsp_response_result = OcspResponse::from_der(&bytes);
     if ocsp_response_result.is_err() {
         output_facts.push(format!("ocspValid({}, false).", hash));
@@ -80,7 +103,8 @@ pub fn check_ocsp(
             output_facts.push(format!("ocspValid({}, true).", hash));
             basic_response
         }
-        Err(_) => {
+        Err(e) => {
+            eprintln!("OCSP response error: {}, error code: {}", e, ocsp_response.status().as_raw());
             // See: https://tools.ietf.org/html/rfc6960#section-4.2.1 for status codes
             if ocsp_response.status() != OcspResponseStatus::INTERNAL_ERROR
                 && ocsp_response.status() != OcspResponseStatus::TRY_LATER
@@ -93,7 +117,7 @@ pub fn check_ocsp(
             return output_facts;
         }
     };
-    match ocsp_basic_response.verify(certs.as_ref(), store, OcspFlag::empty()) {
+    match ocsp_basic_response.verify(actual_certs.as_ref(), store, OcspFlag::empty()) {
         Ok(_) => output_facts.push(format!("ocspVerified({}, true).", hash)),
         Err(error_stack) => {
             eprintln!("Verification failed for URI {}. Error stack: {}", ocsp_uri, error_stack);
@@ -133,8 +157,8 @@ pub fn check_ocsp(
 pub fn ocsp_stapling(
     stapled_ocsp_response: Option<&[u8]>,
     store: &X509Store,
-    subject: &X509,
-    issuer: &X509,
+    subject: &X509Ref,
+    issuer: &X509Ref,
     certs: &Stack<X509>,
 ) -> Vec<String> {
     let hash = "cert_0".to_string();

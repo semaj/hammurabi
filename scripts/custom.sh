@@ -1,4 +1,3 @@
 #!/usr/bin/env bash
-
-# firefox.sh <path to chain file> <hostname to validate against>
-RUST_BACKTRACE=1 SCRIPT=test ./target/debug/single $1 $2 --ocsp
+DATALOG="${3:-test}"
+RUST_BACKTRACE=1 SCRIPT=$DATALOG ./target/debug/single $1 $2 --ocsp $4

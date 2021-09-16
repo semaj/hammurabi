@@ -10,3 +10,5 @@ datalog/gen/*
 
 tmp/*
 !tmp/.gitkeep
+
+datalog/static/tmp*
