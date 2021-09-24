@@ -8,26 +8,15 @@
     isRoot/1,
     pathLengthOkay/3,
     maxIntermediatesOkay/1,
-    descendant/2,
-    ipToNumber/6,
-    hostInNetwork/2,
-    basicsWork/1,
-    isCert/1
+    descendant/2
 ]).
 
+:-style_check(-singleton).
 :- use_module(env).
 :- use_module(certs).
-:- use_module(cert_0).
-:- use_module(cert_1).
 :- use_module(ext).
-:- use_module(browser).
 :- use_module(checks).
 
-
-% Sugar
-% is a Cert if it has serial number
-isCert(Cert):-
-    certs:serialNumber(Cert, Serial).
 
 % common name match function
 % wildcard clause
@@ -67,8 +56,7 @@ nameMatches(Cert):-
 
 % Error reporting clause
 isTimeValid(Cert):-
-    checks:timeValidCheckEnabled(false),
-    std:isCert(Cert).
+    checks:timeValidCheckEnabled(false).
 
 % time validity check. between Lower and Upper
 isTimeValid(Cert):-
@@ -92,8 +80,7 @@ isRoot(Cert):-
 
 % Error reporting clause
 isCA(Cert):-
-    checks:parentNotCACheckEnabled(false),
-    std:isCert(Cert).
+    checks:parentNotCACheckEnabled(false).
 
 % Basic Constraints checks
 % CA bit set
@@ -104,7 +91,6 @@ isCA(Cert):-
 % Error reporting clause
 pathLengthOkay(Cert, ChainLen, SelfCount):-
     checks:chainLengthCheckEnabled(false),
-    std:isCert(Cert),
     ext:geq(ChainLen, ChainLen),
     ext:geq(SelfCount, SelfCount).
 

@@ -23,14 +23,13 @@ elif [[ $CLIENT == "firefox" ]]; then
 fi
 
 STATIC_FILES="$BROWSER_SPECIFIC $BROWSER env.pl std.pl ev.pl ext.pl"
-ARGS="-l $DIR/$CHECKS $DIR/env.pl $DIR/std.pl $DIR/ev.pl $DIR/$BROWSER $DIR/$CERTS $DIR/$BROWSER_SPECIFIC $DIR/query.pl"
 
 for f in $GEN_FILES; do
   cat gen/$f > $DIR/$f
 done
 
 for f in $STATIC_FILES; do
-    cat static/$f > $DIR/$f
+  cat static/$f > $DIR/$f
 done
 
 
@@ -38,7 +37,7 @@ echo -e "?- \nenv:domain(\"$DOMAIN\").\n$CLIENT:verified(cert_0)." > $DIR/query.
 echo "Gen execution time: $((($(date +%s%N) - $gen_start_time)/1000000))ms"
 
 start_time=$(date +%s%N)
-$ENGINE $(echo $ARGS) > /dev/null
+$ENGINE $BROWSER -g "halt."
 E=$?
 if [[ $3 == "writetime" ]]; then
   echo "Datalog execution time: $((($(date +%s%N) - $start_time)/1000000))ms"
