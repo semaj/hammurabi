@@ -4,7 +4,6 @@ CLIENT=$1
 DOMAIN=$2
 
 ENGINE=swipl
-MODULARIZE=./modularize.sh
 
 CHECKS=checks$JOBINDEX.pl
 CERTS=certs$JOBINDEX.pl
@@ -19,7 +18,7 @@ if [[ $CLIENT == "chrome" ]]; then
   BROWSER_SPECIFIC=chrome_env.pl
   GEN_FILES="$CHECKS $CERTS"
   for f in $GEN_FILES; do
-    $MODULARIZE gen/$f > $DIR/$f
+    cat gen/$f > $DIR/$f
   done
   STATIC_FILES="$BROWSER_SPECIFIC $BROWSER env.pl std.pl ev.pl ext.pl"
   ARGS="-l $DIR/$CHECKS $DIR/env.pl $DIR/std.pl $DIR/ev.pl $DIR/$BROWSER $DIR/$CERTS $DIR/$BROWSER_SPECIFIC $DIR/query.pl"
@@ -38,11 +37,11 @@ else
 fi
 
 for f in $GEN_FILES; do
-  $MODULARIZE gen/$f > $DIR/$f
+  cat gen/$f > $DIR/$f
 done
 
 for f in $STATIC_FILES; do
-    $MODULARIZE static/$f > $DIR/$f
+    cat static/$f > $DIR/$f
 done
 
 
