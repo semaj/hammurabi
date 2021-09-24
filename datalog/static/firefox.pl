@@ -1,286 +1,174 @@
 :- module(firefox, [
-    parent/4,
-    verified/4,
-    verified/1
+  verified_firefox/18
 ]).
-:-style_check(-singleton).
 
+:- use_module(firefox_env).
 :- use_module(env).
-:- use_module(certs).
 :- use_module(std).
-:- use_module(onecrl).
-:- use_module(ext).
-:- use_module(ev).
-:- use_module(checks).
+:- use_module(library(clpfd)).
 
-symantecFingerprint("FF856A2D251DCD88D36656F450126798CFABAADE40799C722DE4D2B5DB36A73A").
-symantecFingerprint("5EDB7AC43B82A06A8761E8D7BE4979EBF2611F7DD79BF91C1C6B566A219ED766").
-symantecFingerprint("B478B812250DF878635C2AA7EC7D155EAA625EE82916E2CD294361886CD1FBD4").
-symantecFingerprint("37D51006C512EAAB626421F1EC8C92013FC5F82AE98EE533EB4619B8DEB4D06C").
-symantecFingerprint("A0459B9F63B22559F5FA5D4C6DB3F9F72FF19342033578F073BF1D1B46CBB912").
-symantecFingerprint("A0234F3BC8527CA5628EEC81AD5D69895DA5680DC91D1CB8477F33F878B95B0B").
-symantecFingerprint("363F3C849EAB03B0A2A0F636D7B86D04D3AC7FCFE26A0A9121AB9795F6E176DF").
-symantecFingerprint("9D190B2E314566685BE8A889E27AA8C7D7AE1D8AADDBA3C1ECF9D24863CD34B9").
-symantecFingerprint("FE863D0822FE7A2353FA484D5924E875656D3DC9FB58771F6F616F9D571BC592").
-symantecFingerprint("CB627D18B58AD56DDE331A30456BC65C601A4E9B18DEDCEA08E7DAAA07815FF0").
-symantecFingerprint("8D722F81A9C113C0791DF136A2966DB26C950A971DB46B4199F4EA54B78BFB9F").
-symantecFingerprint("A4310D50AF18A6447190372A86AFAF8B951FFB431D837F1E5688B45971ED1557").
-symantecFingerprint("4B03F45807AD70F21BFC2CAE71C9FDE4604C064CF5FFB686BAE5DBAAD7FDD34C").
-symantecFingerprint("CBB5AF185E942A2402F9EACBC0ED5BB876EEA3C1223623D00447E4F3BA554B65").
-symantecFingerprint("92A9D9833FE1944DB366E8BFAE7A95B6480C2D6C6C2A1BE65D4236B608FCA1BB").
-symantecFingerprint("EB04CF5EB1F39AFA762F2BB120F296CBA520C1B97DB1589565B81CB9A17B7244").
-symantecFingerprint("69DDD7EA90BB57C93E135DC85EA6FCD5480B603239BDC454FC758B2A26CF7F79").
-symantecFingerprint("9ACFAB7E43C8D880D06B262A94DEEEE4B4659989C3D0CAF19BAF6405E41AB7DF").
-symantecFingerprint("2399561127A57125DE8CEFEA610DDF2FA078B5C8067F4E828290BFB860E84B3C").
-
-tubitak1Fingerprint("46EDC3689046D53A453FB3104AB80DCAEC658B2660EA1629DD7E867990648716").
-tubitak1Subtree("*.gov.tr").
-tubitak1Subtree("*.k12.tr").
-tubitak1Subtree("*.pol.tr").
-tubitak1Subtree("*.mil.tr").
-tubitak1Subtree("*.tsk.tr").
-tubitak1Subtree("*.kep.tr").
-tubitak1Subtree("*.bel.tr").
-tubitak1Subtree("*.edu.tr").
-tubitak1Subtree("*.org.tr").
-
-anssiFingerprint("B9BEA7860A962EA3611DAB97AB6DA3E21C1068B97D55575ED0E11279C11C8932").
-anssiSubtree("*.fr").
-anssiSubtree("*.gp").
-anssiSubtree("*.gf").
-anssiSubtree("*.mq").
-anssiSubtree("*.re").
-anssiSubtree("*.yt").
-anssiSubtree("*.pm").
-anssiSubtree("*.bl").
-anssiSubtree("*.mf").
-anssiSubtree("*.wf").
-anssiSubtree("*.pf").
-anssiSubtree("*.nc").
-anssiSubtree("*.tf").
-
-% Error reporting clause
-nssNameConstraintValid(Leaf, Root) :-
-  checks:nssNameConstraintCheckEnabled(false),
-  std:isCert(Leaf),
-  std:isCert(Root).
 
 % See: https://wiki.mozilla.org/CA/Additional_Trust_Changes#ANSSI
-nssNameConstraintValid(Leaf, Root) :-
-  certs:fingerprint(Root, F),
-  \+anssiFingerprint(F),
-  \+tubitak1Fingerprint(F),
-  std:isCert(Leaf).
+nssNameConstraintValid(_, RootFingerprint) :-
+  firefox_env:trusted_roots(RootFingerprint),
+  \+firefox_env:anssiFingerprint(RootFingerprint),
+  \+firefox_env:tubitak1Fingerprint(RootFingerprint).
 
-nssNameConstraintValid(Leaf, Root) :-
-  tubitak1Fingerprint(F),
-  certs:fingerprint(Root, F),
-  certs:san(Leaf, Name),
-  tubitak1Subtree(Tree),
+nssNameConstraintValid(LeafSANList, RootFingerprint) :-
+  firefox_env:tubitak1Fingerprint(RootFingerprint),
+  firefox_env:tubitak1Subtree(Tree),
+  member(Name, LeafSANList),
   std:stringMatch(Tree, Name).
 
-nssNameConstraintValid(Leaf, Root) :-
-  anssiFingerprint(F),
-  certs:fingerprint(Root, F),
-  certs:san(Leaf, Name),
-  anssiSubtree(Tree),
+nssNameConstraintValid(LeafSANList, RootFingerprint) :-
+  firefox_env:anssiFingerprint(RootFingerprint),
+  firefox_env:anssiSubtree(Tree),
+  member(Name, LeafSANList),
   std:stringMatch(Tree, Name).
 
-% Error reporting clause
-notRevoked(Cert) :-
-  checks:revokedCheckEnabled(false),
-  std:isCert(Cert).
+notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
+  shortLived(Lower, Upper);
+  notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse).
 
-notRevoked(Cert) :-
-  shortLived(Cert). % Firefox uses 10 days
 
-notRevoked(Cert) :-
-  std:isCert(Cert),
-  \+ocspRevoked(Cert).
+notOCSPRevoked(_, _, _, OcspResponse) :-
+  OcspResponse = [].
 
-stapledResponseError(Cert) :-
-  certs:stapledOcspValid(Cert, false).
+notOCSPRevoked(_, _, _, OcspResponse) :-
+  OcspResponse = [verified, not_expired, valid, good].
 
-stapledResponseError(Cert) :-
-  certs:stapledOcspExpired(Cert, true).
+notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
+  \+std:isEV(CertPolicies, RootSubject),
+  StapledResponse = [],
+  (
+    OcspResponse = [not_verified, _, _, _];
+    OcspResponse = [_, _, invalid, _];
+    OcspResponse = [_, expired, _, _]
+  ).
 
-stapledResponseError(Cert) :-
-  certs:stapledOcspVerified(Cert, false).
+notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
+  \+std:isEV(CertPolicies, RootSubject),
+  StapledResponse = [verified, not_expired, valid],
+  (
+    OcspResponse = [not_verified, _, _, _];
+    OcspResponse = [_, expired, _, _];
+    OcspResponse = [_, _, invalid, _]
+  ).
 
-ocspResponseError(Cert) :-
-  certs:ocspExpired(Cert, R, true).
-
-ocspResponseError(Cert) :-
-  certs:ocspValid(Cert, R, false).
-
-ocspResponseError(Cert) :-
-  certs:ocspVerified(Cert, R, false).
-
-ocspRevoked(Cert) :-
-  certs:ocspStatus(Cert, Responder, revoked).
-
-ocspRevoked(Cert) :-
-  certs:ocspStatus(Cert, Responder, unknown).
-
-ocspRevoked(Cert) :-
-  stapledResponseError(Cert),
-  \+certs:ocspResponder(Cert, R).
-
-ocspRevoked(Cert) :-
-  ev:isEV(Cert),
-  \+certs:ocspResponder(Cert, R).
-
-ocspRevoked(Cert) :-
-  ocspResponseError(Cert),
-  stapledResponseError(Cert).
-
-ocspRevoked(Cert) :-
-  ev:isEV(Cert),
-  ocspResponseError(Cert).
 
 tenDaysInSeconds(864001).
 
-shortLived(Cert) :-
+shortLived(Lower, Upper) :-
   tenDaysInSeconds(ValidDuration),
-  validity(Cert, Lower, Upper),
-  ext:subtract(Duration, Upper, Lower),
-  ext:larger(ValidDuration, Duration).
+  Upper - Lower #< ValidDuration.
 
-notInOneCRL(Cert) :-
-  certs:fingerprint(Cert, Fingerprint),
-  \+onecrl:onecrl(Fingerprint).
+checkKeyUsage(_, KeyUsage) :-
+  KeyUsage = [].
 
-checkKeyUsage(Cert) :-
-  std:isCA(Cert),
-  certs:keyUsageExt(Cert, true),
-  std:usageAllowed(Cert, keyCertSign).
+checkKeyUsage(BasicConstraints, KeyUsage) :-
+  std:isCA(BasicConstraints),
+  member(keyCertSign, KeyUsage).
 
-checkKeyUsage(Cert) :-
-  certs:keyUsageExt(Cert, false).
+checkKeyUsage(BasicConstraints, KeyUsage) :-
+  \+std:isCA(BasicConstraints),
+  (
+    member(digitalSignature, KeyUsage);
+    member(keyEncipherment, KeyUsage);
+    member(keyAgreement, KeyUsage)
+  ).
 
-checkKeyUsage(Cert) :-
-  \+std:isCA(Cert),
-  std:usageAllowed(Cert, digitalSignature).
-
-checkKeyUsage(Cert) :-
-  \+std:isCA(Cert),
-  std:usageAllowed(Cert, keyEncipherment).
-
-checkKeyUsage(Cert) :-
-  \+std:isCA(Cert),
-  std:usageAllowed(Cert, keyAgreement).
+checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
+  std:isCA(BasicConstraints),
+  member(serverAuth, ExtKeyUsage).
 
 
-notSymantec(Cert) :-
-  certs:fingerprint(Cert, F),
-  \+symantecFingerprint(F).
+checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
+  \+std:isCA(BasicConstraints),
+  member(serverAuth, ExtKeyUsage),
+  \+member(oCSPSigning, ExtKeyUsage).
 
-checkKeyCertSign(Cert) :-
-  std:usageAllowed(Cert, keyCertSign).
+checkExtendedKeyUsage(_, ExtKeyUsage) :-
+  ExtKeyUsage = [].
 
-checkKeyCertSign(Cert) :-
-  certs:keyUsageExt(Cert, false).
+checkKeyCertSign(KeyUsage) :-
+  KeyUsage = []; member(keyCertSign, KeyUsage).
 
-parent(C, P, ChainLen):-
-    certs:issuer(C, P),
-    std:isCA(P),
-    checkKeyCertSign(P),
-    std:pathLengthOkay(P, ChainLen, 0).
 
-validSHA1(Cert) :-
-  certs:signatureAlgorithm(Cert, Algorithm),
+validSHA1(Algorithm) :-
   % ecdsa with sha1
-  ext:unequal(Algorithm, "1.2.840.10045.4.1"),
+  Algorithm \== "1.2.840.10045.4.1",
   % rsa signature with sha1
-  ext:unequal(Algorithm, "1.3.14.3.2.29"),
+  Algorithm \== "1.3.14.3.2.29",
   % rsa encryption with sha1
-  ext:unequal(Algorithm, "1.2.840.113549.1.1.5").
+  Algorithm \== "1.2.840.113549.1.1.5".
 
-checkExtendedKeyUsage(Cert) :-
-  std:isCA(Cert),
-  certs:extendedKeyUsage(Cert, serverAuth).
 
-checkExtendedKeyUsage(Cert):-
-  \+std:isCA(Cert),
-  \+certs:extendedKeyUsage(Cert, oCSPSigning),
-  certs:extendedKeyUsage(Cert, serverAuth).
-
-checkExtendedKeyUsage(Cert) :-
-  certs:extendedKeyUsageExt(Cert, false).
-
-% Override kb_env.pl
-max_intermediates(5).
-
-% Error reporting clause
-maxIntermediatesOkay(ChainLen):-
-  checks:chainLengthCheckEnabled(false),
-  ext:larger(ChainLen, -1),
-  ext:larger(100, ChainLen).
-
-% Custom limit on intermediate certs check
-% exempts trusted certs from limit
-maxIntermediatesOkay(ChainLen):-
-  max_intermediates(M),
-  ext:larger(M, ChainLen).
-
-verified(Leaf, Cert, ChainLen):-
-  std:isTimeValid(Cert),
-  std:isRoot(Cert),
-  nssNameConstraintValid(Leaf, Cert),
-  notSymantec(Cert),
-  ext:larger(ChainLen, -1),
-  ext:larger(100, ChainLen).
-
-verified(Leaf, Cert, ChainLen):-
-  std:isTimeValid(Cert),
-  parent(Cert, P, ChainLen),
-  checkKeyUsage(P),
-  checkExtendedKeyUsage(Cert),
-  maxIntermediatesOkay(ChainLen),
-  % Firefox-specific
-  validSHA1(Cert),
-  notInOneCRL(Cert),
-  notRevoked(Cert),
-  % BLOCKED: parentNameConstraints(Cert, Parent), % BLOCKED ON PARSING
-  % BLOCKED: checkCertificatePolicies(Cert), % BLOCKED ON PARSING
-  % checkRequiredTLSFeaturesMatch(Cert, Parent), % Seems like this is done to match cert with issuer... which we do automatically?
-  % checkDigestSignedByIssuer(Cert, Parent), % Checked by webpki AFAIK
-  % checkSubjectPublicKeyInfo(cert), % This checks for issues in the certificate that may cause buffer overflows in trust domain... skip for now.
-  ext:add(ChainLenNew, ChainLen, 1),
-  verified(Leaf, P, ChainLenNew).
-
-% Error reporting clause
-firefoxNameMatches(Cert) :-
-  checks:domainMatchCheckEnabled(false),
-  std:isCert(Cert).
-
-firefoxNameMatches(Cert) :-
-  certs:sanExt(Cert, true),
-  std:nameMatchesSAN(Cert).
+firefoxNameMatches(SANList, _):-
+  env:domain(D),
+  std:nameMatchesSAN(D, SANList).
 
 % Check CN ONLY if SAN not present
-firefoxNameMatches(Cert) :-
-  certs:sanExt(Cert, false),
-  std:nameMatchesCN(Cert).
+firefoxNameMatches(SANList, Subject) :-
+  SANList = [],
+  env:domain(D),
+  std:nameMatchesCN(D, Subject).
 
 % in seconds
 duration27MonthsPlusSlop(71712000).
 
-isNSSTimeValid(Cert):-
-  \+ev:isEV(Cert).
+isNSSTimeValid(CertPolicies, _, _, RootSubject):-
+  \+std:isEV(CertPolicies, RootSubject).
 
-isNSSTimeValid(Cert):-
-  ev:isEV(Cert),
+isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject):-
+  std:isEV(CertPolicies, RootSubject),
   duration27MonthsPlusSlop(ValidDuration),
-  certs:notBefore(Cert, Lower),
-  certs:notAfter(Cert, Upper),
-  ext:subtract(Duration, Upper, Lower),
-  ext:geq(ValidDuration, Duration).
+  Upper - Lower #< ValidDuration.
 
-verified(Cert):-
-  \+std:isCA(Cert),
-  checkKeyUsage(Cert),
-  checkExtendedKeyUsage(Cert),
-  firefoxNameMatches(Cert),
-  isNSSTimeValid(Cert),
-  verified(Cert, Cert, -1).
+notcrl(F):-
+    var(F), F = "".
+
+notcrl(F):-
+    nonvar(F), \+firefox_env:onecrl(F).
+
+verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
+  firefox_env:trusted_roots(Fingerprint),
+  \+firefox_env:symantecFingerprint(Fingerprint),
+  std:isTimeValid(Lower, Upper),
+  nssNameConstraintValid(LeafSANList, Fingerprint),
+  std:isCA(BasicConstraints),
+  checkKeyCertSign(KeyUsage).
+
+verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+  notcrl(Fingerprint),
+
+  types:sANList(SANList),
+  firefoxNameMatches(SANList, Subject),
+
+  types:timestamp(Lower),
+  types:timestamp(Upper),
+  std:isTimeValid(Lower, Upper),
+
+  types:algorithm(Algorithm),
+  validSHA1(Algorithm),
+
+  types:basicConstraints(BasicConstraints),
+  \+std:isCA(BasicConstraints),
+
+  types:keyUsageList(KeyUsage),
+  checkKeyUsage(BasicConstraints, KeyUsage),
+
+  types:extKeyUsageList(ExtKeyUsage),
+  checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage),
+
+  types:certificatePolicy(CertPolicies),
+  isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject),
+
+  types:stapledResponse(StapledResponse),
+  types:ocspResponse(OcspResponse),
+  notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse),
+
+  types:timestamp(RootLower),
+  types:timestamp(RootUpper),
+  types:basicConstraints(RootBasicConstraints),
+  types:keyUsageList(RootKeyUsage),
+  verifiedRoot(SANList, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).

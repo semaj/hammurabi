@@ -1,136 +1,138 @@
 :- module(chrome, [
-    verified/1
+  verified_chrome/13
 ]).
 
-:- style_check(-singleton).
-:- use_module(certs).
 :- use_module(std).
+:- use_module(library(clpfd)).
 :- use_module(chrome_env).
 
-checkKeyUsage(Cert) :-
-  certs:keyUsageExt(Cert, false).
+% For certificates issued on-or-after the BR effective
+% For certificates issued on-or-after 1 April 2015 (39 months)
+% For certificates issued on-or-after 1 March 2018 (825 days)
+% For certificates issued on-or-after 1 September 2020 (398 days)
+% net/cert/cert_verify_proc
+leaf_duration_valid(Lower, Upper):-
+  Duration = Upper - Lower,
+  July2012 = 1341100800,
+  April2015 = 1427846400,
+  March2018 = 1519862400,
+  July2019 = 1561939200,
+  Sep2020 = 1598918400,
+  TenYears = 315532800,
+  SixtyMonths = 157852800,
+  ThirtyNineMonths = 102643200,
+  EightTwentyFiveDays = 71280000,
+  ThreeNinetyEightDays = 34387200,
+  (
+    (Lower #< July2012, Upper #< July2019, Duration #=< TenYears);
+    (Lower in July2012..April2015, Duration #=< SixtyMonths);
+    (Lower in April2015..March2018, Duration #=< ThirtyNineMonths);
+    (Lower in March2018..Sep2020, Duration #=< EightTwentyFiveDays);
+    (Lower #>= Sep2020, Duration #=< ThreeNinetyEightDays)
+  ).
 
-checkKeyUsage(Cert) :-
-  std:isCA(Cert),
-  certs:keyUsageExt(Cert, true),
-  std:usageAllowed(Cert, keyCertSign).
+no_name_constraint_violation(Fingerprint, _):-
+  chrome_env:trusted(Fingerprint),
+  \+chrome_env:anssiFingerprint(Fingerprint),
+  \+chrome_env:indiaFingerprint(Fingerprint).
 
-checkKeyUsage(Cert) :-
-  \+std:isCA(Cert),
-  certs:keyUsageExt(Cert, true),
-  \+std:usageAllowed(Cert, keyCertSign),
-  std:usageAllowed(Cert, digitalSignature).
+no_name_constraint_violation(Fingerprint, Domain):-
+  chrome_env:indiaFingerprint(Fingerprint),
+  chrome_env:indiaDomain(Accepted),
+  std:stringMatch(Accepted, Domain).
 
-checkKeyUsage(Cert) :-
-  \+std:isCA(Cert),
-  certs:keyUsageExt(Cert, true),
-  \+std:usageAllowed(Cert, keyCertSign),
-  std:usageAllowed(Cert, keyEncipherment).
+no_name_constraint_violation(Fingerprint, Domain):-
+  chrome_env:anssiFingerprint(Fingerprint),
+  chrome_env:anssiDomain(Accepted),
+  std:stringMatch(Accepted, Domain).
 
-checkKeyUsage(Cert) :-
-  \+std:isCA(Cert),
-  certs:keyUsageExt(Cert, true),
-  \+std:usageAllowed(Cert, keyCertSign),
-  std:usageAllowed(Cert, keyAgreement).
+strong_signature(Algorithm):-
+  \+types:md2_sig_algo(Algorithm),
+  \+types:md4_sig_algo(Algorithm),
+  \+types:md5_sig_algo(Algorithm).
 
+checkKeyUsage(_, KeyUsage) :-
+  KeyUsage = [].
 
-time_2016_06_01(1464739200). % 01 Jun 2016
-time_2017_12_01(1512086400). % 01 Dec 2017
+checkKeyUsage(BasicConstraints, KeyUsage) :-
+  std:isCA(BasicConstraints),
+  member(keyCertSign, KeyUsage).
 
-symantec_untrusted(Cert):-
-  certs:notBefore(Cert, Start),
-  time_2016_06_01(June2016),
-  ext:larger(Jun2016, Start).
+checkKeyUsage(BasicConstraints, KeyUsage) :-
+  \+std:isCA(BasicConstraints),
+  (
+    member(digitalSignature, KeyUsage);
+    member(keyEncipherment, KeyUsage);
+    member(keyAgreement, KeyUsage)
+  ),
+  \+member(keyCertSign, KeyUsage).
 
-symantec_untrusted(Cert):-
-  certs:notBefore(Cert, Start),
-  time_2017_12_01(Dec2017),
-  ext:larger(Start, Dec2017).
+checkKeyCertSign(KeyUsage) :-
+  (KeyUsage = []; member(keyCertSign, KeyUsage)).
+
+checkExtendedKeyUsage(ExtKeyUsage) :-
+  (ExtKeyUsage = []; member(serverAuth, ExtKeyUsage)).
+
+symantec_untrusted(Lower):-
+  June2016 = 1464739200,
+  Dec2017 = 1512086400,
+  (Lower #< June2016; Lower #> Dec2017).
 
 % if legacy symantec and
 % symantec enforcement on OR untrusted symantec
 % legacy: if it's a symantec root and not an exception/managed
 % untrusted: issued after 01 dec 2017 or before 01 jun 2016
-bad_symantec(Cert):-
-  certs:fingerprint(Cert, Fingerprint),
+bad_symantec(Fingerprint, Lower):-
+  chrome_env:trusted(Fingerprint),
   chrome_env:symantec_root(Fingerprint),
   \+chrome_env:symantec_exception(Fingerprint),
   \+chrome_env:symantec_managed_ca(Fingerprint),
-  symantec_untrusted(Cert).
+  symantec_untrusted(Lower).
 
-% Error reporting clause
-inCRLSets(Cert):-
-  checks:revokedCheckEnabled(true),
-  certs:fingerprint(Cert, Fingerprint),
-  crl_set(Fingerprint).
 
-% XXX reorganize/rename
-isRoot(Cert):-
-  certs:fingerprint(Cert, Fingerprint),
+isChromeRoot(Fingerprint):-
   chrome_env:trusted(Fingerprint),
   env:domain(Domain),
-  chrome_env:no_name_constraint_violation(Cert, Domain).
+  no_name_constraint_violation(Fingerprint, Domain).
 
+notcrl_set(F):-
+    var(F), F = "".
 
-parent(C, P, ChainLen):-
-    certs:issuer(C, P),
-    isRoot(P),
-    std:pathLengthOkay(P, ChainLen, 0).
+notcrl_set(F):-
+    nonvar(F), \+chrome_env:crl_set(F).
 
-checkKeyCertSign(Cert) :-
-  std:usageAllowed(Cert, keyCertSign).
+verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
+  std:isCA(BasicConstraints),
+  checkKeyCertSign(KeyUsage),
+  std:isTimeValid(Lower, Upper),
+  isChromeRoot(Fingerprint),
+  \+bad_symantec(Fingerprint, Lower).
 
-checkKeyCertSign(Cert) :-
-  certs:keyUsageExt(Cert, false).
+verified_chrome(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
+  notcrl_set(Fingerprint),
 
-parent(C, P, ChainLen):-
-    certs:issuer(C, P),
-    std:isCA(P),
-    checkKeyCertSign(P),
-    std:pathLengthOkay(P, ChainLen, 0).
+  types:sANList(SANList),
+  env:domain(Domain),
+  std:nameMatchesSAN(Domain, SANList),
 
+  types:timestamp(Lower),
+  types:timestamp(Upper),
+  std:isTimeValid(Lower, Upper),
+  leaf_duration_valid(Lower, Upper),
 
-verified(Cert, ChainLength, Leaf):-
-  std:isTimeValid(Cert),
-  ext:larger(20, ChainLength), % Artificial max chain length -- XXX
-  \+bad_symantec(Cert),
-  isRoot(Cert),
-  std:isCert(Leaf),
-  ext:geq(ChainLength, 0).
+  types:algorithm(Algorithm),
+  strong_signature(Algorithm),
 
-verified(Cert, ChainLength, Leaf):-
-  chrome_env:strong_signature(Cert),
-  std:isTimeValid(Cert),
-  checkKeyUsage(Cert),
-  checkExtendedKeyUsage(Cert),
-  ext:larger(20, ChainLength), % Artificial max chain length -- XXX
-  \+bad_symantec(Cert),
-  \+inCRLSets(Cert),
-  parent(Cert, Parent, ChainLength),
-  ext:add(ChainLenNew, ChainLength, 1),
-  verified(Parent, ChainLenNew, Leaf).
+  types:basicConstraints(BasicConstraints),
+  types:keyUsageList(KeyUsage),
+  checkKeyUsage(BasicConstraints, KeyUsage),
 
-% Error reporting clause
-chromeNameMatches(Cert) :-
-  checks:domainMatchCheckEnabled(false),
-  std:isCert(Cert).
+  types:extKeyUsageList(ExtKeyUsage),
+  checkExtendedKeyUsage(ExtKeyUsage),
 
-chromeNameMatches(Cert) :-
-  certs:sanExt(Cert, true),
-  std:nameMatchesSAN(Cert).
-
-checkExtendedKeyUsage(Cert):-
-  certs:extendedKeyUsage(Cert, serverAuth).
-
-checkExtendedKeyUsage(Cert) :-
-  certs:extendedKeyUsageExt(Cert, false).
-
-checkExtendedKeyUsage(Cert):-
-  \+std:isCA(Cert),
-  certs:extendedKeyUsage(Cert, serverAuth).
-
-verified(Cert):-
-  chromeNameMatches(Cert),
-  checkExtendedKeyUsage(Cert),
-  chrome_env:leaf_duration_valid(Cert),
-  verified(Cert, -1, Cert). % 0 is the chain length, which is the number of CAs allowed
+  types:timestamp(RootLower),
+  types:timestamp(RootUpper),
+  types:basicConstraints(RootBasicConstraints),
+  types:keyUsageList(RootKeyUsage),
+  
+  verifiedRoot(RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
