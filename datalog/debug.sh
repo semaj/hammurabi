@@ -8,7 +8,7 @@ CHECKS="timeValid nssNameConstraint revoked chainLength parentNotCA domainMatch 
 ERR_CODES="10 20 40 50 60 30 70 80"
 N_CHECKS=$(echo $CHECKS | wc -w | cut -f1)
 
-DIR=datalog/gen/job$JOBINDEX
+DIR=datalog/job$JOBINDEX
 
 function verify {
     # Which check should be enabled

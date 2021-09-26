@@ -270,7 +270,7 @@ ocsp_status_good(hack, hack).\n\n"
 
     let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
 
-    let outdir = format!("datalog/gen/job{}", jobindex);
+    let outdir = format!("datalog/job{}", jobindex);
     fs::create_dir_all(&outdir)?;
     let filename = format!("{}/certs.pl", outdir);
     let mut certs_file = fs::File::create(filename)?;

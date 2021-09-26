@@ -4,7 +4,7 @@ CLIENT=$1
 DOMAIN=$2
 ENGINE=swipl
 
-DIR=datalog/gen/job$JOBINDEX
+DIR=datalog/job$JOBINDEX
 gen_start_time=$(date +%s%N)
 
 STATIC_FILES="$CLIENT.pl ${CLIENT}_env.pl types.pl checks.pl std.pl ev.pl"
