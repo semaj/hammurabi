@@ -137,7 +137,7 @@ certVerifiedNonLeaf(Cert):-
     (
       verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
       certs:issuer(Cert, Parent),
-      certVerifiedChain(Parent)
+      certVerifiedNonLeaf(Parent)
     );
     verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   ).

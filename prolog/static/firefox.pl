@@ -41,18 +41,18 @@ notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   \+std:isEV(CertPolicies, RootSubject),
   StapledResponse = [],
   (
-    OcspResponse = [not_verified, _, _, _];
-    OcspResponse = [_, _, invalid, _];
-    OcspResponse = [_, expired, _, _]
+    OcspResponse = [invalid, _, _, _];
+    OcspResponse = [_, expired, _, _];
+    OcspResponse = [_, _, not_verified, _]
   ).
 
 notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
   \+std:isEV(CertPolicies, RootSubject),
-  StapledResponse = [verified, not_expired, valid],
+  StapledResponse = [verified, not_expired, valid, good],
   (
-    OcspResponse = [not_verified, _, _, _];
+    OcspResponse = [invalid, _, _, _];
     OcspResponse = [_, expired, _, _];
-    OcspResponse = [_, _, invalid, _]
+    OcspResponse = [_, _, not_verified, _]
   ).
 
 
@@ -138,13 +138,54 @@ verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verifiedLeaf(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
+verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
   notCrl(Fingerprint),
-  firefoxNameMatches(SANList, Subject),
   std:isTimeValid(Lower, Upper),
   strongSignature(Algorithm),
-  \+std:isCA(BasicConstraints),
   keyUsageValid(BasicConstraints, KeyUsage),
   extKeyUsageValid(BasicConstraints, ExtKeyUsage),
-  leafDurationValid(CertPolicies, Lower, Upper, RootSubject),
   notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse).
+
+verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
+  \+std:isCA(BasicConstraints),
+  env:domain(Subject),
+  firefoxNameMatches(SANList, Subject),
+  leafDurationValid(CertPolicies, Lower, Upper, RootSubject),
+  verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse).
+
+certVerifiedNonLeaf(Cert, LeafSANList):-
+  certs:fingerprint(Cert, Fingerprint),
+  certs:notBefore(Cert, Lower),
+  certs:notAfter(Cert, Upper),
+  certs:signatureAlgorithm(Cert, Algorithm),
+  std:getBasicConstraints(Cert, BasicConstraints),
+  findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
+  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  (
+    (
+      verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
+      certs:issuer(Cert, Parent),
+      certVerifiedNonLeaf(Parent)
+    );
+    verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
+  ).
+
+certVerifiedLeaf(Cert):-
+  certs:fingerprint(Cert, Fingerprint),
+  findall(Name, certs:san(Cert, Name), SANList),
+  certs:notBefore(Cert, Lower),
+  certs:notAfter(Cert, Upper),
+  certs:signatureAlgorithm(Cert, Algorithm),
+  std:getBasicConstraints(Cert, BasicConstraints),
+  findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
+  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  findall(Policy, certs:certificatePolicies(Cert, Policy), CertPolicies),
+  findall(Policy, certs:certificatePolicies(Cert, Policy), CertPolicies),
+
+  verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse).
+
+certVerifiedChain(Cert):-
+  certVerifiedLeaf(Cert),
+  findall(Name, certs:san(Cert, Name), SANList),
+  certs:issuer(Cert, Parent),
+  certVerifiedNonLeaf(Parent, SANList).

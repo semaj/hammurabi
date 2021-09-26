@@ -3,8 +3,8 @@ use openssl::hash::MessageDigest;
 use openssl::stack::Stack;
 use openssl::x509::store::X509StoreBuilder;
 use openssl::x509::{X509VerifyResult, X509};
-use std::io::Write;
 use std::io;
+use std::io::Write;
 use std::process::Command;
 use std::time::Instant;
 use std::{env, fs};
@@ -15,7 +15,6 @@ mod revocation;
 
 mod errors;
 use errors::Error;
-
 
 pub fn parse_chain(
     chain: &mut Vec<X509>,
@@ -35,17 +34,16 @@ pub fn parse_chain(
             return Err(Error::X509ParsingError);
         }
     };
-    let mut repr: String = cert.emit_all(&format!("cert_{}", counter));
     let sha256 = hex::encode(leaf.digest(MessageDigest::sha256()).unwrap());
-    repr.push_str(&format!(
-        "fingerprint(cert_0, \"{}\").\n",
-        sha256.to_uppercase()
-    ));
+    let mut repr: String = format!("fingerprint(cert_0, \"{}\").\n", sha256.to_uppercase());
+
+    repr.push_str(format!("{}\n\n", cert.emit_all(&format!("cert_{}", counter))).as_str());
     translation_time += start.elapsed().as_millis();
 
     let mut stack = Stack::new().unwrap();
-    repr.push_str(get_intermediate_repr(&chain, &leaf, &mut stack, &mut translation_time)?.as_str());
-    
+    repr.push_str(
+        get_intermediate_repr(&chain, &leaf, &mut stack, &mut counter, &mut translation_time)?.as_str(),
+    );
     let mut store_builder = X509StoreBuilder::new().unwrap();
 
     // get root certs
@@ -84,7 +82,7 @@ pub fn parse_chain(
                 };
                 repr.push_str(&v.emit_all(&format!("cert_{}", counter)));
                 repr.push_str(&format!(
-                    "issuer(cert_{}, cert_{}).\n",
+                    "issuer(cert_{}, cert_{}).\n\n",
                     counter - 1,
                     counter
                 ));
@@ -103,23 +101,19 @@ pub fn parse_chain(
     let mut subject_ref = subject_x509.as_ref();
     let mut cert_index = 0;
     for intermediate_ref in stack.iter() {
-        let mut should_staple = staple;
+        let mut check_staple = staple;
         if cert_index != 0 {
-            should_staple = false;
+            check_staple = false;
         }
-        repr.push_str(
-            &revocation::check_ocsp(
-                cert_index,
-                &store,
-                subject_ref,
-                intermediate_ref,
-                &stack,
-                check_ocsp,
-                should_staple,
-            )
-            .join("\n"),
-        );
-        repr.push_str("\n\n");
+        repr.push_str(&revocation::get_ocsp_fact(
+            cert_index,
+            &store,
+            subject_ref,
+            intermediate_ref,
+            &stack,
+            check_ocsp,
+            check_staple,
+        ));
         subject_ref = intermediate_ref;
         cert_index += 1;
     }
@@ -127,7 +121,7 @@ pub fn parse_chain(
 
     match emit_chain_repr(&repr) {
         Ok(()) => Ok(()),
-        Err(_) => Err(Error::UnknownError)
+        Err(_) => Err(Error::UnknownError),
     }
 }
 
@@ -157,13 +151,13 @@ fn get_intermediate_repr(
     chain: &Vec<X509>,
     leaf: &X509,
     stack: &mut Stack<X509>,
+    counter: &mut u32,
     translation_time: &mut u128,
 ) -> Result<String, Error> {
-    let mut counter = 0;
     let mut repr: String = "".to_string();
     let mut recursive_subject = leaf.clone();
     for intermediate_x509 in chain.iter() {
-        counter += 1;
+        *counter += 1;
         match recursive_subject.verify(&intermediate_x509.public_key().unwrap()) {
             Ok(true) => {}
             Ok(false) => return Err(Error::OpenSSLInvalid),
@@ -182,28 +176,28 @@ fn get_intermediate_repr(
                 return Err(Error::X509ParsingError);
             }
         };
-        repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
         repr.push_str(&format!(
             "fingerprint(cert_{}, \"{}\").\n",
             counter,
             hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
         ));
+        repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
         repr.push_str(&format!(
-            "issuer(cert_{}, cert_{}).\n",
-            counter - 1,
+            "issuer(cert_{}, cert_{}).\n\n",
+            *counter - 1,
             counter
         ));
         stack.push(intermediate_x509.clone()).unwrap();
         // We just assume (for now) that intermediates
         // do not have stapled ocsp responses.
-        repr.push_str(&format!("no_stapled_ocsp_response(cert_{}).\n", counter));
         *translation_time += start.elapsed().as_millis();
     }
     return Ok(repr);
 }
 
 fn emit_chain_repr(repr: &str) -> io::Result<()> {
-    let preamble = format!("
+    let preamble = format!(
+        "
 :- module(certs, [
     basicConstraintsCritical/2,
     basicConstraintsExt/2,
@@ -224,11 +218,8 @@ fn emit_chain_repr(repr: &str) -> io::Result<()> {
     keyUsageCritical/2,
     keyUsageExt/2,
     nameConstraintsExt/2,
-    no_stapled_ocsp_response/1,
     notAfter/2,
     notBefore/2,
-    ocsp_responder/2,
-    ocsp_response_invalid/2,
     pathLimit/2,
     policyConstraintsExt/2,
     policyMappingsExt/3,
@@ -240,32 +231,11 @@ fn emit_chain_repr(repr: &str) -> io::Result<()> {
     subjectKeyIdentifier/2,
     subjectKeyIdentifierCritical/2,
     subjectKeyIdentifierExt/2,
-    version/2
+    version/2,
+    ocspResponse/2,
+    stapledResponse/2
 ]).
-:-style_check(-discontiguous).
-no_stapled_ocsp_response(hack).
-stapled_ocsp_response(hack).
-stapled_ocsp_response_verified(hack).
-stapled_ocsp_response_valid(hack).
-stapled_ocsp_response_not_expired(hack).
-stapled_ocsp_response_not_verified(hack).
-stapled_ocsp_response_invalid(hack).
-stapled_ocsp_response_verified(hack).
-stapled_ocsp_response_expired(hack).
-stapled_ocsp_status_revoked(hack).
-stapled_ocsp_status_unknown(hack).
-stapled_ocsp_status_good(hack).
-ocsp_responder(hack, hack).
-no_ocsp_responders(hack).
-ocsp_response_verified(hack, hack).
-ocsp_response_valid(hack, hack).
-ocsp_response_not_expired(hack, hack).
-ocsp_response_not_verified(hack, hack).
-ocsp_response_invalid(hack, hack).
-ocsp_response_expired(hack, hack).
-ocsp_status_revoked(hack, hack).
-ocsp_status_unknown(hack, hack).
-ocsp_status_good(hack, hack).\n\n"
+:-style_check(-discontiguous).\n\n"
     );
 
     let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
