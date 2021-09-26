@@ -9,18 +9,18 @@
 
 
 % See: https://wiki.mozilla.org/CA/Additional_Trust_Changes#ANSSI
-nssNameConstraintValid(_, RootFingerprint) :-
+nameConstraintValid(_, RootFingerprint) :-
   firefox_env:trusted_roots(RootFingerprint),
   \+firefox_env:anssiFingerprint(RootFingerprint),
   \+firefox_env:tubitak1Fingerprint(RootFingerprint).
 
-nssNameConstraintValid(LeafSANList, RootFingerprint) :-
+nameConstraintValid(LeafSANList, RootFingerprint) :-
   firefox_env:tubitak1Fingerprint(RootFingerprint),
   firefox_env:tubitak1Subtree(Tree),
   member(Name, LeafSANList),
   std:stringMatch(Tree, Name).
 
-nssNameConstraintValid(LeafSANList, RootFingerprint) :-
+nameConstraintValid(LeafSANList, RootFingerprint) :-
   firefox_env:anssiFingerprint(RootFingerprint),
   firefox_env:anssiSubtree(Tree),
   member(Name, LeafSANList),
@@ -62,14 +62,14 @@ shortLived(Lower, Upper) :-
   tenDaysInSeconds(ValidDuration),
   Upper - Lower #< ValidDuration.
 
-checkKeyUsage(_, KeyUsage) :-
+keyUsageValid(_, KeyUsage) :-
   KeyUsage = [].
 
-checkKeyUsage(BasicConstraints, KeyUsage) :-
+keyUsageValid(BasicConstraints, KeyUsage) :-
   std:isCA(BasicConstraints),
   member(keyCertSign, KeyUsage).
 
-checkKeyUsage(BasicConstraints, KeyUsage) :-
+keyUsageValid(BasicConstraints, KeyUsage) :-
   \+std:isCA(BasicConstraints),
   (
     member(digitalSignature, KeyUsage);
@@ -77,24 +77,24 @@ checkKeyUsage(BasicConstraints, KeyUsage) :-
     member(keyAgreement, KeyUsage)
   ).
 
-checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
+extKeyUsageValid(BasicConstraints, ExtKeyUsage) :-
   std:isCA(BasicConstraints),
   member(serverAuth, ExtKeyUsage).
 
 
-checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage) :-
+extKeyUsageValid(BasicConstraints, ExtKeyUsage) :-
   \+std:isCA(BasicConstraints),
   member(serverAuth, ExtKeyUsage),
   \+member(oCSPSigning, ExtKeyUsage).
 
-checkExtendedKeyUsage(_, ExtKeyUsage) :-
+extKeyUsageValid(_, ExtKeyUsage) :-
   ExtKeyUsage = [].
 
 checkKeyCertSign(KeyUsage) :-
   KeyUsage = []; member(keyCertSign, KeyUsage).
 
 
-validSHA1(Algorithm) :-
+strongSignature(Algorithm) :-
   % ecdsa with sha1
   Algorithm \== "1.2.840.10045.4.1",
   % rsa signature with sha1
@@ -116,59 +116,35 @@ firefoxNameMatches(SANList, Subject) :-
 % in seconds
 duration27MonthsPlusSlop(71712000).
 
-isNSSTimeValid(CertPolicies, _, _, RootSubject):-
+leafDurationValid(CertPolicies, _, _, RootSubject):-
   \+std:isEV(CertPolicies, RootSubject).
 
-isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject):-
+leafDurationValid(CertPolicies, Lower, Upper, RootSubject):-
   std:isEV(CertPolicies, RootSubject),
   duration27MonthsPlusSlop(ValidDuration),
   Upper - Lower #< ValidDuration.
 
-notcrl(F):-
+notCrl(F):-
     var(F), F = "".
 
-notcrl(F):-
-    nonvar(F), \+firefox_env:onecrl(F).
+notCrl(F):-
+    nonvar(F), \+firefox_env:oneCrl(F).
 
 verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   firefox_env:trusted_roots(Fingerprint),
   \+firefox_env:symantecFingerprint(Fingerprint),
   std:isTimeValid(Lower, Upper),
-  nssNameConstraintValid(LeafSANList, Fingerprint),
+  nameConstraintValid(LeafSANList, Fingerprint),
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
-  notcrl(Fingerprint),
-
-  types:sANList(SANList),
+verifiedLeaf(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
+  notCrl(Fingerprint),
   firefoxNameMatches(SANList, Subject),
-
-  types:timestamp(Lower),
-  types:timestamp(Upper),
   std:isTimeValid(Lower, Upper),
-
-  types:algorithm(Algorithm),
-  validSHA1(Algorithm),
-
-  types:basicConstraints(BasicConstraints),
+  strongSignature(Algorithm),
   \+std:isCA(BasicConstraints),
-
-  types:keyUsageList(KeyUsage),
-  checkKeyUsage(BasicConstraints, KeyUsage),
-
-  types:extKeyUsageList(ExtKeyUsage),
-  checkExtendedKeyUsage(BasicConstraints, ExtKeyUsage),
-
-  types:certificatePolicy(CertPolicies),
-  isNSSTimeValid(CertPolicies, Lower, Upper, RootSubject),
-
-  types:stapledResponse(StapledResponse),
-  types:ocspResponse(OcspResponse),
-  notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse),
-
-  types:timestamp(RootLower),
-  types:timestamp(RootUpper),
-  types:basicConstraints(RootBasicConstraints),
-  types:keyUsageList(RootKeyUsage),
-  verifiedRoot(SANList, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
+  keyUsageValid(BasicConstraints, KeyUsage),
+  extKeyUsageValid(BasicConstraints, ExtKeyUsage),
+  leafDurationValid(CertPolicies, Lower, Upper, RootSubject),
+  notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse).
