@@ -4,12 +4,12 @@ CLIENT=$1
 DOMAIN=$2
 ENGINE=swipl
 
-DIR=gen/job$JOBINDEX
+DIR=datalog/gen/job$JOBINDEX
 gen_start_time=$(date +%s%N)
 
-STATIC_FILES="$CLIENT.pl ${CLIENT}_env.pl types.pl std.pl ev.pl"
+STATIC_FILES="$CLIENT.pl ${CLIENT}_env.pl types.pl checks.pl std.pl ev.pl"
 for f in $STATIC_FILES; do
-  cp static/$f $DIR/$f
+  cp datalog/static/$f $DIR/$f
 done
 
 echo -e ":- module(env, [domain/1]).\nenv:domain(\"$DOMAIN\")." > $DIR/env.pl

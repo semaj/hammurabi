@@ -2,11 +2,13 @@
 
 CLIENT=$1
 DOMAIN=$2
+ENGINE=swipl
 
 CHECKS="timeValid nssNameConstraint revoked chainLength parentNotCA domainMatch aCC leafValidity"
 ERR_CODES="10 20 40 50 60 30 70 80"
 N_CHECKS=$(echo $CHECKS | wc -w | cut -f1)
-CHECKS_PL=gen/job$JOBINDEX/checks.pl
+
+DIR=datalog/gen/job$JOBINDEX
 
 function verify {
     # Which check should be enabled
@@ -20,18 +22,29 @@ function verify {
         BEGIN { print ":- module(checks, [" }
         NR < total { print "  " $1 "CheckEnabled/1," }
         NR == total { print "  " $1 "CheckEnabled/1" }
-        END { print "])." }' > $CHECKS_PL
+        END { print "])." }' > $DIR/checks.pl
 
     echo $CHECKS | tr ' ' '\n' | awk -vi="$DISABLED" '
         i == 0 || NR == i {print $1"CheckEnabled(true)."}
         i < 0 {print $1"CheckEnabled(false)."}
-        i > 0  && NR != i {print $1"CheckEnabled(false)."}' >> $CHECKS_PL
+        i > 0  && NR != i {print $1"CheckEnabled(false)."}' >> $DIR/checks.pl
 
-    ./run.sh $CLIENT $DOMAIN $WRITETIME
-    return $?
+
+    start_time=$(date +%s%N)
+    $ENGINE -q -s $DIR/$CLIENT.pl -t "$CLIENT:certVerifiedChain(cert_0)."
+    E=$?
+    if [[ $3 == "writetime" ]]; then
+        echo "Datalog execution time: $((($(date +%s%N) - $start_time)/1000000))ms"
+    fi
+    return $E
 }
 
-cd datalog
+echo -e ":- module(env, [domain/1]).\nenv:domain(\"$DOMAIN\")." > $DIR/env.pl
+STATIC_FILES="$CLIENT.pl ${CLIENT}_env.pl types.pl std.pl ev.pl"
+for f in $STATIC_FILES; do
+  cp datalog/static/$f $DIR/$f
+done
+
 
 # Verify with all checks enabled
 verify 0 $1 writetime
