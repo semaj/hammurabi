@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-SCRIPT="${SCRIPT:-firefox}"
+CLIENT=$1
 DOMAIN=$2
 
 CHECKS="timeValid nssNameConstraint revoked chainLength parentNotCA domainMatch aCC leafValidity"
 ERR_CODES="10 20 40 50 60 30 70 80"
 N_CHECKS=$(echo $CHECKS | wc -w | cut -f1)
-CHECKS_PL=gen/checks$JOBINDEX.pl
+CHECKS_PL=gen/job$JOBINDEX/checks.pl
 
 function verify {
     # Which check should be enabled
@@ -27,7 +27,7 @@ function verify {
         i < 0 {print $1"CheckEnabled(false)."}
         i > 0  && NR != i {print $1"CheckEnabled(false)."}' >> $CHECKS_PL
 
-    ./run.sh $SCRIPT $DOMAIN $WRITETIME
+    ./run.sh $CLIENT $DOMAIN $WRITETIME
     return $?
 }
 
