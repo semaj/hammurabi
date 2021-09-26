@@ -8,7 +8,7 @@ CHECKS="timeValid nssNameConstraint revoked chainLength parentNotCA domainMatch 
 ERR_CODES="10 20 40 50 60 30 70 80"
 N_CHECKS=$(echo $CHECKS | wc -w | cut -f1)
 
-DIR=datalog/job$JOBINDEX
+DIR=prolog/job$JOBINDEX
 
 function verify {
     # Which check should be enabled
@@ -34,7 +34,7 @@ function verify {
     $ENGINE -q -s $DIR/$CLIENT.pl -t "$CLIENT:certVerifiedChain(cert_0)."
     E=$?
     if [[ $3 == "writetime" ]]; then
-        echo "Datalog execution time: $((($(date +%s%N) - $start_time)/1000000))ms"
+        echo "Prolog execution time: $((($(date +%s%N) - $start_time)/1000000))ms"
     fi
     return $E
 }
@@ -42,7 +42,7 @@ function verify {
 echo -e ":- module(env, [domain/1]).\nenv:domain(\"$DOMAIN\")." > $DIR/env.pl
 STATIC_FILES="$CLIENT.pl ${CLIENT}_env.pl types.pl std.pl ev.pl"
 for f in $STATIC_FILES; do
-  cp datalog/static/$f $DIR/$f
+  cp prolog/static/$f $DIR/$f
 done
 
 

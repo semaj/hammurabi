@@ -165,7 +165,7 @@ impl PrologCert<'_> {
                 "2.5.29.14" => { subject_key_identifier = true; Some(extensions::emit_subject_key_identifier(hash, &ext)) },
                 "2.5.29.32" => { certificate_policies = true; Some(extensions::emit_certificate_policies(hash, &ext)) },
                 "1.3.3.7" => {
-                    fs::write("datalog/static/tmp.pl", extensions::emit_acc_assertions(hash, &ext)).unwrap();
+                    fs::write("prolog/static/tmp.pl", extensions::emit_acc_assertions(hash, &ext)).unwrap();
                     acc_assertions = true;
                     None
                 },
@@ -369,7 +369,7 @@ impl PrologCert<'_> {
                 if eku.ocscp_signing {
                     answer.push(format!("{} oCSPSigning).", prefix));
                 }
-                    // TODO: Use this in Datalog
+                // TODO: Use this in Prolog
                 if eku.any {
                     answer.push(format!("{} any).", prefix));
                 }
