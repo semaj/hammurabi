@@ -1,17 +1,20 @@
 :- module(chrome, [
-  verified_chrome/13
+  certVerifiedChain/1
 ]).
 
+:- use_module(env).
+:- use_module(types).
 :- use_module(std).
 :- use_module(library(clpfd)).
 :- use_module(chrome_env).
+:- use_module(certs).
 
 % For certificates issued on-or-after the BR effective
 % For certificates issued on-or-after 1 April 2015 (39 months)
 % For certificates issued on-or-after 1 March 2018 (825 days)
 % For certificates issued on-or-after 1 September 2020 (398 days)
 % net/cert/cert_verify_proc
-leaf_duration_valid(Lower, Upper):-
+leafDurationValid(Lower, Upper):-
   Duration = Upper - Lower,
   July2012 = 1341100800,
   April2015 = 1427846400,
@@ -31,34 +34,34 @@ leaf_duration_valid(Lower, Upper):-
     (Lower #>= Sep2020, Duration #=< ThreeNinetyEightDays)
   ).
 
-no_name_constraint_violation(Fingerprint, _):-
+nameConstraintValid(Fingerprint, _):-
   chrome_env:trusted(Fingerprint),
   \+chrome_env:anssiFingerprint(Fingerprint),
   \+chrome_env:indiaFingerprint(Fingerprint).
 
-no_name_constraint_violation(Fingerprint, Domain):-
+nameConstraintValid(Fingerprint, Domain):-
   chrome_env:indiaFingerprint(Fingerprint),
   chrome_env:indiaDomain(Accepted),
   std:stringMatch(Accepted, Domain).
 
-no_name_constraint_violation(Fingerprint, Domain):-
+nameConstraintValid(Fingerprint, Domain):-
   chrome_env:anssiFingerprint(Fingerprint),
   chrome_env:anssiDomain(Accepted),
   std:stringMatch(Accepted, Domain).
 
-strong_signature(Algorithm):-
+strongSignature(Algorithm):-
   \+types:md2_sig_algo(Algorithm),
   \+types:md4_sig_algo(Algorithm),
   \+types:md5_sig_algo(Algorithm).
 
-checkKeyUsage(_, KeyUsage) :-
+keyUsageValid(_, KeyUsage) :-
   KeyUsage = [].
 
-checkKeyUsage(BasicConstraints, KeyUsage) :-
+keyUsageValid(BasicConstraints, KeyUsage) :-
   std:isCA(BasicConstraints),
   member(keyCertSign, KeyUsage).
 
-checkKeyUsage(BasicConstraints, KeyUsage) :-
+keyUsageValid(BasicConstraints, KeyUsage) :-
   \+std:isCA(BasicConstraints),
   (
     member(digitalSignature, KeyUsage);
@@ -70,10 +73,10 @@ checkKeyUsage(BasicConstraints, KeyUsage) :-
 checkKeyCertSign(KeyUsage) :-
   (KeyUsage = []; member(keyCertSign, KeyUsage)).
 
-checkExtendedKeyUsage(ExtKeyUsage) :-
+extKeyUsageValid(ExtKeyUsage) :-
   (ExtKeyUsage = []; member(serverAuth, ExtKeyUsage)).
 
-symantec_untrusted(Lower):-
+symantecUntrusted(Lower):-
   June2016 = 1464739200,
   Dec2017 = 1512086400,
   (Lower #< June2016; Lower #> Dec2017).
@@ -82,57 +85,75 @@ symantec_untrusted(Lower):-
 % symantec enforcement on OR untrusted symantec
 % legacy: if it's a symantec root and not an exception/managed
 % untrusted: issued after 01 dec 2017 or before 01 jun 2016
-bad_symantec(Fingerprint, Lower):-
+badSymantec(Fingerprint, Lower):-
   chrome_env:trusted(Fingerprint),
-  chrome_env:symantec_root(Fingerprint),
-  \+chrome_env:symantec_exception(Fingerprint),
-  \+chrome_env:symantec_managed_ca(Fingerprint),
-  symantec_untrusted(Lower).
+  chrome_env:symantecRoot(Fingerprint),
+  \+chrome_env:symantecException(Fingerprint),
+  \+chrome_env:symantecManagedCA(Fingerprint),
+  symantecUntrusted(Lower).
 
 
 isChromeRoot(Fingerprint):-
   chrome_env:trusted(Fingerprint),
   env:domain(Domain),
-  no_name_constraint_violation(Fingerprint, Domain).
+  nameConstraintValid(Fingerprint, Domain).
 
-notcrl_set(F):-
+notCrlSet(F):-
     var(F), F = "".
 
-notcrl_set(F):-
-    nonvar(F), \+chrome_env:crl_set(F).
+notCrlSet(F):-
+    nonvar(F), \+chrome_env:crlSet(F).
 
 verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage),
   std:isTimeValid(Lower, Upper),
   isChromeRoot(Fingerprint),
-  \+bad_symantec(Fingerprint, Lower).
+  \+badSymantec(Fingerprint, Lower).
 
-verified_chrome(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage):- 
-  notcrl_set(Fingerprint),
+verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
+  notCrlSet(Fingerprint),
+  \+badSymantec(Fingerprint, Lower),
+  std:isTimeValid(Lower, Upper),
+  strongSignature(Algorithm),
+  keyUsageValid(BasicConstraints, KeyUsage),
+  extKeyUsageValid(ExtKeyUsage).
 
-  types:sANList(SANList),
+verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
   env:domain(Domain),
   std:nameMatchesSAN(Domain, SANList),
+  leafDurationValid(Lower, Upper),
+  verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
-  types:timestamp(Lower),
-  types:timestamp(Upper),
-  std:isTimeValid(Lower, Upper),
-  leaf_duration_valid(Lower, Upper),
+certVerifiedNonLeaf(Cert):-
+  certs:fingerprint(Cert, Fingerprint),
+  certs:notBefore(Cert, Lower),
+  certs:notAfter(Cert, Upper),
+  certs:signatureAlgorithm(Cert, Algorithm),
+  std:getBasicConstraints(Cert, BasicConstraints),
+  findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
+  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  (
+    (
+      verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
+      certs:issuer(Cert, Parent),
+      certVerifiedChain(Parent)
+    );
+    verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
+  ).
 
-  types:algorithm(Algorithm),
-  strong_signature(Algorithm),
+certVerifiedLeaf(Cert):-
+  certs:fingerprint(Cert, Fingerprint),
+  findall(Name, certs:san(Cert, Name), SANList),
+  certs:notBefore(Cert, Lower),
+  certs:notAfter(Cert, Upper),
+  certs:signatureAlgorithm(Cert, Algorithm),
+  std:getBasicConstraints(Cert, BasicConstraints),
+  findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
+  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
-  types:basicConstraints(BasicConstraints),
-  types:keyUsageList(KeyUsage),
-  checkKeyUsage(BasicConstraints, KeyUsage),
-
-  types:extKeyUsageList(ExtKeyUsage),
-  checkExtendedKeyUsage(ExtKeyUsage),
-
-  types:timestamp(RootLower),
-  types:timestamp(RootUpper),
-  types:basicConstraints(RootBasicConstraints),
-  types:keyUsageList(RootKeyUsage),
-  
-  verifiedRoot(RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).
+certVerifiedChain(Cert):-
+  certVerifiedLeaf(Cert),
+  certs:issuer(Cert, Parent),
+  certVerifiedNonLeaf(Parent).

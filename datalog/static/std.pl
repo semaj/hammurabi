@@ -4,11 +4,10 @@
     nameMatchesCN/2,
     isTimeValid/2,
     isCA/1,
-    isEV/2
+    isEV/2,
+    getBasicConstraints/2
 ]).
 
-:- use_module(env).
-:- use_module(types).
 :- use_module(library(dialect/sicstus/system)).
 :- use_module(library(clpfd)).
 
@@ -47,15 +46,24 @@ nameMatchesCN(Domain, Subject):-
 % time validity check. between Lower and Upper
 isTimeValid(Lower, Upper):-
     % now(T),
-    T #= 1618287688,
+    T = 1621487267,
     Lower #< T, Upper #> T.
 
 % Basic Constraints checks
 % CA bit set
 isCA(BasicConstraints):-
-    BasicConstraints = [ca, _].
+    BasicConstraints = [true, _].
 
 isEV(CertPolicies, RootSubject):-
     CertPolicies = [Oid, _],
     types:evPolicyOid(Oid, RootSubject).
 
+getBasicConstraints(Cert, BasicConstraints):-
+    certs:basicConstraintsExt(Cert, false),
+    BasicConstraints = [].
+
+getBasicConstraints(Cert, BasicConstraints):-
+    certs:basicConstraintsExt(Cert, true),
+    certs:isCA(Cert, IsCA),
+    certs:pathLimit(Cert, PathLimit),
+    BasicConstraints = [IsCA, PathLimit].

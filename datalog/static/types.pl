@@ -1,5 +1,5 @@
 :- module(types, [
-    sANList/1,
+    sanList/1,
     timestamp/1,
     md2_sig_algo/1,
     md4_sig_algo/1,
@@ -17,7 +17,7 @@
 ]).
 :- use_module(library(clpfd)).
 
-sANList(L):-
+sanList(L):-
     N in 0..4, label([N]), length(L, N).
 
 epoch_start(631170000).                 % 01-01-1990 00:00:00
@@ -61,7 +61,7 @@ basicConstraints(Bc):-
     Bc = [];
     (
         Bc = [Ca, Len],
-        (Ca = ca; Ca = notca),
+        (Ca = true; Ca = notca),
         Len in 0..10
     ).
 
