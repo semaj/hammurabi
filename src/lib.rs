@@ -134,7 +134,7 @@ pub fn parse_chain(
 pub fn verify_chain(client: &str, dns_name: &str) -> Result<(), Error> {
     let status = Command::new("sh")
         .arg("-c")
-        .arg(format!("datalog/query.sh {} cert_0 {}", client, dns_name))
+        .arg(format!("datalog/query.sh {} {}", client, dns_name))
         .status()
         .expect("failed to execute process");
 
@@ -268,10 +268,11 @@ ocsp_status_unknown(hack, hack).
 ocsp_status_good(hack, hack).\n\n"
     );
 
-    let key = "JOBINDEX";
-    let jobindex = env::var(key).unwrap_or("".to_string());
+    let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
 
-    let filename = format!("datalog/gen/certs{}.pl", jobindex);
+    let outdir = format!("datalog/gen/job{}", jobindex);
+    fs::create_dir(&outdir)?;
+    let filename = format!("{}/certs.pl", outdir);
     let mut certs_file = fs::File::create(filename)?;
     certs_file.write_all(preamble.as_bytes())?;
     certs_file.write_all(repr.as_bytes())?;
