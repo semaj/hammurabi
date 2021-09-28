@@ -1,16 +1,20 @@
 :- module(firefox, [
-  verified_firefox/18
+  certVerifiedChain/1,
+  verifiedLeaf/11
 ]).
 
-:- use_module(firefox_env).
+:- style_check(-singleton).
+:- use_module(certs).
 :- use_module(env).
 :- use_module(std).
+:- use_module(ev).
+:- use_module(firefox_env).
 :- use_module(library(clpfd)).
 
 
 % See: https://wiki.mozilla.org/CA/Additional_Trust_Changes#ANSSI
 nameConstraintValid(_, RootFingerprint) :-
-  firefox_env:trusted_roots(RootFingerprint),
+  firefox_env:trustedRoots(RootFingerprint),
   \+firefox_env:anssiFingerprint(RootFingerprint),
   \+firefox_env:tubitak1Fingerprint(RootFingerprint).
 
@@ -26,19 +30,19 @@ nameConstraintValid(LeafSANList, RootFingerprint) :-
   member(Name, LeafSANList),
   std:stringMatch(Tree, Name).
 
-notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
+notRevoked(Lower, Upper, EVStatus, StapledResponse, OcspResponse) :-
   shortLived(Lower, Upper);
-  notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse).
+  notOCSPRevoked(EVStatus, StapledResponse, OcspResponse).
 
 
-notOCSPRevoked(_, _, _, OcspResponse) :-
+notOCSPRevoked(_, _, OcspResponse) :-
   OcspResponse = [].
 
-notOCSPRevoked(_, _, _, OcspResponse) :-
-  OcspResponse = [verified, not_expired, valid, good].
+notOCSPRevoked(_, _, OcspResponse) :-
+  OcspResponse = [valid, not_expired, verified, good].
 
-notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
-  \+std:isEV(CertPolicies, RootSubject),
+notOCSPRevoked(EVStatus, StapledResponse, OcspResponse) :-
+  EVStatus = not_ev,
   StapledResponse = [],
   (
     OcspResponse = [invalid, _, _, _];
@@ -46,8 +50,8 @@ notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
     OcspResponse = [_, _, not_verified, _]
   ).
 
-notOCSPRevoked(CertPolicies, RootSubject, StapledResponse, OcspResponse) :-
-  \+std:isEV(CertPolicies, RootSubject),
+notOCSPRevoked(EVStatus, StapledResponse, OcspResponse) :-
+  EVStatus = not_ev,
   StapledResponse = [verified, not_expired, valid, good],
   (
     OcspResponse = [invalid, _, _, _];
@@ -116,11 +120,11 @@ firefoxNameMatches(SANList, Subject) :-
 % in seconds
 duration27MonthsPlusSlop(71712000).
 
-leafDurationValid(CertPolicies, _, _, RootSubject):-
-  \+std:isEV(CertPolicies, RootSubject).
+leafDurationValid(EVStatus, _, _):-
+  EVStatus = not_ev.
 
-leafDurationValid(CertPolicies, Lower, Upper, RootSubject):-
-  std:isEV(CertPolicies, RootSubject),
+leafDurationValid(EVStatus, Lower, Upper):-
+  EVStatus = ev,
   duration27MonthsPlusSlop(ValidDuration),
   Upper - Lower #< ValidDuration.
 
@@ -130,30 +134,55 @@ notCrl(F):-
 notCrl(F):-
     nonvar(F), \+firefox_env:oneCrl(F).
 
+
+isEVChain(Cert) :-
+  certs:certificatePoliciesExt(Cert, true),
+  certs:certificatePolicies(Cert, Oid), 
+  evPolicyOid(Oid, _, _, _, _, _),
+  certs:issuer(Cert, P),
+  isEVIntermediate(P, Oid).
+
+isEVIntermediate(Cert, Oid) :-
+  certs:fingerprint(Cert, RootFingerprint),
+  firefox_env:trustedRoots(RootFingerprint),
+  certs:serialNumber(Cert, Serial),
+  ev:evPolicyOid(Oid, Serial).
+
+isEVIntermediate(Cert, Oid) :-
+  certs:certificatePoliciesExt(Cert, true),
+  (ev:evPolicyOid(Oid, _); ev:anyPolicyOid(Oid)),
+  certs:certificatePolicies(Cert, Oid),
+  certs:issuer(Cert, P),
+  isEVIntermediate(P, Oid).
+
+getEVStatus(Cert, EVStatus):-
+  (isEVChain(Cert), EVStatus = ev);
+  EVStatus = not_ev.
+
 verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
-  firefox_env:trusted_roots(Fingerprint),
+  firefox_env:trustedRoots(Fingerprint),
   \+firefox_env:symantecFingerprint(Fingerprint),
   std:isTimeValid(Lower, Upper),
   nameConstraintValid(LeafSANList, Fingerprint),
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage).
 
-verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
+verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse):- 
   notCrl(Fingerprint),
   std:isTimeValid(Lower, Upper),
   strongSignature(Algorithm),
   keyUsageValid(BasicConstraints, KeyUsage),
   extKeyUsageValid(BasicConstraints, ExtKeyUsage),
-  notRevoked(Lower, Upper, CertPolicies, RootSubject, StapledResponse, OcspResponse).
+  notRevoked(Lower, Upper, EVStatus, StapledResponse, OcspResponse).
 
-verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
+verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse):- 
   \+std:isCA(BasicConstraints),
   env:domain(Subject),
   firefoxNameMatches(SANList, Subject),
-  leafDurationValid(CertPolicies, Lower, Upper, RootSubject),
-  verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse).
+  leafDurationValid(EVStatus, Lower, Upper),
+  verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
-certVerifiedNonLeaf(Cert, LeafSANList):-
+certVerifiedNonLeaf(Cert, LeafSANList, EVStatus):-
   certs:fingerprint(Cert, Fingerprint),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
@@ -163,14 +192,14 @@ certVerifiedNonLeaf(Cert, LeafSANList):-
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
   (
     (
-      verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse):- 
+      verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse), 
       certs:issuer(Cert, Parent),
-      certVerifiedNonLeaf(Parent)
+      certVerifiedNonLeaf(Parent, LeafSANList, EVStatus)
     );
     verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   ).
 
-certVerifiedLeaf(Cert):-
+certVerifiedLeaf(Cert, EVStatus):-
   certs:fingerprint(Cert, Fingerprint),
   findall(Name, certs:san(Cert, Name), SANList),
   certs:notBefore(Cert, Lower),
@@ -179,13 +208,13 @@ certVerifiedLeaf(Cert):-
   std:getBasicConstraints(Cert, BasicConstraints),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
-  findall(Policy, certs:certificatePolicies(Cert, Policy), CertPolicies),
-  findall(Policy, certs:certificatePolicies(Cert, Policy), CertPolicies),
-
-  verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse).
+  certs:stapledResponse(Cert, StapledResponse),
+  certs:ocspResponse(Cert, OcspResponse),
+  verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
 certVerifiedChain(Cert):-
-  certVerifiedLeaf(Cert),
+  getEVStatus(Cert, EVStatus),
+  certVerifiedLeaf(Cert, EVStatus),
   findall(Name, certs:san(Cert, Name), SANList),
   certs:issuer(Cert, Parent),
-  certVerifiedNonLeaf(Parent, SANList).
+  certVerifiedNonLeaf(Parent, SANList, EVStatus).

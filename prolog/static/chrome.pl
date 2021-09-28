@@ -1,5 +1,6 @@
 :- module(chrome, [
-  certVerifiedChain/1
+  certVerifiedChain/1,
+  verifiedLeaf/8
 ]).
 
 :- use_module(env).

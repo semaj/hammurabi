@@ -86,8 +86,8 @@ pub fn get_ocsp_fact(
     }
 
     let fact = match check_staple {
-        true => "ocspResponse({}, []).\nstapledResponse",
-        false => "stapledResponse({}, []).\nocspResponse",
+        true => format!("ocspResponse({}, []).\nstapledResponse", hash),
+        false => format!("stapledResponse({}, []).\nocspResponse", hash),
     };
     match get_ocsp_response(
         store,
