@@ -53,7 +53,7 @@ pub fn get_ocsp_fact(
 ) -> String {
     let hash = format!("cert_{}", cert_index);
     if !check_ocsp {
-        return format!("ocspResponse({}, []).\n", hash);
+        return format!("ocspResponse({}, []).\nstapledResponse({}, []).\n", hash, hash);
     }
 
     let responders = match subject.ocsp_responders() {

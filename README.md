@@ -31,7 +31,7 @@ Consider the certificate chain in
 You can execute the Chrome verification logic on this chain like so:
 
 `./target/debug/single chrome
-79c40d605e887f46b6cf9089cfadbb76881314ba3fd05ee7b67fe0894503ef2c.pem
+certs/79c40d605e887f46b6cf9089cfadbb76881314ba3fd05ee7b67fe0894503ef2c.pem
 jameslarisch.com`. `jameslarisch.com` is the domain you're validating against.
 
 `OK` means the constraints were satisfied, an error means they were not.
