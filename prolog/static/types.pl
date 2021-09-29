@@ -61,7 +61,7 @@ basicConstraints(Bc):-
     Bc = [];
     (
         Bc = [Ca, Len],
-        (Ca = true; Ca = notca),
+        (Ca = true; Ca = false),
         Len in 0..10
     ).
 
@@ -72,14 +72,15 @@ keyUsageVal(keyCertSign).
 
 keyUsageList(L):-
   N in 0..4, label([N]), length(PreL, N),
-  maplist(keyUsageVal, PreL), is_set(PreL), sort(PreL, L).
+  maplist(keyUsageVal, PreL), is_set(PreL).
   
 extKeyUsageVal(serverAuth).
+extKeyUsageVal(clientAuth).
 extKeyUsageVal(oCSPSigning).
 
 extKeyUsageList(L):-
   N in 0..2, label([N]), length(PreL, N),
-  maplist(extKeyUsageVal, PreL), is_set(PreL), sort(PreL, L).
+  maplist(extKeyUsageVal, PreL), is_set(PreL).
 
 
 % The anyPolicy OID, usable by intermediates

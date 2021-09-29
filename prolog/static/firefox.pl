@@ -112,10 +112,10 @@ firefoxNameMatches(SANList, _):-
   std:nameMatchesSAN(D, SANList).
 
 % Check CN ONLY if SAN not present
-firefoxNameMatches(SANList, Subject) :-
+firefoxNameMatches(SANList, CommonName) :-
   SANList = [],
   env:domain(D),
-  std:nameMatchesCN(D, Subject).
+  std:nameMatchesCN(D, CommonName).
 
 % in seconds
 duration27MonthsPlusSlop(71712000).
@@ -175,10 +175,9 @@ verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, Key
   extKeyUsageValid(BasicConstraints, ExtKeyUsage),
   notRevoked(Lower, Upper, EVStatus, StapledResponse, OcspResponse).
 
-verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse):- 
+verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse):- 
   \+std:isCA(BasicConstraints),
-  env:domain(Subject),
-  firefoxNameMatches(SANList, Subject),
+  firefoxNameMatches(SANList, CommonName),
   leafDurationValid(EVStatus, Lower, Upper),
   verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
@@ -202,6 +201,7 @@ certVerifiedNonLeaf(Cert, LeafSANList, EVStatus):-
 certVerifiedLeaf(Cert, EVStatus):-
   certs:fingerprint(Cert, Fingerprint),
   findall(Name, certs:san(Cert, Name), SANList),
+  certs:commonName(Cert, CommonName),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
   certs:signatureAlgorithm(Cert, Algorithm),
@@ -210,7 +210,7 @@ certVerifiedLeaf(Cert, EVStatus):-
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
   certs:stapledResponse(Cert, StapledResponse),
   certs:ocspResponse(Cert, OcspResponse),
-  verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
+  verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
 certVerifiedChain(Cert):-
   getEVStatus(Cert, EVStatus),
