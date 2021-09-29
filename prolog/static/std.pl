@@ -7,8 +7,8 @@
     getBasicConstraints/2
 ]).
 
-:- use_module(library(dialect/sicstus/system)).
-:- use_module(library(clpfd)).
+:- use_module(library(lists)).
+:- use_module(library(clpz)).
 
 % md2
 md2_sig_algo("1.2.840.113549.1.1.2").

@@ -1,15 +1,14 @@
 :- module(firefox, [
-  certVerifiedChain/1,
-  verifiedLeaf/11
+  certVerifiedChain/1
 ]).
 
-:- style_check(-singleton).
 :- use_module(certs).
 :- use_module(env).
 :- use_module(std).
 :- use_module(ev).
 :- use_module(firefox_env).
-:- use_module(library(clpfd)).
+:- use_module(library(clpz)).
+:- use_module(library(lists)).
 
 
 % See: https://wiki.mozilla.org/CA/Additional_Trust_Changes#ANSSI
@@ -189,6 +188,8 @@ certVerifiedNonLeaf(Cert, LeafSANList, EVStatus):-
   std:getBasicConstraints(Cert, BasicConstraints),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  certs:stapledResponse(Cert, StapledResponse),
+  certs:ocspResponse(Cert, OcspResponse),
   (
     (
       verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse), 

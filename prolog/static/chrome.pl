@@ -5,7 +5,8 @@
 
 :- use_module(env).
 :- use_module(std).
-:- use_module(library(clpfd)).
+:- use_module(library(lists)).
+:- use_module(library(clpz)).
 :- use_module(chrome_env).
 :- use_module(certs).
 

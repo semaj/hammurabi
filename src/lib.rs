@@ -81,6 +81,8 @@ pub fn get_chain_facts(
                     }
                 };
                 repr.push_str(&v.emit_all(&format!("cert_{}", counter)));
+                // fake revocation facts for root
+                repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
                 repr.push_str(&format!(
                     "issuer(cert_{}, cert_{}).\n\n",
                     counter - 1,
@@ -127,9 +129,10 @@ pub fn get_chain_facts(
 pub fn verify_chain(job_dir: &str, client: &str) -> Result<(), Error> {
     let start = Instant::now();
 
+    // .arg(format!("swipl -q -s {}/{}.pl -t \"{}:certVerifiedChain(cert_0).\"", job_dir, client, client))
     let status = Command::new("sh")
         .arg("-c")
-        .arg(format!("swipl -q -s {}/{}.pl -t {}:certVerifiedChain(cert_0).", job_dir, client, client))
+        .arg(format!("scryer-prolog {}/{}.pl -g \"{}:certVerifiedChain(cert_0).\" -g \"halt.\"", job_dir, client, client))
         .status()
         .expect("failed to execute process");
 
