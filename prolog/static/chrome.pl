@@ -4,7 +4,6 @@
 ]).
 
 :- use_module(env).
-:- use_module(types).
 :- use_module(std).
 :- use_module(library(clpfd)).
 :- use_module(chrome_env).
@@ -51,9 +50,9 @@ nameConstraintValid(Fingerprint, Domain):-
   std:stringMatch(Accepted, Domain).
 
 strongSignature(Algorithm):-
-  \+types:md2_sig_algo(Algorithm),
-  \+types:md4_sig_algo(Algorithm),
-  \+types:md5_sig_algo(Algorithm).
+  \+std:md2_sig_algo(Algorithm),
+  \+std:md4_sig_algo(Algorithm),
+  \+std:md5_sig_algo(Algorithm).
 
 keyUsageValid(_, KeyUsage) :-
   KeyUsage = [].
