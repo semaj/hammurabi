@@ -1,5 +1,6 @@
 use openssl::x509::X509;
 use serde::Deserialize;
+use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 
@@ -78,7 +79,12 @@ fn main() {
         let chain_raw = form_chain(&row.certificate_bytes, &args.arg_intpath, &row.ints);
         let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
         let domain = row.domain.as_str();
-        acclib::parse_chain(&mut chain, None, args.flag_ocsp, false).unwrap();
+        let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
+        let static_dir = "prolog/static";
+        let job_dir = format!("prolog/job{}", jobindex);
+
+        let facts = acclib::get_chain_facts(&mut chain, None, args.flag_ocsp, false).unwrap();
+        acclib::write_job_files(static_dir, &job_dir, domain, &facts).unwrap();
         let result = acclib::verify_chain(&args.arg_client, &domain);
         let result_str = match result {
             Ok(_) => "OK".to_string(),

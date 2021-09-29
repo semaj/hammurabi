@@ -7,7 +7,7 @@ use std::io;
 use std::io::Write;
 use std::process::Command;
 use std::time::Instant;
-use std::{env, fs};
+use std::fs;
 use x509_parser::pem::parse_x509_pem;
 
 mod cert;
@@ -16,12 +16,12 @@ mod revocation;
 mod errors;
 use errors::Error;
 
-pub fn parse_chain(
+pub fn get_chain_facts(
     chain: &mut Vec<X509>,
     _stapled_ocsp_response: Option<&[u8]>,
     check_ocsp: bool,
     staple: bool,
-) -> Result<(), Error> {
+) -> Result<String, Error> {
     let mut translation_time = 0;
     let mut start = Instant::now();
 
@@ -119,17 +119,17 @@ pub fn parse_chain(
     }
     println!("Translation time: {}ms", translation_time);
 
-    match emit_chain_repr(&repr) {
-        Ok(()) => Ok(()),
-        Err(_) => Err(Error::UnknownError),
-    }
+    let mut facts = repr.split("\n").collect::<Vec<&str>>();
+    facts.sort_by(|a, b| a.cmp(b));
+    Ok(facts.join("\n"))
 }
 
-pub fn verify_chain(client: &str, dns_name: &str) -> Result<(), Error> {
+pub fn verify_chain(job_dir: &str, client: &str) -> Result<(), Error> {
     let start = Instant::now();
+
     let status = Command::new("sh")
         .arg("-c")
-        .arg(format!("prolog/run.sh {} {}", client, dns_name))
+        .arg(format!("swipl -q -s {}/{}.pl -t {}:certVerifiedChain(cert_0).", job_dir, client, client))
         .status()
         .expect("failed to execute process");
 
@@ -197,7 +197,8 @@ fn get_intermediate_repr(
     return Ok(repr);
 }
 
-fn emit_chain_repr(repr: &str) -> io::Result<()> {
+
+pub fn write_job_files(static_dir: &str, job_dir: &str, domain: &str, chain_facts: &str) -> io::Result<()> {
     let preamble = format!(
         "
 :- module(certs, [
@@ -236,17 +237,22 @@ fn emit_chain_repr(repr: &str) -> io::Result<()> {
     version/2,
     ocspResponse/2,
     stapledResponse/2
-]).
-:-style_check(-discontiguous).\n\n"
+]).\n"
     );
 
-    let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
+    fs::create_dir_all(job_dir)?;
 
-    let outdir = format!("prolog/job{}", jobindex);
-    fs::create_dir_all(&outdir)?;
-    let filename = format!("{}/certs.pl", outdir);
-    let mut certs_file = fs::File::create(filename)?;
+    let static_files = vec!["chrome.pl", "chrome_env.pl", "firefox.pl", "firefox_env.pl", "std.pl", "ev.pl"];
+    for f in static_files.iter() {
+        fs::copy(format!("{}/{}", static_dir, f), format!("{}/{}", job_dir, f))?;
+    }
+
+    let mut certs_file = fs::File::create(format!("{}/certs.pl", job_dir))?;
     certs_file.write_all(preamble.as_bytes())?;
-    certs_file.write_all(repr.as_bytes())?;
-    certs_file.sync_all()
+    certs_file.write_all(chain_facts.as_bytes())?;
+    certs_file.sync_all()?;
+
+    let mut env_file = fs::File::create(format!("{}/env.pl", job_dir))?;
+    env_file.write_all(format!(":- module(env, [domain/1]).\ndomain(\"{}\").", domain).as_bytes())?;
+    env_file.sync_all()
 }

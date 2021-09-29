@@ -1,5 +1,5 @@
 use openssl::x509::X509;
-use std::fs;
+use std::{env, fs};
 use serde::Deserialize;
 use docopt::Docopt;
 
@@ -37,11 +37,19 @@ fn main() {
         .and_then(|d| Ok(d.version(Some(version))))
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
+
+    let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
+    let static_dir = "prolog/static";
+    let job_dir = format!("prolog/job{}", jobindex);
+
+
     let chain_raw = fs::read(&args.arg_path).unwrap();
     let mut chain = X509::stack_from_pem(&chain_raw).unwrap();
     let domain = &args.arg_hostname.to_lowercase();
-    acclib::parse_chain(&mut chain, None, args.flag_ocsp, args.flag_staple).unwrap();
-    match acclib::verify_chain(&args.arg_client, &domain) {
+
+    let facts = acclib::get_chain_facts(&mut chain, None, args.flag_ocsp, args.flag_staple).unwrap();
+    acclib::write_job_files(static_dir, &job_dir, domain, &facts).unwrap();
+    match acclib::verify_chain(&job_dir, &args.arg_client) {
         Ok(_) => println!("OK"),
         Err(e) => println!("Error: {:?}", e),
     }
