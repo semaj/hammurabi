@@ -126,6 +126,7 @@ pub fn parse_chain(
 }
 
 pub fn verify_chain(client: &str, dns_name: &str) -> Result<(), Error> {
+    let start = Instant::now();
     let status = Command::new("sh")
         .arg("-c")
         .arg(format!("prolog/run.sh {} {}", client, dns_name))
@@ -133,6 +134,7 @@ pub fn verify_chain(client: &str, dns_name: &str) -> Result<(), Error> {
         .expect("failed to execute process");
 
     let status = status.code().unwrap();
+    println!("Verification time: {}ms", start.elapsed().as_millis());
     match status {
         0 => Ok(()),
         10 => Err(Error::CertNotTimeValid),
