@@ -39,7 +39,6 @@ fn main() {
         .unwrap_or_else(|e| e.exit());
 
     let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
-    let static_dir = "prolog/static";
     let job_dir = format!("prolog/job{}", jobindex);
 
 
@@ -48,7 +47,7 @@ fn main() {
     let domain = &args.arg_hostname.to_lowercase();
 
     let facts = acclib::get_chain_facts(&mut chain, None, args.flag_ocsp, args.flag_staple).unwrap();
-    acclib::write_job_files(static_dir, &job_dir, domain, &facts).unwrap();
+    acclib::write_job_files(&job_dir, domain, &facts).unwrap();
     match acclib::verify_chain(&job_dir, &args.arg_client) {
         Ok(_) => println!("OK"),
         Err(e) => println!("Error: {:?}", e),

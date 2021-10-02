@@ -129,16 +129,16 @@ pub fn get_chain_facts(
 pub fn verify_chain(job_dir: &str, client: &str) -> Result<(), Error> {
     let start = Instant::now();
 
-    // .arg(format!("swipl -q -s {}/{}.pl -t \"{}:certVerifiedChain(cert_0).\"", job_dir, client, client))
-    let status = Command::new("sh")
+    let verifier = Command::new("sh")
         .arg("-c")
-        .arg(format!("scryer-prolog {}/{}.pl -g \"{}:certVerifiedChain(cert_0).\" -g \"halt.\"", job_dir, client, client))
-        .status()
+        .arg(format!("prolog/bin/{} {}/certs.pl cert_0", client, job_dir))
+        .spawn()
         .expect("failed to execute process");
 
-    let status = status.code().unwrap();
-    println!("Verification time: {}ms", start.elapsed().as_millis());
-    match status {
+    let output = verifier.wait_with_output().unwrap();
+    print!("{}", String::from_utf8(output.stdout).unwrap());
+    println!("Binary running time: {}ms", start.elapsed().as_millis());
+    match output.status.code().unwrap() {
         0 => Ok(()),
         10 => Err(Error::CertNotTimeValid),
         20 => Err(Error::NameConstraintViolation),
@@ -201,7 +201,7 @@ fn get_intermediate_repr(
 }
 
 
-pub fn write_job_files(static_dir: &str, job_dir: &str, domain: &str, chain_facts: &str) -> io::Result<()> {
+pub fn write_job_files(job_dir: &str, domain: &str, chain_facts: &str) -> io::Result<()> {
     let preamble = format!(
         "
 :- module(certs, [
@@ -239,23 +239,15 @@ pub fn write_job_files(static_dir: &str, job_dir: &str, domain: &str, chain_fact
     subjectKeyIdentifierExt/2,
     version/2,
     ocspResponse/2,
-    stapledResponse/2
+    stapledResponse/2,
+    envDomain/1
 ]).\n"
     );
-
     fs::create_dir_all(job_dir)?;
-
-    let static_files = vec!["chrome.pl", "chrome_env.pl", "firefox.pl", "firefox_env.pl", "std.pl", "ev.pl"];
-    for f in static_files.iter() {
-        fs::copy(format!("{}/{}", static_dir, f), format!("{}/{}", job_dir, f))?;
-    }
 
     let mut certs_file = fs::File::create(format!("{}/certs.pl", job_dir))?;
     certs_file.write_all(preamble.as_bytes())?;
     certs_file.write_all(chain_facts.as_bytes())?;
-    certs_file.sync_all()?;
-
-    let mut env_file = fs::File::create(format!("{}/env.pl", job_dir))?;
-    env_file.write_all(format!(":- module(env, [domain/1]).\ndomain(\"{}\").", domain).as_bytes())?;
-    env_file.sync_all()
+    certs_file.write_all(format!("\n\nenvDomain(\"{}\").", domain).as_bytes())?;
+    certs_file.sync_all()
 }
