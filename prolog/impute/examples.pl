@@ -58,7 +58,7 @@ both():-
     RootFingerprint = "5A2FC03F0C83B090BBFA40604B0988446C7636183DF9846E17101A447FB8EFD6",
     RootLower = 631170000,
     RootUpper = 1618287689,
-    RootBasicConstraints = [ca, 10],
+    RootBasicConstraints = [true, 10],
     RootKeyUsage = [],
     verified_chrome(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage),
     verified_firefox(Fingerprint, SANList, Subject, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, CertPolicies, StapledResponse, OcspResponse, RootSubject, RootFingerprint, RootLower, RootUpper, RootBasicConstraints, RootKeyUsage).

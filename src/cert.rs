@@ -348,7 +348,7 @@ impl PrologCert<'_> {
                 "2.5.29.31" => { crl_distribution_points = true; Some(extensions::emit_crl_distribution_points(hash, &ext)) },
                 "1.3.6.1.5.5.7.1.1" => { authority_info_access = true; Some(extensions::emit_authority_info_access(hash, &ext)) },
                 "1.3.3.7" => {
-                    fs::write("datalog/static/tmp.pl", extensions::emit_acc_assertions(hash, &ext)).unwrap();
+                    fs::write("prolog/static/tmp.pl", extensions::emit_acc_assertions(hash, &ext)).unwrap();
                     acc_assertions = true;
                     None
                 },
@@ -568,7 +568,7 @@ impl PrologCert<'_> {
                 if eku.ocscp_signing {
                     answer.push(format!("{} oCSPSigning).", prefix));
                 }
-                    // TODO: Use this in Datalog
+                // TODO: Use this in Prolog
                 if eku.any {
                     answer.push(format!("{} any).", prefix));
                 }

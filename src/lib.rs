@@ -1,13 +1,13 @@
-
 use hex;
 use openssl::hash::MessageDigest;
 use openssl::stack::Stack;
 use openssl::x509::store::X509StoreBuilder;
 use openssl::x509::{X509VerifyResult, X509};
-use std::{fs, env};
+use std::io;
 use std::io::Write;
-use std::time::Instant;
 use std::process::Command;
+use std::time::Instant;
+use std::fs;
 use x509_parser::pem::parse_x509_pem;
 
 mod cert;
@@ -16,15 +16,12 @@ mod revocation;
 mod errors;
 use errors::Error;
 
-const DATALOG_GEN_DIR: &'static str = "datalog/gen";
-
-pub fn verify_prolog(
+pub fn get_chain_facts(
     chain: &mut Vec<X509>,
-    dns_name: &str,
     _stapled_ocsp_response: Option<&[u8]>,
     check_ocsp: bool,
     staple: bool,
-) -> Result<(), Error> {
+) -> Result<String, Error> {
     let mut translation_time = 0;
     let mut start = Instant::now();
 
@@ -35,55 +32,18 @@ pub fn verify_prolog(
         Ok(p) => p,
         Err(_) => {
             return Err(Error::X509ParsingError);
-        },
+        }
     };
-    let mut repr: String = cert.emit_all(&format!("cert_{}", counter));
     let sha256 = hex::encode(leaf.digest(MessageDigest::sha256()).unwrap());
-    repr.push_str(&format!(
-            "fingerprint(cert_0, \"{}\").\n",
-            sha256.to_uppercase()
-    ));
+    let mut repr: String = format!("fingerprint(cert_0, \"{}\").\n", sha256.to_uppercase());
+
+    repr.push_str(format!("{}\n\n", cert.emit_all(&format!("cert_{}", counter))).as_str());
     translation_time += start.elapsed().as_millis();
 
-    let mut root_fingerprints: Vec<String> = Vec::new();
-
     let mut stack = Stack::new().unwrap();
-    let mut recursive_subject = leaf.clone();
-
-    for intermediate_x509 in chain.iter() {
-        counter += 1;
-        match recursive_subject.verify(&intermediate_x509.public_key().unwrap()) {
-            Ok(true) => {},
-            Ok(false) => return Err(Error::OpenSSLInvalid),
-            Err(e) => {
-                eprintln!("OpenSSL Verify error {}", e);
-                return Err(Error::OpenSSLFailed);
-            }
-        }
-        start = Instant::now();
-        recursive_subject = intermediate_x509.clone();
-
-        let intermediate_der = intermediate_x509.to_der().unwrap();
-        let intermediate = match cert::PrologCert::from_der(&intermediate_der) {
-            Ok(p) => p,
-            Err(_) => {
-                return Err(Error::X509ParsingError);
-            },
-        };
-        repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
-        repr.push_str(&format!(
-                "fingerprint(cert_{}, \"{}\").\n",
-                counter,
-                hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
-        ));
-        repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter - 1, counter));
-        stack.push(intermediate_x509.clone()).unwrap();
-        // We just assume (for now) that intermediates
-        // do not have stapled ocsp responses.
-        repr.push_str(&format!("no_stapled_ocsp_response(cert_{}).\n", counter));
-        translation_time += start.elapsed().as_millis();
-    }
-
+    repr.push_str(
+        get_intermediate_repr(&chain, &leaf, &mut stack, &mut counter, &mut translation_time)?.as_str(),
+    );
     let mut store_builder = X509StoreBuilder::new().unwrap();
 
     // get root certs
@@ -103,7 +63,6 @@ pub fn verify_prolog(
         let root_x509 = X509::from_der(&temp).unwrap();
         //println!("ROOT: {:?}", root_x509.subject_name());
         for intermediate_x509 in chain.iter() {
-            root_fingerprints.push(hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase());
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
                 counter += 1;
                 found_issuer = true;
@@ -111,18 +70,24 @@ pub fn verify_prolog(
                 let root_x509_for_stack = X509::from_der(&temp).unwrap();
                 stack.push(root_x509_for_stack).unwrap();
                 repr.push_str(&format!(
-                        "fingerprint(cert_{}, \"{}\").\n",
-                        counter,
-                        hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
+                    "fingerprint(cert_{}, \"{}\").\n",
+                    counter,
+                    hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
                 ));
                 let v = match cert::PrologCert::from_der(&temp) {
                     Ok(p) => p,
                     Err(_) => {
                         return Err(Error::X509ParsingError);
-                    },
+                    }
                 };
                 repr.push_str(&v.emit_all(&format!("cert_{}", counter)));
-                repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter - 1, counter));
+                // fake revocation facts for root
+                repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
+                repr.push_str(&format!(
+                    "issuer(cert_{}, cert_{}).\n\n",
+                    counter - 1,
+                    counter
+                ));
                 translation_time += start.elapsed().as_millis();
             }
         }
@@ -135,74 +100,45 @@ pub fn verify_prolog(
     let store = store_builder.build();
     let subject_x509 = leaf;
 
-    //let issuer_x509 = &chain[0];
-    //repr.push_str(
-    //&revocation::ocsp_stapling(
-    //stapled_ocsp_response,
-    //&store,
-    //&subject_x509,
-    //issuer_x509,
-    //&stack,
-    //)
-    //.join("\n"),
-    //);
-    //repr.push_str("\n\n");
-
     let mut subject_ref = subject_x509.as_ref();
     let mut cert_index = 0;
     for intermediate_ref in stack.iter() {
-        let mut should_staple = staple;
+        let mut check_staple = staple;
         if cert_index != 0 {
-            should_staple = false;
+            check_staple = false;
         }
-        repr.push_str(
-            &revocation::check_ocsp(cert_index, &store, subject_ref, intermediate_ref, &stack, check_ocsp, should_staple)
-            .join("\n"),
-        );
-        repr.push_str("\n\n");
+        repr.push_str(&revocation::get_ocsp_fact(
+            cert_index,
+            &store,
+            subject_ref,
+            intermediate_ref,
+            &stack,
+            check_ocsp,
+            check_staple,
+        ));
         subject_ref = intermediate_ref;
         cert_index += 1;
     }
     println!("Translation time: {}ms", translation_time);
 
-    let key = "JOBINDEX";
-    let jobindex = env::var(key).unwrap_or("".to_string());
-    let roots: String = root_fingerprints
-        .iter()
-        .map(|name| format!("\ntrusted_roots(\"{}\").", name))
-        .collect::<String>()
-        .to_string();
-    // let countries: String = country_isos
-    //     .iter()
-    //     .map(|name| format!("\nval_country(\"{}\").", name))
-    //     .collect::<String>()
-    //     .to_string();
-    let name = format!("{}/env.pl", DATALOG_GEN_DIR);
-    let mut kb_env = fs::File::create(name).expect("failed to create file"); kb_env
-        .write_all(emit_env_preamble().as_bytes())
-        .expect("failed to write message");
-    kb_env.write_all(roots.as_bytes()).expect("failed to write message");
-   // kb_env.write_all(countries.as_bytes()).expect("failed to write message");
-    kb_env.sync_all().unwrap();
+    let mut facts = repr.split("\n").collect::<Vec<&str>>();
+    facts.sort_by(|a, b| a.cmp(b));
+    Ok(facts.join("\n"))
+}
 
-    let name = format!("{}/certs{}.pl", DATALOG_GEN_DIR, jobindex);
-    let mut kb_cert = fs::File::create(name).expect("failed to create file");
-    kb_cert
-        .write_all(emit_kb_cert_preamble().as_bytes())
-        .expect("failed to write message");
-    kb_cert
-        .write_all(repr.as_bytes())
-        .expect("failed to write message");
-    kb_cert.sync_all().unwrap();
+pub fn verify_chain(job_dir: &str, client: &str) -> Result<(), Error> {
+    let start = Instant::now();
 
-    let status = Command::new("sh")
+    let verifier = Command::new("sh")
         .arg("-c")
-        .arg(format!("datalog/query.sh cert_0 {}", dns_name))
-        .status()
+        .arg(format!("prolog/bin/{} {}/certs.pl cert_0", client, job_dir))
+        .spawn()
         .expect("failed to execute process");
 
-    let status = status.code().unwrap();
-    match status {
+    let output = verifier.wait_with_output().unwrap();
+    print!("{}", String::from_utf8(output.stdout).unwrap());
+    println!("Binary running time: {}ms", start.elapsed().as_millis());
+    match output.status.code().unwrap() {
         0 => Ok(()),
         10 => Err(Error::CertNotTimeValid),
         20 => Err(Error::NameConstraintViolation),
@@ -212,89 +148,106 @@ pub fn verify_prolog(
         60 => Err(Error::UnknownIssuer),
         70 => Err(Error::ACCFailure),
         80 => Err(Error::LeafValidForTooLong),
-        _ => Err(Error::UnknownError)
+        _ => Err(Error::UnknownError),
     }
 }
 
-fn emit_kb_cert_preamble() -> String {
-    format!(
-        ":- module(certs, [
-        issuer/6,
-        validity/3,
-        subject/6,
-        extensionCritic/3,
-        extensionValues/3,
-        extensionValues/4,
-        serialNumber/2,
-        version/2,
-        keyAlgorithm/2,
-        keyLen/2,
-        signatureAlgorithm/2,
-        no_stapled_ocsp_response/1,
-        stapled_ocsp_response/1,
-        stapled_ocsp_response_verified/1,
-        stapled_ocsp_response_valid/1,
-        stapled_ocsp_response_not_expired/1,
-        stapled_ocsp_response_not_verified/1,
-        stapled_ocsp_response_invalid/1,
-        stapled_ocsp_response_expired/1,
-        stapled_ocsp_status_revoked/1,
-        stapled_ocsp_status_unknown/1,
-        stapled_ocsp_status_good/1,
-        ocsp_responder/2,
-        no_ocsp_responders/1,
-        ocsp_response_verified/2,
-        ocsp_response_valid/2,
-        ocsp_response_not_expired/2,
-        ocsp_response_not_verified/2,
-        ocsp_response_invalid/2,
-        ocsp_response_expired/2,
-        ocsp_status_revoked/2,
-        ocsp_status_unknown/2,
-        ocsp_status_good/2,
-        fingerprint/2
-    ]).
-:-style_check(-discontiguous).
-no_stapled_ocsp_response(hack).
-stapled_ocsp_response(hack).
-stapled_ocsp_response_verified(hack).
-stapled_ocsp_response_valid(hack).
-stapled_ocsp_response_not_expired(hack).
-stapled_ocsp_response_not_verified(hack).
-stapled_ocsp_response_invalid(hack).
-stapled_ocsp_response_expired(hack).
-stapled_ocsp_status_revoked(hack).
-stapled_ocsp_status_unknown(hack).
-stapled_ocsp_status_good(hack).
-ocsp_responder(hack, hack).
-no_ocsp_responders(hack).
-ocsp_response_verified(hack, hack).
-ocsp_response_valid(hack, hack).
-ocsp_response_not_expired(hack, hack).
-ocsp_response_not_verified(hack, hack).
-ocsp_response_invalid(hack, hack).
-ocsp_response_expired(hack, hack).
-ocsp_status_revoked(hack, hack).
-ocsp_status_unknown(hack, hack).
-ocsp_status_good(hack, hack).\n\n"
-)
+fn get_intermediate_repr(
+    chain: &Vec<X509>,
+    leaf: &X509,
+    stack: &mut Stack<X509>,
+    counter: &mut u32,
+    translation_time: &mut u128,
+) -> Result<String, Error> {
+    let mut repr: String = "".to_string();
+    let mut recursive_subject = leaf.clone();
+    for intermediate_x509 in chain.iter() {
+        *counter += 1;
+        match recursive_subject.verify(&intermediate_x509.public_key().unwrap()) {
+            Ok(true) => {}
+            Ok(false) => return Err(Error::OpenSSLInvalid),
+            Err(e) => {
+                eprintln!("OpenSSL Verify error {}", e);
+                return Err(Error::OpenSSLFailed);
+            }
+        }
+        let start = Instant::now();
+        recursive_subject = intermediate_x509.clone();
+
+        let intermediate_der = intermediate_x509.to_der().unwrap();
+        let intermediate = match cert::PrologCert::from_der(&intermediate_der) {
+            Ok(p) => p,
+            Err(_) => {
+                return Err(Error::X509ParsingError);
+            }
+        };
+        repr.push_str(&format!(
+            "fingerprint(cert_{}, \"{}\").\n",
+            counter,
+            hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
+        ));
+        repr.push_str(&intermediate.emit_all(&format!("cert_{}", counter)));
+        repr.push_str(&format!(
+            "issuer(cert_{}, cert_{}).\n\n",
+            *counter - 1,
+            counter
+        ));
+        stack.push(intermediate_x509.clone()).unwrap();
+        // We just assume (for now) that intermediates
+        // do not have stapled ocsp responses.
+        *translation_time += start.elapsed().as_millis();
+    }
+    return Ok(repr);
 }
 
-fn emit_env_preamble() -> String {
-    format!(
-        ":- module(env, [
-        tlsVersion/1,
-        max_intermediates/1,
-        hostIp/1
-    ]).
 
-:- use_module(std, [ipToNumber/6]).
-:- style_check(-discontiguous).
+pub fn write_job_files(job_dir: &str, domain: &str, chain_facts: &str) -> io::Result<()> {
+    let preamble = format!(
+        "
+:- module(certs, [
+    basicConstraintsCritical/2,
+    basicConstraintsExt/2,
+    certificatePolicies/2,
+    certificatePoliciesCritical/2,
+    certificatePoliciesExt/2,
+    commonName/2,
+    extendedKeyUsage/2,
+    extendedKeyUsageCritical/2,
+    extendedKeyUsageExt/2,
+    fingerprint/2,
+    inhibitAnyPolicyExt/2,
+    isCA/2,
+    issuer/2,
+    keyAlgorithm/2,
+    keyLen/2,
+    keyUsage/2,
+    keyUsageCritical/2,
+    keyUsageExt/2,
+    nameConstraintsExt/2,
+    notAfter/2,
+    notBefore/2,
+    pathLimit/2,
+    policyConstraintsExt/2,
+    policyMappingsExt/3,
+    san/2,
+    sanCritical/2,
+    sanExt/2,
+    serialNumber/2,
+    signatureAlgorithm/2,
+    subjectKeyIdentifier/2,
+    subjectKeyIdentifierCritical/2,
+    subjectKeyIdentifierExt/2,
+    version/2,
+    ocspResponse/2,
+    stapledResponse/2,
+    envDomain/1
+]).\n"
+    );
+    fs::create_dir_all(job_dir)?;
 
-tlsVersion(2).
-max_intermediates(5).
-hostIp(H):-
-    ipToNumber(192,168,1,1,0,H).\n",
-    )
+    let mut certs_file = fs::File::create(format!("{}/certs.pl", job_dir))?;
+    certs_file.write_all(preamble.as_bytes())?;
+    certs_file.write_all(chain_facts.as_bytes())?;
+    certs_file.write_all(format!("\n\nenvDomain(\"{}\").", domain).as_bytes())?;
+    certs_file.sync_all()
 }
-

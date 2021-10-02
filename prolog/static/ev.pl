@@ -1,53 +1,7 @@
 :- module(ev, [
-    isEV/1,
-    isEV/2,
-    isEVIntermediate/2,
-    directDescendant/2,
     anyPolicyOid/1,
     evPolicyOid/6
 ]).
-
-:- use_module(certs).
-:- use_module(std).
-:- use_module(browser).
-
-% extended validation cert
-% recognized EV policy OID clause
-isEV(Cert) :-
-    certs:certificatePoliciesExt(Cert, true),
-    certs:certificatePolicies(Cert, Oid), 
-    evPolicyOid(Oid, CN, C, L, ST, O),
-    directDescendant(Cert, P),
-    isEVIntermediate(P, Oid).
-
-% extended validation intermediate cert
-% root clause
-isEVIntermediate(Cert, Oid) :-
-    std:isRoot(Cert),
-    certs:serialNumber(Cert, Serial),
-    evPolicyOid(Oid, Serial).
-
-% chain clause: matching EV policy OID
-isEVIntermediate(Cert, Oid) :-
-    certs:certificatePoliciesExt(Cert, true),
-    certs:certificatePolicies(Cert, Oid),
-    directDescendant(Cert, P),
-    isEVIntermediate(P, Oid).
-
-% chain clause: matching anyPolicy OID
-isEVIntermediate(Cert, Oid) :-
-    certs:certificatePoliciesExt(Cert, true),
-    anyPolicyOid(AnyPolicyOid),
-    certs:certificatePolicies(Cert, AnyPolicyOid),
-    directDescendant(Cert, P),
-    isEVIntermediate(P, Oid).
-
-
-% body copied from std:descendant, only want direct parents
-% TODO: is there a better way?
-directDescendant(Cert, Y):-
-    certs:issuer(Cert, Y),
-    ext:unequal(Cert, Y).
 
 % The anyPolicy OID, usable by intermediates
 anyPolicyOid("2.5.29.32.0").

@@ -4,7 +4,7 @@ require 'openssl'
 # Non-benchmarking Usage:
 # ruby scripts/acc-test.rb <short name of acc script>
 # where <short name of acc script> would be `tmp` corresponding to
-# the datalog file `datalog/static/tmp.pl`.
+# the prolog file `prolog/static/tmp.pl`.
 
 SCRIPT_NAME = ARGV[0] || "tmp"
 SHOULD_BENCHMARK = ARGV[1] || false
@@ -22,7 +22,7 @@ end
 accs.each do |acc_short|
 
   puts acc_short
-  acc = File.read("datalog/static/#{acc_short}.pl")
+  acc = File.read("prolog/static/#{acc_short}.pl")
 
   ca_key = OpenSSL::PKey.read(File.read(CA_KEY))
   ca = OpenSSL::X509::Certificate.new(File.read(CA))
@@ -51,13 +51,13 @@ accs.each do |acc_short|
 
   if SHOULD_BENCHMARK == "true"
     translation_times = []
-    datalog_times = []
+    prolog_times = []
     50.times do
       output = `MOCK=true ./scripts/custom.sh /tmp/tmp.pem jameslarisch.com #{SCRIPT_NAME} --staple`
-      datalog_times << output.match(/Datalog execution time: (\d+)ms/)[1].to_i
+      prolog_times << output.match(/Prolog execution time: (\d+)ms/)[1].to_i
       translation_times << output.match(/Translation time: (\d+)ms/)[1].to_i
     end
-    puts "#{datalog_times.mean}, #{translation_times.mean}"
+    puts "#{prolog_times.mean}, #{translation_times.mean}"
   else
     system("MOCK=true ./scripts/custom.sh /tmp/tmp.pem jameslarisch.com #{SCRIPT_NAME} --staple")
   end

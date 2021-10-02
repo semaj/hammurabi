@@ -1,16 +1,18 @@
 use openssl::x509::X509;
 use serde::Deserialize;
+use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 
 use docopt::Docopt;
 
 const USAGE: &'static str = "
-Verifies certificate at <path> for host <hostname>.
+Verifies certificate at <path> for host <hostname> using policy for client <client>.
+<client> should be chrome or firefox.
 <path> should be an absolute path, because rustls has some silly behavior regarding paths.
 
 Usage:
-  localcheck [options] <mappingfile> <intpath> <outputfile> [--ocsp]
+  localcheck [options] <client> <mappingfile> <intpath> <outputfile> [--ocsp]
   localcheck (--version | -v)
   localcheck (--help | -h)
 
@@ -23,6 +25,7 @@ const FOOTER: &'static str = "-----END CERTIFICATE-----";
 
 #[derive(Debug, Deserialize)]
 struct Args {
+    arg_client: String,
     arg_mappingfile: String,
     arg_intpath: String,
     //arg_workingPath: String, (thread-safety)
@@ -76,7 +79,12 @@ fn main() {
         let chain_raw = form_chain(&row.certificate_bytes, &args.arg_intpath, &row.ints);
         let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
         let domain = row.domain.as_str();
-        let result = acclib::verify_prolog(&mut chain, &domain.to_lowercase(), None, args.flag_ocsp, false);
+        let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
+        let job_dir = format!("prolog/job{}", jobindex);
+
+        let facts = acclib::get_chain_facts(&mut chain, None, args.flag_ocsp, false).unwrap();
+        acclib::write_job_files(&job_dir, domain, &facts).unwrap();
+        let result = acclib::verify_chain(&args.arg_client, &domain);
         let result_str = match result {
             Ok(_) => "OK".to_string(),
             Err(e) => format!("{:?}", e),
