@@ -7,8 +7,6 @@
     getBasicConstraints/2
 ]).
 
-:- use_module(library(lists)).
-:- use_module(library(clpz)).
 
 % md2
 md2_sig_algo("1.2.840.113549.1.1.2").
@@ -69,7 +67,7 @@ nameMatchesCN(Domain, Subject):-
 isTimeValid(Lower, Upper):-
     % now(T),
     T = 1621487267,
-    Lower #< T, Upper #> T.
+    Lower < T, Upper > T.
 
 % Basic Constraints checks
 % CA bit set
