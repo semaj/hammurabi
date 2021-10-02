@@ -66,6 +66,9 @@ rebuild.
 This creates two executables: `target/debug/single` and `target/debug/scale`.
 `single` is what you'll probably need.
 
+If you edit the Prolog code in `prolog/static`, run `make` in the `prolog`
+directory. This will build the executables `firefox` and `chrome` in `prolog/bin`
+which the Rust binaries will call as shell commands.
 
 # Scale
 
