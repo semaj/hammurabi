@@ -12,7 +12,8 @@ The easiest way to get started is to use the Vagrant box. To do so, you'll need
 VirtualBox installed. In this directory, you can then run `vagrant up`, then
 `vagrant ssh`. `vagrant up` creates a new virtual machine, installs necessary
 dependencies, `vagrant ssh` connects to the box. After connecting to the Vagrant
-box, run `cargo build` to build everything.
+box, run `cargo build` to build everything. Then, run `make` in the `prolog`
+directory to build policy executables.
 
 Note that `vagrant up` might take a few minutes.
 
@@ -22,7 +23,8 @@ If on a Debian-based system, you can run `scripts/install-dependencies.sh` to
 install the necessary dependencies. Note that this will attempt to install
 Rust---I recommend looking at that file before running it. If not on Debian,
 you'll need to look at that file and install the analogous dependencies. Run
-`cargo build` after installing dependencies.
+`cargo build` after installing dependencies. Then, run `make` in the `prolog`
+directory to build policy executables.
 
 # Usage
 
