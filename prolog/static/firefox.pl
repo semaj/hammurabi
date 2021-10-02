@@ -1,15 +1,11 @@
-:- module(firefox, [
-  certVerifiedChain/1
-]).
+#!/usr/bin/env swipl
 
-:- use_module(certs).
-:- use_module(env).
-:- use_module(std).
+% :- use_module(certs).
 :- use_module(ev).
 :- use_module(firefox_env).
-:- use_module(library(clpz)).
-:- use_module(library(lists)).
+:- use_module(std).
 
+:- initialization(main, main).
 
 % See: https://wiki.mozilla.org/CA/Additional_Trust_Changes#ANSSI
 nameConstraintValid(_, RootFingerprint) :-
@@ -63,7 +59,7 @@ tenDaysInSeconds(864001).
 
 shortLived(Lower, Upper) :-
   tenDaysInSeconds(ValidDuration),
-  Upper - Lower #< ValidDuration.
+  Upper - Lower < ValidDuration.
 
 keyUsageValid(_, KeyUsage) :-
   KeyUsage = [].
@@ -107,13 +103,13 @@ strongSignature(Algorithm) :-
 
 
 firefoxNameMatches(SANList, _):-
-  env:domain(D),
+  certs:envDomain(D),
   std:nameMatchesSAN(D, SANList).
 
 % Check CN ONLY if SAN not present
 firefoxNameMatches(SANList, CommonName) :-
   SANList = [],
-  env:domain(D),
+  certs:envDomain(D),
   std:nameMatchesCN(D, CommonName).
 
 % in seconds
@@ -125,7 +121,7 @@ leafDurationValid(EVStatus, _, _):-
 leafDurationValid(EVStatus, Lower, Upper):-
   EVStatus = ev,
   duration27MonthsPlusSlop(ValidDuration),
-  Upper - Lower #< ValidDuration.
+  Upper - Lower < ValidDuration.
 
 notCrl(F):-
     var(F), F = "".
@@ -219,3 +215,15 @@ certVerifiedChain(Cert):-
   findall(Name, certs:san(Cert, Name), SANList),
   certs:issuer(Cert, Parent),
   certVerifiedNonLeaf(Parent, SANList, EVStatus).
+
+
+main([CertsFile, Cert]):-
+  statistics(walltime, _),
+  consult(CertsFile),
+  statistics(walltime, [_ | [LoadTime]]),
+  write('Cert facts loading time: '), write(LoadTime), write('ms\n'),
+  statistics(walltime, _),
+  certVerifiedChain(Cert),
+  statistics(walltime, [_ | [VerifyTime]]),
+  write('Cert verification time): '), write(VerifyTime), write('ms\n').
+  

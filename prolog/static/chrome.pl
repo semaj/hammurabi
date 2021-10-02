@@ -1,14 +1,10 @@
-:- module(chrome, [
-  certVerifiedChain/1,
-  verifiedLeaf/8
-]).
+#!/usr/bin/env swipl
 
-:- use_module(env).
-:- use_module(std).
-:- use_module(library(lists)).
-:- use_module(library(clpz)).
+:- use_module(library(clpfd)).
 :- use_module(chrome_env).
-:- use_module(certs).
+:- use_module(std).
+
+:- initialization(main, main).
 
 % For certificates issued on-or-after the BR effective
 % For certificates issued on-or-after 1 April 2015 (39 months)
@@ -96,7 +92,7 @@ badSymantec(Fingerprint, Lower):-
 
 isChromeRoot(Fingerprint):-
   chrome_env:trusted(Fingerprint),
-  env:domain(Domain),
+  certs:envDomain(Domain),
   nameConstraintValid(Fingerprint, Domain).
 
 notCrlSet(F):-
@@ -121,7 +117,7 @@ verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, Key
   extKeyUsageValid(ExtKeyUsage).
 
 verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
-  env:domain(Domain),
+  certs:envDomain(Domain),
   std:nameMatchesSAN(Domain, SANList),
   leafDurationValid(Lower, Upper),
   verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
@@ -158,3 +154,14 @@ certVerifiedChain(Cert):-
   certVerifiedLeaf(Cert),
   certs:issuer(Cert, Parent),
   certVerifiedNonLeaf(Parent).
+
+main([CertsFile, Cert]):-
+  statistics(walltime, _),
+  consult(CertsFile),
+  statistics(walltime, [_ | [LoadTime]]),
+  write('Cert facts loading time: '), write(LoadTime), write('ms\n'),
+  statistics(walltime, _),
+  certVerifiedChain(Cert),
+  statistics(walltime, [_ | [VerifyTime]]),
+  write('Cert verification time): '), write(VerifyTime), write('ms\n').
+  
