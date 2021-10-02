@@ -5,10 +5,10 @@
 %:- use_module(cert_1).
 %:- use_module(browser).
 %:- use_module(checks).
-:- include(certs).
+:- include("../job/certs").
 % The following functions are taken from zlint
 % specifically the cabf_br tests  
-% but reimplemented using Datalog 
+% but reimplemented using Prolog 
 % See www.github.com/zmap/zlint for more information 
 
 isCert(Cert) :-

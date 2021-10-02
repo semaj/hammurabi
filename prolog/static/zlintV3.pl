@@ -2,9 +2,9 @@
 %:- use_module(std).
 %:- use_module(env).
 %:- use_module(ext).
-:- include(datalog/gen/job/certs).
-%:- include(datalog/gen/job/std).
-%:- include(datalog/gen/env).
+:- include(prolog/gen/job/certs).
+%:- include(prolog/gen/job/std).
+%:- include(prolog/gen/env).
 
 
 isSubCA(Cert) :-

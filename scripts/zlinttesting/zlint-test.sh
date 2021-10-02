@@ -9,7 +9,7 @@
 # In the Zlint file, make sure to comment out 
 # (or delete) your verified rule 
 
-# The following script tests a given Zlint Datalog file 
+# The following script tests a given Zlint Prolog file 
 # with a given set of test cases and outputs whether 
 # each test passed or failed
 # Usage: ./zlint-test.sh [Test Cases File] [Zlint File]
@@ -31,12 +31,12 @@ while IFS=",", read -r rule test_file expected; do
     echo "Rule being tested: $rule"
     echo "Test Data: $test_file"
     echo "Expected Result: $expected"
-    cp ~/engine/datalog/static/$2.pl ~/engine/datalog/static/tmpZlint.pl
-    echo "verified(Cert) :-" >> ~/engine/datalog/static/tmpZlint.pl 
-    echo "  std:isCert(Cert)," >> ~/engine/datalog/static/tmpZlint.pl
-    echo "  $rule(Cert)." >> ~/engine/datalog/static/tmpZlint.pl
-    actual=`bash ~/engine/scripts/custom.sh ~/engine/$test_file domain tmpZlint | tail -1`
-    rm ~/engine/datalog/static/tmpZlint.pl
+    cp prolog/static/$2.pl prolog/static/tmpZlint.pl
+    echo "verified(Cert) :-" >> prolog/static/tmpZlint.pl 
+    echo "  std:isCert(Cert)," >> prolog/static/tmpZlint.pl
+    echo "  $rule(Cert)." >> prolog/static/tmpZlint.pl
+    actual=`bash scripts/custom.sh $test_file domain tmpZlint | tail -1`
+    rm prolog/static/tmpZlint.pl
     echo "Actual Result: $actual"
     expected=`echo $expected | xargs`
     # troubleshooting
@@ -49,4 +49,4 @@ while IFS=",", read -r rule test_file expected; do
         echo -e "${RED}Test Failed${NC}"
     fi
     let "test_num++"
-done < ~/engine/scripts/zlinttesting/$1
+done < scripts/zlinttesting/$1
