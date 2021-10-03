@@ -84,7 +84,7 @@ pub fn get_chain_facts(
                 // fake revocation facts for root
                 repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
                 repr.push_str(&format!(
-                    "issuer(cert_{}, cert_{}).\n\n",
+                    "issuer(cert_{}, cert_{}).\n",
                     counter - 1,
                     counter
                 ));
@@ -95,7 +95,8 @@ pub fn get_chain_facts(
         store_builder.add_cert(root_x509).unwrap();
     }
     if !found_issuer {
-       // eprintln!("NO ISSUER FOUND");
+        repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
+        repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter, counter));
     }
     let store = store_builder.build();
     let subject_x509 = leaf;
