@@ -5,7 +5,7 @@
 %:- use_module(cert_1).
 %:- use_module(browser).
 %:- use_module(checks).
-:- include("../job/certs").
+:- use_module("prolog/job/certs").
 % The following functions are taken from zlint
 % specifically the cabf_br tests  
 % but reimplemented using Prolog 

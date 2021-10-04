@@ -17,7 +17,7 @@
 ./target/debug/single chrome $1 foo.com --ocsp > /dev/null
 echo -n "{"
 while IFS=";", read -r apply lint; do
-    result=`python3 prolog/static/driver.py prolog/static/zlint.pl $lint $apply`
+    result=`python3 prolog/zlint/driver.py prolog/zlint/zlint.pl $lint $apply`
     echo -n "\"$lint\": {\"result\": \"$result\"},"
-done < prolog/static/applies_rules.txt
+done < prolog/zlint/applies_rules.txt
 echo -n "\"end\": \"pass\"}" # Update this in future
