@@ -15,9 +15,4 @@
 # *The jq is used to format the output
 
 ./target/debug/single chrome $1 foo.com --ocsp > /dev/null
-echo -n "{"
-while IFS=";", read -r apply lint; do
-    result=`python3 prolog/zlint/driver.py prolog/zlint/zlint.pl $lint $apply`
-    echo -n "\"$lint\": {\"result\": \"$result\"},"
-done < prolog/zlint/applies_rules.txt
-echo -n "\"end\": \"pass\"}" # Update this in future
+./prolog/zlint/driver.py prolog/zlint/zlint.pl prolog/zlint/applies_rules.txt

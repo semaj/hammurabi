@@ -1,27 +1,38 @@
-# The following code is a python driver that 
-# can query a singlular lint rule (pass/fail) and a singular 
-# applies rule (NA) from a specific prolog file 
+#!/usr/bin/env python3
+
+# The following code is a python driver that
+# can query a singlular lint rule (pass/fail) and a singular
+# applies rule (NA) from a specific prolog file
 # Usage: python3 driver.py [Prolog File] [Lint Rule] [Applies Rule]
 
-from pyswip import Prolog 
+import json
 import sys
+
+from pygments import highlight
+from pygments.formatters.terminal256 import Terminal256Formatter
+from pygments.lexers.web import JsonLexer
+from pyswip import Prolog
+
+zlint = sys.argv[1]
+applies_rules = sys.argv[2]
+
 prolog = Prolog()
-prolog.consult(sys.argv[1])
+prolog.consult(zlint)
 
-def isEmpty(s): 
-    for i in s: 
-        return False 
-    return True
+results = {}
+with open(applies_rules) as f:
+    for line in f:
+        try:
+            apply, lint = line.strip().split(";")
+            applies = bool(list(prolog.query(apply + "(X)")))
+            if not applies:
+                results[lint] = {"result": "NA"}
+                continue
+            passes = bool(list(prolog.query(lint + "(X)")))
+            results[lint] = {"result": "pass" if passes else "fail"}
+        except:
+            pass
 
-applies = True
-if (len(sys.argv) > 3): 
-    #app_query = prolog.query(sys.argv[3] + "(X)")
-    applies = not isEmpty(prolog.query(sys.argv[3] + "(X)"))
-    if not applies: 
-        print("NA")
-if applies: 
-    soln = prolog.query(sys.argv[2] + "(X)")
-    if not isEmpty(soln): 
-        print("pass")
-    else: 
-        print("fail")
+
+output = json.dumps(results, indent=2)
+print(highlight(output, lexer=JsonLexer(), formatter=Terminal256Formatter()))
