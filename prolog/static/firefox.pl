@@ -86,12 +86,22 @@ nameValid(Name) :-
 
 % Name-constrainted name (any)
 dnsNameValid(Name, PermittedNames, ExcludedNames) :-
+  length(PermittedNames, PermittedNamesLength),
+  length(ExcludedNames, ExcludedNamesLength),
+  % RFC 5280 says both cannot be empty
+  ( PermittedNamesLength > 0; ExcludedNamesLength > 0),
   nameValid(Name),
-  forall(member(PermittedName, PermittedNames), (
-    nameConstraintValid(PermittedName)
-  )),
-  member(PermittedName, PermittedNames),
-  namePermitted(Name, PermittedName),
+  (
+    (
+      PermittedNamesLength > 0,
+      forall(member(PermittedName, PermittedNames), (
+        nameConstraintValid(PermittedName)
+      )),
+      member(PermittedName, PermittedNames),
+      namePermitted(Name, PermittedName)
+    );
+    PermittedNamesLength = 0
+  ),
   forall(member(ExcludedName, ExcludedNames), (
     nameConstraintValid(ExcludedName),
     nameNotExcluded(Name, ExcludedName)
@@ -288,11 +298,17 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
   (
     (
       verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse), 
-      findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), Permitted),
-      findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), Excluded),
-      dnsNameConstrained(LeafCommonName, LeafSANList, Permitted, Excluded),
       certs:issuer(Cert, Parent),
-      certVerifiedNonLeaf(Parent, LeafCommonName, LeafSANList, EVStatus)
+      certVerifiedNonLeaf(Parent, LeafCommonName, LeafSANList, EVStatus),
+      (
+        (
+          certs:nameConstraintsExt(Cert, true),
+          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), Permitted),
+          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), Excluded),
+          dnsNameConstrained(LeafCommonName, LeafSANList, Permitted, Excluded)
+        );
+        certs:nameConstraintsExt(Cert, false)
+      )
     );
     verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   ).
