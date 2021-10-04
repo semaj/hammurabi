@@ -31,6 +31,8 @@ sha1_sig_algo("1.3.14.3.2.27"). % dsaSHA1
 sha1_sig_algo("1.3.14.3.2.26"). % sha1NoSign
 sha1_sig_algo("1.2.840.10045.4.1"). % sha1ECDSA
 
+count(L, E, N) :-
+    include(=(E), L, L2), length(L2, N).
 
 stringMatch(Pattern, CommonName):-
     var(CommonName),
