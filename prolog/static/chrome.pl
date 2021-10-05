@@ -6,8 +6,137 @@
 
 :- use_module(chrome_env).
 :- use_module(std).
+:- use_module(psl).
 
 :- initialization(main, main).
+
+% Presented: example.com, Excluded: .example.com -- valid
+nameLabelsNotExcluded([], [""|[]]).
+% Presented: example.org, Excluded: example.com -- valid
+% Presented: example.com, Excluded: example.com -- invalid
+nameLabelsNotExcluded([NameLabel|_], [ExcludedLabel|_]) :-
+  ExcludedLabel \= "",
+  NameLabel \= ExcludedLabel.
+% Presented: example1.com, Excluded: example.com -- valid
+nameLabelsNotExcluded([NameLabel|NameRest], [ExcludedLabel|ExcludedRest]) :-
+  NameLabel = ExcludedLabel,
+  nameLabelsNotExcluded(NameRest, ExcludedRest).
+
+% Nothing is excluded
+nameNotExcluded(_, "").
+% Something is excluded
+nameNotExcluded(Name, Excluded) :-
+  % Split into labels
+  split_string(Name, ".", "", NameLabels),
+  split_string(Excluded, ".", "", ExcludedLabels),
+  % Walk the labels from the end to the front
+  reverse(NameLabels, NameLabelsReversed),
+  reverse(ExcludedLabels, ExcludedLabelsReversed),
+  nameLabelsNotExcluded(NameLabelsReversed, ExcludedLabelsReversed).
+
+% There's nothing (more) to permit -- valid
+nameLabelsPermitted(_, []).
+% Presented: foo.example.com, Permitted: .example.com -- valid
+% Presented: example.com, Permitted: .example.com -- invalid
+nameLabelsPermitted([_|_], [""|[]]).
+% Presented: foo.example.com, Permitted: foo.example.com -- valid
+% Presented: foo1.example.com, Permitted: foo.example.com --invalid
+nameLabelsPermitted([NameLabel|NameRest], [PermittedLabel|PermittedRest]) :-
+  PermittedLabel \= "", % Should be checked earlier
+  PermittedLabel = NameLabel,
+  nameLabelsPermitted(NameRest, PermittedRest).
+
+% Everything is permitted
+namePermitted(_, "").
+% Not eveything is permitted
+namePermitted(Name, Permitted) :-
+  split_string(Name, ".", "", NameLabels),
+  split_string(Permitted, ".", "", PermittedLabels),
+  reverse(NameLabels, NameLabelsReversed),
+  reverse(PermittedLabels, PermittedLabelsReversed),
+  nameLabelsPermitted(NameLabelsReversed, PermittedLabelsReversed).
+
+% DNS name constraint name validity
+nameConstraintValid(Name) :-
+  string_chars(Name, NameChars),
+  std:count(NameChars, '*', 0),
+  sub_string(Name, _, 1, 0, LastChar),
+  LastChar \= ".".
+
+suffixMatch(["*"|[]], _).
+suffixMatch([NameLabel|NameRest], [SuffixLabel|SuffixRest]) :-
+  NameLabel = SuffixLabel,
+  suffixMatch(NameRest, SuffixRest).
+
+isPublicSuffix(NameLabels) :-
+  reverse(NameLabels, NameLabelsReverse),
+  publicSuffix(Suffix),
+  split_string(Suffix, ".", "", SuffixLabels),
+  reverse(SuffixLabels, SuffixLabelsReverse),
+  suffixMatch(NameLabelsReverse, SuffixLabelsReverse).
+
+% SAN/CN name validity, without wildcard
+nameValid(Name) :-
+  string_chars(Name, NameChars),
+  std:count(NameChars, '*', 0),
+  sub_string(Name, 0, 1, _, FirstChar),
+  FirstChar \= ".",
+  sub_string(Name, _, 1, 0, LastChar),
+  LastChar \= ".".
+
+% SAN/CN name validity, with wildcard
+nameValid(Name) :-
+  string_chars(Name, NameChars),
+  % If there is (max) one wildcard, it must be first label
+  std:count(NameChars, '*', 1),
+  sub_string(Name, 0, 1, _, FirstChar),
+  FirstChar = "*",
+  sub_string(Name, _, 1, 0, LastChar),
+  LastChar \= ".",
+  % If there is a wildcard, there must be at least two labels
+  % (other than the wildcard label)
+  split_string(Name, ".", "", NameLabels),
+  length(NameLabels, NameLabelsLength),
+  NameLabelsLength > 2,
+  \+ isPublicSuffix(NameLabels).
+
+cleanName(Name, Name) :-
+  sub_string(Name, _, 1, 0, LastChar),
+  LastChar \= "." .
+
+cleanName(Name, Cleaned) :-
+  sub_string(Name, _, 1, 0, LastChar),
+  LastChar = ".",
+  sub_string(Name, 0, _, 1, Cleaned).
+
+% Name-constrained name (any)
+dnsNameValid(Name, PermittedNames, ExcludedNames) :-
+  length(PermittedNames, PermittedNamesLength),
+  length(ExcludedNames, ExcludedNamesLength),
+  % RFC 5280 says both cannot be empty
+  ( PermittedNamesLength > 0; ExcludedNamesLength > 0),
+  (
+    (
+      PermittedNamesLength > 0,
+      forall(member(PermittedName, PermittedNames), (
+        cleanName(PermittedName, CleanPermittedName),
+        nameConstraintValid(CleanPermittedName)
+      )),
+      member(PermittedName, PermittedNames),
+      cleanName(PermittedName, CleanPermittedName),
+      namePermitted(Name, PermittedName)
+    );
+    PermittedNamesLength = 0
+  ),
+  forall(member(ExcludedName, ExcludedNames), (
+    cleanName(ExcludedName, CleanExcludedName),
+    nameConstraintValid(CleanExcludedName),
+    nameNotExcluded(Name, CleanExcludedName)
+  )).
+
+% Name-constrained SAN list
+dnsNameConstrained(_, ChildSANList, PermittedNames, ExcludedNames) :-
+  forall(member(Name, ChildSANList), dnsNameValid(Name,  PermittedNames, ExcludedNames)).
 
 % For certificates issued on-or-after the BR effective
 % For certificates issued on-or-after 1 April 2015 (39 months)
@@ -137,7 +266,16 @@ certVerifiedNonLeaf(Cert):-
     (
       verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
       certs:issuer(Cert, Parent),
-      certVerifiedNonLeaf(Parent)
+      certVerifiedNonLeaf(Parent),
+      (
+        (
+          certs:nameConstraintsExt(Cert, true),
+          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), Permitted),
+          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), Excluded),
+          dnsNameConstrained(LeafCommonName, LeafSANList, Permitted, Excluded)
+        );
+        certs:nameConstraintsExt(Cert, false)
+      )
     );
     verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   ).
@@ -145,13 +283,17 @@ certVerifiedNonLeaf(Cert):-
 certVerifiedLeaf(Cert):-
   certs:fingerprint(Cert, Fingerprint),
   findall(Name, certs:san(Cert, Name), SANList),
+  length(SANList, SANListLength),
+  SANListLength > 0,
+  maplist(cleanName, SANList, CleanSANList),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
+  forall(member(SAN, CleanSANList), nameValid(SAN)),
   certs:signatureAlgorithm(Cert, Algorithm),
   std:getBasicConstraints(Cert, BasicConstraints),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
-  verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
+  verifiedLeaf(Fingerprint, CleanSANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
 certVerifiedChain(Cert):-
   certVerifiedLeaf(Cert),

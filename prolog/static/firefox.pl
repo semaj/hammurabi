@@ -86,13 +86,12 @@ nameValid(Name) :-
   length(NameLabels, NameLabelsLength),
   NameLabelsLength > 2.
 
-% Name-constrainted name (any)
+% Name-constrained name (any)
 dnsNameValid(Name, PermittedNames, ExcludedNames) :-
   length(PermittedNames, PermittedNamesLength),
   length(ExcludedNames, ExcludedNamesLength),
   % RFC 5280 says both cannot be empty
   ( PermittedNamesLength > 0; ExcludedNamesLength > 0),
-  nameValid(Name),
   (
     (
       PermittedNamesLength > 0,
@@ -109,12 +108,12 @@ dnsNameValid(Name, PermittedNames, ExcludedNames) :-
     nameNotExcluded(Name, ExcludedName)
   )).
 
-% Name-constrainted Common Name
+% Name-constrained Common Name
 dnsNameConstrained(ChildCommonName, ChildSANList, PermittedNames, ExcludedNames) :-
   ChildSANList = [],
   dnsNameValid(ChildCommonName, PermittedNames, ExcludedNames).
 
-% Name-constrainted SAN list
+% Name-constrained SAN list
 dnsNameConstrained(_, ChildSANList, PermittedNames, ExcludedNames) :-
   ChildSANList \= [],
   forall(member(Name, ChildSANList), dnsNameValid(Name,  PermittedNames, ExcludedNames)).
@@ -318,11 +317,22 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
 certVerifiedLeaf(Cert, EVStatus):-
   certs:fingerprint(Cert, Fingerprint),
   findall(Name, certs:san(Cert, Name), SANList),
+  length(SANList, SANListLength),
   certs:commonName(Cert, CommonName),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
   certs:signatureAlgorithm(Cert, Algorithm),
   std:getBasicConstraints(Cert, BasicConstraints),
+  (
+    (
+      SANListLength > 0,
+      forall(member(SAN, SANList), nameValid(SAN))
+    );
+    (
+      SANListLength = 0,
+      nameValid(CommonName)
+    )
+  ),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
   certs:stapledResponse(Cert, StapledResponse),
