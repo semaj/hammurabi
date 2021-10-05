@@ -25,7 +25,7 @@ mod extensions;
 
 #[derive(Debug)]
 pub struct PrologCert<'a> {
-    inner: x509_parser::certificate::TbsCertificate<'a>,
+    cert: x509_parser::certificate::X509Certificate<'a>,
     pub serial: String,
 }
 
@@ -36,7 +36,7 @@ impl PrologCert<'_> {
                 assert!(rem.is_empty());
                 Ok(PrologCert {
                     serial: format!("{}", parsed.tbs_certificate.serial),
-                    inner: parsed.tbs_certificate,
+                    cert: parsed,
                 })
             }
             Err(e) => {
@@ -64,6 +64,7 @@ impl PrologCert<'_> {
                 // self.emit_subject(&hash),
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
+                self.emit_signature(&hash),
                 self.emit_subject_public_key_algorithm(&hash),
                 self.emit_rsa_pub_key(&hash),
                 self.emit_dsa_pub_key(&hash),
@@ -116,7 +117,7 @@ impl PrologCert<'_> {
 
     fn emit_common_name(&self, hash: &String) -> String {
         let mut cn: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.3" => {
                     cn = PrologCert::str_from_rdn(f)
@@ -129,7 +130,7 @@ impl PrologCert<'_> {
 
     fn emit_country(&self, hash: &String) -> String { 
         let mut country: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.6" => {
                     country = PrologCert::str_from_rdn(f)
@@ -141,7 +142,7 @@ impl PrologCert<'_> {
     }
     fn emit_organization(&self, hash: &String) -> String { 
         let mut org: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.10" => {
                     org = PrologCert::str_from_rdn(f)
@@ -153,7 +154,7 @@ impl PrologCert<'_> {
     }
     fn emit_given_name(&self, hash: &String) -> String { 
         let mut given: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.42" => {
                     given = PrologCert::str_from_rdn(f)
@@ -165,7 +166,7 @@ impl PrologCert<'_> {
     }
     fn emit_surname(&self, hash: &String) -> String { 
         let mut surname: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.4" => {
                     surname = PrologCert::str_from_rdn(f)
@@ -177,7 +178,7 @@ impl PrologCert<'_> {
     }
     fn emit_state_or_prov(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.8" => {
                     loc = PrologCert::str_from_rdn(f)
@@ -189,7 +190,7 @@ impl PrologCert<'_> {
     }
     fn emit_street_address(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.9" => {
                     loc = PrologCert::str_from_rdn(f)
@@ -201,7 +202,7 @@ impl PrologCert<'_> {
     }
     fn emit_locality(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.7" => {
                     loc = PrologCert::str_from_rdn(f)
@@ -213,7 +214,7 @@ impl PrologCert<'_> {
     }
     fn emit_postal_code(&self, hash: &String) -> String { 
         let mut code: String = String::from("");
-        &self.inner.subject.rdn_seq.iter().for_each(|f| {
+        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.17" => {
                     code = PrologCert::str_from_rdn(f)
@@ -228,9 +229,9 @@ impl PrologCert<'_> {
         format!(
             "notBefore({}, {:?}).\nnotAfter({}, {:?}).",
             hash,
-            &self.inner.validity.not_before.timestamp(),
+            &self.cert.tbs_certificate.validity.not_before.timestamp(),
             hash,
-            &self.inner.validity.not_after.timestamp()
+            &self.cert.tbs_certificate.validity.not_after.timestamp()
         )
     }
 
@@ -238,7 +239,7 @@ impl PrologCert<'_> {
     //     format!(
     //         "subject({}, {}).",
     //         hash,
-    //         PrologCert::name_from_rdn(&self.inner.subject).to_lowercase()
+    //         PrologCert::name_from_rdn(&self.cert.tbs_certificate.subject).to_lowercase()
     //     )
     // }
 
@@ -247,7 +248,7 @@ impl PrologCert<'_> {
     }
 
     pub fn emit_version(&self, hash: &String) -> String {
-        let version = match self.inner.version {
+        let version = match self.cert.tbs_certificate.version {
             X509Version::V1 => 0,
             X509Version::V2 => 1,
             X509Version::V3 => 2,
@@ -257,15 +258,44 @@ impl PrologCert<'_> {
     }
 
     pub fn emit_sign_alg(&self, hash: &String) -> String {
+        println!("{:?}", &self.cert.signature_algorithm.parameters);
+        let parameters = match &self.cert.signature_algorithm.parameters {
+            Some(params) => {
+                match params.as_slice() {
+                    Ok(bytes) => hex::encode(bytes),
+                    Err(_) => "none".to_string(),
+                }
+            },
+            None => "none".to_string(),
+        };
         return format!(
-            "signatureAlgorithm({}, {:?}).",
+            "signatureAlgorithm({}, {:?}, {}).",
             hash,
-            &self.inner.signature.algorithm.to_string()
+            &self.cert.signature_algorithm.algorithm.to_string(),
+            parameters,
+        );
+    }
+
+    pub fn emit_signature(&self, hash: &String) -> String {
+        let parameters = match &self.cert.tbs_certificate.signature.parameters {
+            Some(params) => {
+                match params.as_slice() {
+                    Ok(bytes) => hex::encode(bytes),
+                    Err(_) => "none".to_string(),
+                }
+            },
+            None => "none".to_string(),
+        };
+        return format!(
+            "signature({}, {:?}, {}).",
+            hash,
+            &self.cert.tbs_certificate.signature.algorithm.to_string(),
+            parameters,
         );
     }
     pub fn emit_rsa_pub_key(&self, hash: &String) -> String { 
-        if self.inner.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
-           let bytes = &self.inner.subject_pki.subject_public_key.data;
+        if self.cert.tbs_certificate.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
+           let bytes = &self.cert.tbs_certificate.subject_pki.subject_public_key.data;
            let (n, e) = public_key_from_der(&bytes).unwrap();
             return format!( 
                 "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).\nrsaModLength({}, {:?}).", 
@@ -294,8 +324,8 @@ impl PrologCert<'_> {
         let mut p = 0;
         let mut q = 0;
         let mut g = 0;
-        if self.inner.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.10040.4.1") {
-            match self.inner.subject_pki.algorithm.parameters.as_ref() {
+        if self.cert.tbs_certificate.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.10040.4.1") {
+            match self.cert.tbs_certificate.subject_pki.algorithm.parameters.as_ref() {
                     Some(outer_bo) => {
                         match &outer_bo.content {
                             Sequence(paras) => {
@@ -326,7 +356,7 @@ impl PrologCert<'_> {
         return format!(
             "keyLen({}, {}).",
             hash,
-            &self.inner.subject_pki.subject_public_key.data.len()
+            &self.cert.tbs_certificate.subject_pki.subject_public_key.data.len()
         );
     }
 
@@ -338,7 +368,8 @@ impl PrologCert<'_> {
         let mut acc_assertions: bool = false;
 
         let mut exts = self
-            .inner
+            .cert
+            .tbs_certificate
             .extensions
             .iter()
             .filter_map(|(oid, ext)|
@@ -376,7 +407,7 @@ impl PrologCert<'_> {
 
     pub fn emit_name_constraints(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
-        match self.inner.name_constraints() {
+        match self.cert.tbs_certificate.name_constraints() {
             Some((is_critical, constraints)) => {
                 answer.push(format!("nameConstraintsExt({}, true).", hash));
                 answer.push(format!("nameConstraintsCritical({}, {}).", hash, is_critical));
@@ -398,7 +429,7 @@ impl PrologCert<'_> {
 
     pub fn emit_subject_alternative_names(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
-        match self.inner.subject_alternative_name() {
+        match self.cert.tbs_certificate.subject_alternative_name() {
             Some((is_critical, sans)) => {
                 answer.push(format!("sanExt({}, true).", hash));
                 answer.push(format!("sanCritical({}, {}).", hash, is_critical));
@@ -417,7 +448,7 @@ impl PrologCert<'_> {
 
     pub fn emit_policy_extras(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
-        match self.inner.policy_constraints() {
+        match self.cert.tbs_certificate.policy_constraints() {
             Some((is_critical, policies)) => {
                 answer.push(format!("policyConstraintsExt({}, true).", hash));
                 answer.push(format!("policyConstraintsCritical({}, {}).", hash, is_critical));
@@ -442,7 +473,7 @@ impl PrologCert<'_> {
                 answer.push(format!("policyConstraintsExt({}, false).", hash))
             }
         }
-        match self.inner.inhibit_anypolicy() {
+        match self.cert.tbs_certificate.inhibit_anypolicy() {
             Some((is_critical, policies)) => {
                 answer.push(format!("inhibitAnyPolicyExt({}, true).", hash));
                 answer.push(format!("inhibitAnyPolicyCritical({}, {}).", hash, is_critical));
@@ -452,7 +483,7 @@ impl PrologCert<'_> {
                 answer.push(format!("inhibitAnyPolicyExt({}, false).", hash))
             }
         }
-        match self.inner.policy_mappings() {
+        match self.cert.tbs_certificate.policy_mappings() {
             Some((is_critical, policies)) => {
                 answer.push(format!("policyMappingsExt({}, true).", hash));
                 answer.push(format!("policyMappingsCritial({}, {}).", hash, is_critical));
@@ -471,7 +502,7 @@ impl PrologCert<'_> {
 
     pub fn emit_basic_constraints(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
-        match self.inner.basic_constraints() {
+        match self.cert.tbs_certificate.basic_constraints() {
             Some((is_critical, basic_constraints)) => {
             answer.push(format!("basicConstraintsExt({}, true).", hash));
             answer.push(format!("basicConstraintsCritical({}, {}).", hash, is_critical));
@@ -505,7 +536,7 @@ impl PrologCert<'_> {
     
     pub fn emit_key_usage(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
-        match self.inner.key_usage() {
+        match self.cert.tbs_certificate.key_usage() {
             Some((is_critical, key_usage)) => {
                 answer.push(format!("keyUsageExt({}, true).", hash));
                 answer.push(format!("keyUsageCritical({}, {}).", hash, is_critical));
@@ -545,7 +576,7 @@ impl PrologCert<'_> {
 
     pub fn emit_extended_key_usage(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
-        match self.inner.extended_key_usage() {
+        match self.cert.tbs_certificate.extended_key_usage() {
             Some((is_critical, eku)) => {
                 answer.push(format!("extendedKeyUsageExt({}, true).", hash));
                 answer.push(format!("extendedKeyUsageCritical({}, {}).", hash, is_critical));
@@ -583,7 +614,7 @@ impl PrologCert<'_> {
 
 
     pub fn emit_subject_public_key_algorithm(&self, hash: &String) -> String {
-        let algorithm = self.inner.subject_pki.algorithm.algorithm.to_string();
+        let algorithm = self.cert.tbs_certificate.subject_pki.algorithm.algorithm.to_string();
         format!("keyAlgorithm({}, {:?}).", hash, algorithm)
     }
 }

@@ -201,16 +201,23 @@ extKeyUsageValid(_, ExtKeyUsage) :-
   ExtKeyUsage = [].
 
 checkKeyCertSign(KeyUsage) :-
-  KeyUsage = []; member(keyCertSign, KeyUsage).
+  KeyUsage = []; 
+  member(keyCertSign, KeyUsage).
 
 
 strongSignature(Algorithm) :-
-  % ecdsa with sha1
-  Algorithm \== "1.2.840.10045.4.1",
-  % rsa signature with sha1
-  Algorithm \== "1.3.14.3.2.29",
-  % rsa encryption with sha1
-  Algorithm \== "1.2.840.113549.1.1.5".
+  % ECDSA + SHA512
+  Algorithm = "1.2.840.10045.4.3.2";
+  % ECDSA + SHA384
+  Algorithm = "1.2.840.10045.4.3.3";
+  % ECDSA + SHA512
+  Algorithm = "1.2.840.10045.4.3.4";
+  % RSA + SHA256
+  Algorithm = "1.2.840.113549.1.1.11";
+  % RSA + SHA384
+  Algorithm = "1.2.840.113549.1.1.12";
+  % RSA + SHA512
+  Algorithm = "1.2.840.113549.1.1.13".
 
 
 firefoxNameMatches(SANList, _):-
@@ -290,7 +297,10 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
   certs:fingerprint(Cert, Fingerprint),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
-  certs:signatureAlgorithm(Cert, Algorithm),
+  certs:signatureAlgorithm(Cert, OuterAlgorithm, OuterParams),
+  certs:signature(Cert, InnerAlgorithm, InnerParams),
+  OuterAlgorithm = InnerAlgorithm,
+  OuterParams = InnerParams,
   std:getBasicConstraints(Cert, BasicConstraints),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
@@ -298,7 +308,7 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
   certs:ocspResponse(Cert, OcspResponse),
   (
     (
-      verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse), 
+      verifiedIntermediate(Fingerprint, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse), 
       certs:issuer(Cert, Parent),
       certVerifiedNonLeaf(Parent, LeafCommonName, LeafSANList, EVStatus),
       (
@@ -314,14 +324,16 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
     verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   ).
 
-certVerifiedLeaf(Cert, EVStatus):-
+certVerifiedLeaf(Cert, SANList, EVStatus):-
   certs:fingerprint(Cert, Fingerprint),
-  findall(Name, certs:san(Cert, Name), SANList),
   length(SANList, SANListLength),
   certs:commonName(Cert, CommonName),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
-  certs:signatureAlgorithm(Cert, Algorithm),
+  certs:signatureAlgorithm(Cert, OuterAlgorithm, OuterParams),
+  certs:signature(Cert, InnerAlgorithm, InnerParams),
+  InnerAlgorithm = OuterAlgorithm,
+  OuterParams = InnerParams,
   std:getBasicConstraints(Cert, BasicConstraints),
   (
     (
@@ -337,12 +349,12 @@ certVerifiedLeaf(Cert, EVStatus):-
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
   certs:stapledResponse(Cert, StapledResponse),
   certs:ocspResponse(Cert, OcspResponse),
-  verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
+  verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
 certVerifiedChain(Cert):-
   getEVStatus(Cert, EVStatus),
-  certVerifiedLeaf(Cert, EVStatus),
   findall(Name, certs:san(Cert, Name), SANList),
+  certVerifiedLeaf(Cert, SANList, EVStatus),
   certs:commonName(Cert, CommonName),
   certs:issuer(Cert, Parent),
   certVerifiedNonLeaf(Parent, CommonName, SANList, EVStatus).

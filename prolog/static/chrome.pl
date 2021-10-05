@@ -179,9 +179,20 @@ nameConstraintValid(Fingerprint, Domain):-
   std:stringMatch(Accepted, Domain).
 
 strongSignature(Algorithm):-
-  \+std:md2_sig_algo(Algorithm),
-  \+std:md4_sig_algo(Algorithm),
-  \+std:md5_sig_algo(Algorithm).
+  % ECDSA + SHA512
+  Algorithm = "1.2.840.10045.4.3.2";
+  % ECDSA + SHA384
+  Algorithm = "1.2.840.10045.4.3.3";
+  % ECDSA + SHA512
+  Algorithm = "1.2.840.10045.4.3.4";
+  % RSA + SHA256
+  Algorithm = "1.2.840.113549.1.1.11";
+  % RSA + SHA384
+  Algorithm = "1.2.840.113549.1.1.12";
+  % RSA + SHA512
+  Algorithm = "1.2.840.113549.1.1.13";
+  % RSA-PSS + SHA256 -- Firefox does not allow this one (yet).
+  Algorithm = "1.2.840.113549.1.1.10".
 
 keyUsageValid(_, KeyUsage) :-
   KeyUsage = [].
@@ -197,6 +208,7 @@ keyUsageValid(BasicConstraints, KeyUsage) :-
     member(keyEncipherment, KeyUsage);
     member(keyAgreement, KeyUsage)
   ),
+  % Firefox does not have this exclusion.
   \+member(keyCertSign, KeyUsage).
 
 checkKeyCertSign(KeyUsage) :-
@@ -254,25 +266,30 @@ verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, Ke
   leafDurationValid(Lower, Upper),
   verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
-certVerifiedNonLeaf(Cert):-
+certVerifiedNonLeaf(Cert, LeafSANList):-
+  % Firefox does not have this restriction
+  certs:version(Cert, 2),
   certs:fingerprint(Cert, Fingerprint),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
-  certs:signatureAlgorithm(Cert, Algorithm),
   std:getBasicConstraints(Cert, BasicConstraints),
+  certs:signatureAlgorithm(Cert, OuterAlgorithm, OuterParams),
+  certs:signature(Cert, InnerAlgorithm, InnerParams),
+  OuterAlgorithm = InnerAlgorithm,
+  OuterParams = InnerParams,
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
   (
     (
-      verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
+      verifiedIntermediate(Fingerprint, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
       certs:issuer(Cert, Parent),
-      certVerifiedNonLeaf(Parent),
+      certVerifiedNonLeaf(Parent, LeafSANList),
       (
         (
           certs:nameConstraintsExt(Cert, true),
           findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), Permitted),
           findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), Excluded),
-          dnsNameConstrained(LeafCommonName, LeafSANList, Permitted, Excluded)
+          dnsNameConstrained(_, LeafSANList, Permitted, Excluded)
         );
         certs:nameConstraintsExt(Cert, false)
       )
@@ -280,25 +297,31 @@ certVerifiedNonLeaf(Cert):-
     verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
   ).
 
-certVerifiedLeaf(Cert):-
+certVerifiedLeaf(Cert, SANList):-
   certs:fingerprint(Cert, Fingerprint),
   findall(Name, certs:san(Cert, Name), SANList),
+  % Firefox does not have this restriction
+  certs:version(Cert, 2),
   length(SANList, SANListLength),
   SANListLength > 0,
-  maplist(cleanName, SANList, CleanSANList),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
-  forall(member(SAN, CleanSANList), nameValid(SAN)),
-  certs:signatureAlgorithm(Cert, Algorithm),
+  forall(member(SAN, SANList), nameValid(SAN)),
+  certs:signatureAlgorithm(Cert, OuterAlgorithm, OuterParams),
+  certs:signature(Cert, InnerAlgorithm, InnerParams),
+  OuterAlgorithm = InnerAlgorithm,
+  OuterParams = InnerParams,
   std:getBasicConstraints(Cert, BasicConstraints),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
-  verifiedLeaf(Fingerprint, CleanSANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
+  verifiedLeaf(Fingerprint, SANList, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
 certVerifiedChain(Cert):-
-  certVerifiedLeaf(Cert),
+  findall(Name, certs:san(Cert, Name), SANList),
+  maplist(cleanName, SANList, CleanSANList),
+  certVerifiedLeaf(Cert, CleanSANList),
   certs:issuer(Cert, Parent),
-  certVerifiedNonLeaf(Parent).
+  certVerifiedNonLeaf(Parent, CleanSANList).
 
 main([CertsFile, Cert]):-
   statistics(walltime, _),
