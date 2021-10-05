@@ -1,5 +1,9 @@
 #!/usr/bin/env swipl
 
+:- module(chrome, [
+  verifiedLeaf/8
+]).
+
 :- use_module(chrome_env).
 :- use_module(std).
 

@@ -1,36 +1,38 @@
+#!/usr/bin/env python3
 import sys
+
 from pyswip import Prolog
 from pyswip.easy import Atom
 
 prolog = Prolog()
-prolog.consult("prolog/impute/examples.pl")
+prolog.consult("prolog/impute.pl")
 query = sys.argv[1]
 
-(Fingerprint, SANList, CommonName, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse):-
 fields = [
     ("Fingerprint", '""'),
     ("SANList", '["jameslarisch.com"]'),
     ("CommonName", '""'),
-    ("Lower", '1621487265'),
-    ("Upper", '1621487270'),
+    ("Lower", "1621487265"),
+    ("Upper", "1621487270"),
     ("Algorithm", '"1.2.840.10040.4.3"'),
-    ("BasicConstraints", '[]'),
-    ("KeyUsage", '[]'),
-    ("ExtKeyUsage", '[]'),
-    ("EVStatus", 'ev'),
-    ("StapledResponse", '[valid, not_expired, verified, good]'),
-    ("OcspResponse", '[]'),
+    ("BasicConstraints", "[]"),
+    ("KeyUsage", "[]"),
+    ("ExtKeyUsage", "[]"),
+    ("EVStatus", "ev"),
+    ("StapledResponse", "[valid, not_expired, verified, good]"),
+    ("OcspResponse", "[]"),
 ]
 
 probes = [
     {"Algorithm"},
-    {"KeyUsage"},
-    {"BasicConstraints"},
-    {"ExtKeyUsage"},
+    {"KeyUsage", "BasicConstraints"},
 ]
 
 for missing in probes:
-    input = ", ".join(list(map(lambda f: f[0] if f[0] in missing else f[1], fields))).replace("'", "")
+    input = ", ".join(
+        list(map(lambda f: f[0] if f[0] in missing else f[1], fields))
+    ).replace("'", "")
+    solutions = prolog.query(f"{query}({input})")
     solutions = prolog.query(f"{query}({input})")
     seen = set()
     for sol in solutions:
@@ -51,4 +53,4 @@ for missing in probes:
             seen.add(key)
             print("--")
     print("\n---------------------\n")
-    
+   

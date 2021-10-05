@@ -1,4 +1,7 @@
 #!/usr/bin/env swipl
+:- module(firefox, [
+  verifiedLeaf/12
+]).
 
 :- use_module(ev).
 :- use_module(firefox_env).
