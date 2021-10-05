@@ -1,6 +1,5 @@
 #!/usr/bin/env swipl
 
-% :- use_module(certs).
 :- use_module(ev).
 :- use_module(firefox_env).
 :- use_module(std).
@@ -343,4 +342,4 @@ main([CertsFile, Cert]):-
   statistics(walltime, _),
   certVerifiedChain(Cert),
   statistics(walltime, [_ | [VerifyTime]]),
-  write('Cert verification time): '), write(VerifyTime), write('ms\n').
+  write('Cert verification time: '), write(VerifyTime), write('ms\n').

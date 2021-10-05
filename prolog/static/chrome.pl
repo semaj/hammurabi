@@ -1,6 +1,5 @@
 #!/usr/bin/env swipl
 
-:- use_module(library(clpfd)).
 :- use_module(chrome_env).
 :- use_module(std).
 
@@ -24,11 +23,11 @@ leafDurationValid(Lower, Upper):-
   EightTwentyFiveDays = 71280000,
   ThreeNinetyEightDays = 34387200,
   (
-    (Lower #< July2012, Upper #< July2019, Duration #=< TenYears);
-    (Lower in July2012..April2015, Duration #=< SixtyMonths);
-    (Lower in April2015..March2018, Duration #=< ThirtyNineMonths);
-    (Lower in March2018..Sep2020, Duration #=< EightTwentyFiveDays);
-    (Lower #>= Sep2020, Duration #=< ThreeNinetyEightDays)
+    (Lower < July2012, Upper < July2019, Duration =< TenYears);
+    (Lower >= July2012, Lower < April2015, Duration =< SixtyMonths);
+    (Lower >= April2015, Lower < March2018, Duration =< ThirtyNineMonths);
+    (Lower >= March2018, Lower < Sep2020, Duration =< EightTwentyFiveDays);
+    (Lower >= Sep2020, Duration =< ThreeNinetyEightDays)
   ).
 
 nameConstraintValid(Fingerprint, _):-
@@ -76,7 +75,7 @@ extKeyUsageValid(ExtKeyUsage) :-
 symantecUntrusted(Lower):-
   June2016 = 1464739200,
   Dec2017 = 1512086400,
-  (Lower #< June2016; Lower #> Dec2017).
+  (Lower < June2016; Lower > Dec2017).
 
 % if legacy symantec and
 % symantec enforcement on OR untrusted symantec
@@ -163,5 +162,5 @@ main([CertsFile, Cert]):-
   statistics(walltime, _),
   certVerifiedChain(Cert),
   statistics(walltime, [_ | [VerifyTime]]),
-  write('Cert verification time): '), write(VerifyTime), write('ms\n').
+  write('Cert verification time: '), write(VerifyTime), write('ms\n').
   
