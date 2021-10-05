@@ -5,8 +5,7 @@
 :- include(prolog/gen/job/certs).
 %:- include(prolog/gen/job/std).
 %:- include(prolog/gen/env).
-
-
+	
 isSubCA(Cert) :-
 	certs:isCA(Cert, true),
 	\+std:isRoot(Cert).
@@ -14,6 +13,12 @@ isSubCA(Cert) :-
 isSubCert(Cert) :-
   certs:isCA(Cert, false).
 
+
+caIsCaApplies(Cert) :-
+	certs:keyUsageExt(Cert, true),
+	certs:keyUsage(Cert, keyCertSign),
+  	certs:basicConstraintsExt(Cert, true).
+	
 % sub_ca: ca field MUST be set to true.
 subCaIsCa(Cert) :-
   isSubCA(Cert).
@@ -23,9 +28,9 @@ rootCaIsCa(Cert) :-
   certs:isCA(Cert, true),
   std:isRoot(Cert).
   
+  
 % sub_ca_cert: basicConstraints MUST be present & marked critical.
 subCaBasicConstaintsMustBeCritical(Cert) :-
-  isSubCA(Cert),
   certs:basicConstraintsExt(Cert, true),
   certs:basicConstraintsCritical(Cert, true).
 
@@ -34,15 +39,15 @@ subCaBasicConstaintsMustBeCritical(Cert) :-
  
 % sub_cert: A cert containing givenName or surname 
 % MUST contain the (2.23.140.1.2.3) certPolicy OID.
-subCertGivenOrSurnameHasCorrectPolicy(Cert) :- 
+subCertGivenOrSurnameApplies(Cert) :-
   isSubCert(Cert),
-  givenNameIsPresent(Cert),
-  certs:certificatePolicies(Cert, Oid),
-  equal(Oid, "2.23.140.1.2.3").
+  givenNameIsPresent(Cert).
 
-subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
+subCertGivenOrSurnameApplies(Cert) :-
   isSubCert(Cert),
-  surnameIsPresent(Cert),
+  surnameIsPresent(Cert).
+
+subCertGivenOrSurnameHasCorrectPolicy(Cert) :- 
   certs:certificatePolicies(Cert, Oid),
   equal(Oid, "2.23.140.1.2.3").
 
@@ -60,19 +65,16 @@ subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
 % or surname are present but stateOrProvinceName is absent.
 
 subCertLocalityNameMustAppear(Cert) :-
-  isSubCert(Cert),
   organizationNameIsPresent(Cert),
   \+stateOrProvinceNameIsPresent(Cert),
   localityNameIsPresent(Cert).
   
 subCertLocalityNameMustAppear(Cert) :-
-  isSubCert(Cert),
   givenNameIsPresent(Cert),
   \+stateOrProvinceNameIsPresent(Cert),
   localityNameIsPresent(Cert).
 
 subCertLocalityNameMustAppear(Cert) :-
-  isSubCert(Cert),
   surnameIsPresent(Cert),
   \+stateOrProvinceNameIsPresent(Cert),
   localityNameIsPresent(Cert).
@@ -86,7 +88,6 @@ subCertLocalityNameMustAppear(Cert) :-
   
 % sub_cert: MUST contain one or more policy identifiers.
 subCertContainsCertPolicy(Cert) :- 
-  isSubCert(Cert),
   certs:certificatePoliciesExt(Cert, true),
   certs:certificatePolicies(Cert, _).
 
@@ -94,37 +95,32 @@ subCertContainsCertPolicy(Cert) :-
   \+isSubCert(Cert).
  
 % ca_cert: organizationName MUST appear.
+isCA(Cert) :-
+  certs:isCA(Cert, true).
+  
 caOrganizationNamePresent(Cert) :-
-  certs:isCA(Cert, true),
   organizationNameIsPresent(Cert).
-
-caOrganizationNamePresent(Cert) :-
-  certs:isCA(Cert, false).
 
 % sub_cert: stateOrProvinceName MUST appear if
 % organizationName, givenName, or surname are present 
 % and localityName is absent.
 
 subCertProvinceMustAppear(Cert) :-
-  isSubCert(Cert),
   organizationNameIsPresent(Cert),
   \+localityNameIsPresent(Cert),
   \+certs:stateOrProvinceName(Cert, "").
 
 subCertProvinceMustAppear(Cert) :-
-  isSubCert(Cert),
   givenNameIsPresent(Cert),
   \+localityNameIsPresent(Cert),
   \+certs:stateOrProvinceName(Cert, "").
 
 subCertProvinceMustAppear(Cert) :-
-  isSubCert(Cert),
   surnameIsPresent(Cert),
   \+localityNameIsPresent(Cert),
   \+certs:stateOrProvinceName(Cert, "").
 
 subCertProvinceMustAppear(Cert) :-
-  isSubCert(Cert),
   \+organizationNameIsPresent(Cert),
   \+givenNameIsPresent(Cert),
   \+surnameIsPresent(Cert).
@@ -135,17 +131,14 @@ subCertProvinceMustAppear(Cert) :-
 % sub_cert: stateOrProvinceName MUST NOT appeear if 
 % organizationName, givenName, or surname are absent.
 subCertProvinceMustNotAppear(Cert) :-
-  isSubCert(Cert),
   \+organizationNameIsPresent(Cert),
   certs:stateOrProvinceName(cert_0, "").
   
 subCertProvinceMustNotAppear(Cert) :-
-  isSubCert(Cert),
   \+givenNameIsPresent(Cert),
   certs:stateOrProvinceName(cert_0, "").
  
 subCertProvinceMustNotAppear(Cert) :-
-  isSubCert(Cert),
   \+surnameIsPresent(Cert),
   certs:stateOrProvinceName(cert_0, "").
 
@@ -188,52 +181,47 @@ signatureAlgorithmSupported(Cert) :-
 
 % Certificates MUST meet the following requirements for DSA algorithm 
 % type and key size: L=2048 and N=224,256 or L=3072 and N=256
-
+dsaApplies(Cert) :-
+  certs:spkiDSAParameters(Cert, L, N, G).
+  
 dsaProperModulusOrDivisorSize(Cert) :-
-  certs:spkiDSAParameters(cert_0, L, N, G),
+  certs:spkiDSAParameters(Cert, L, N, G),
   equal(L, 2048),
   equal(N, 224).
 
 dsaProperModulusOrDivisorSize(Cert) :-
-  certs:spkiDSAParameters(cert_0, L, N, G),
+  certs:spkiDSAParameters(Cert, L, N, G),
   equal(L, 2048),
   equal(N, 256).
 
 dsaProperModulusOrDivisorSize(Cert) :-
-  certs:spkiDSAParameters(cert_0, L, N, G),
+  certs:spkiDSAParameters(Cert, L, N, G),
   equal(L, 3072),
   equal(N, 256).
 
 dsaProperModulusOrDivisorSize(Cert) :-
-  \+certs:spkiDSAParameters(cert_0, L, N, G).
+  \+certs:spkiDSAParameters(Cert, L, N, G).
   
 
 % Certificates MUST include all domain parameters
 dsaParamsAllPresent(Cert) :-
-  certs:spkiDSAParameters(cert_0, P, Q, G),
+  certs:spkiDSAParameters(Cert, P, Q, G),
   unequal(P, 0),
   unequal(Q, 0),
   unequal(G, 0).
 
-%dsaParamsMissing(Cert) :-
-%  \+dsaParamsAllPresent(Cert).
-
  
 % Certificates MUST meet the following requirements for algorithm 
 % type and key size: ECC NIST P-256(65), P-384(97), or P-521(133)
-
-%ecImproperCurves(Cert) :-
-%  \+ecProperCurves(Cert).
-
+idecPKeyAlgo(Cert) :-
+  certs:keyAlgorithm(Cert, Algo),
+  equal(Algo, "1.2.840.10045.2.1").
+  
 ecProperCurves(Cert) :-
   idecPKeyAlgo(Cert),
   certs:keyLen(Cert, Len),
   geq(Len, 65).
 
-idecPKeyAlgo(Cert) :-
-  certs:keyAlgorithm(Cert, Algo),
-  equal(Algo, "1.2.840.10045.2.1").
-  
 
 % Certificates MUST be of type X.509 v3.
 validCertificateVersion(Cert) :-
@@ -243,7 +231,6 @@ validCertificateVersion(Cert) :-
 
 % sub_ca: MUST NOT contain the anyPolicy identifier
 subCaMustNotContainAnyPolicy(Cert) :-
-  isSubCA(Cert),
   certs:certificatePoliciesExt(Cert, true),
   certs:certificatePolicies(Cert, Oid),
   \+anyPolicyOid(Oid).
@@ -256,7 +243,6 @@ anyPolicyOid("2.5.29.32.0").
 
 % sub_cert: subjAltName MUST contain at least one entry.
 extSanContainsEntries(Cert) :-
-  isSubCert(Cert),
   certs:sanExt(Cert, true),
   certs:san(Cert, _).
 
@@ -265,14 +251,11 @@ extSanContainsEntries(Cert) :-
 
 % sub_cert: basicContrainsts cA field MUST NOT be true.
 subCertIsNotCa(Cert) :- 
-  isSubCert(Cert),
   certs:keyUsageExt(Cert, true),
   certs:keyUsage(Cert, keyCertSign),
   certs:basicConstraintsExt(Cert, true),
   certs:isCA(Cert, false).
 
-subCertIsNotCa(Cert) :- 
-  \+isSubCert(Cert).
 
 % If the Certificate asserts the policy identifier of 2.23.140.1.2.1, 
 % then it MUST NOT include organizationName, streetAddress, localityName,
@@ -308,7 +291,6 @@ cabDvDoesNotConflictWithStreet(Cert) :-
 % sub_cert: streetAddress MUST NOT appear if organizationName, 
 % 	    givenName, and surname fields are absent.
 subCertStreetAddressMustNotAppear(Cert) :-
-  isSubCert(Cert),
   \+organizationNameIsPresent(Cert),
   \+givenNameIsPresent(Cert),
   \+surnameIsPresent(Cert),
@@ -320,7 +302,6 @@ subCertStreetAddressMustNotAppear(Cert) :-
 % sub_cert: localityName MUST NOT appear if organizationName, 
 %	    givenName, and surname fields are absent.
 subCertLocalityNameMustNotAppear(Cert) :-
-  isSubCert(Cert),
   \+organizationNameIsPresent(Cert),
   \+givenNameIsPresent(Cert),
   \+surnameIsPresent(Cert),
@@ -332,7 +313,6 @@ subCertLocalityNameMustNotAppear(Cert) :-
 % sub_ca: authorityInformationAccess MUST be present, 
 %         with the exception of stapling.  
 subCaAiaPresent(Cert) :-
-  isSubCA(Cert),
   certs:authorityInfoAccessExt(Cert, true).
 
 subCaAiaPresent(Cert) :-
@@ -342,7 +322,6 @@ subCaAiaPresent(Cert) :-
 % sub_cert: authorityInformationAccess MUST be present, 
 % 	    with the exception of stapling.  
 subCertAiaPresent(Cert) :-
-  isSubCert(Cert),
   certs:authorityInfoAccessExt(Cert, true).
 
 subCertAiaPresent(Cert) :-
@@ -351,7 +330,6 @@ subCertAiaPresent(Cert) :-
 
 % sub_ca: authorityInformationAccess MUST NOT be marked critical
 subCaAiaNotMarkedCritical(Cert) :-
-  isSubCA(Cert),
   certs:authorityInfoAccessExt(Cert, true),
   certs:authorityInfoAccessCritical(Cert, false).
 
@@ -362,7 +340,6 @@ subCaAiaNotMarkedCritical(Cert) :-
 %         indicates the Subordinate CA’s adherence to and compliance 
 %	  with these requirements
 subCaCertificatePoliciesPresent(Cert) :-
-  isSubCA(Cert),
   certs:certificatePoliciesExt(Cert, true).
 
 subCaCertificatePoliciesPresent(Cert) :-
