@@ -299,7 +299,6 @@ certVerifiedNonLeaf(Cert, LeafSANList):-
 
 certVerifiedLeaf(Cert, SANList):-
   certs:fingerprint(Cert, Fingerprint),
-  findall(Name, certs:san(Cert, Name), SANList),
   % Firefox does not have this restriction
   certs:version(Cert, 2),
   length(SANList, SANListLength),
