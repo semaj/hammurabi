@@ -48,12 +48,25 @@ sha1_sig_algo("1.3.14.3.2.13"). % sha1DSA
 sha1_sig_algo("1.3.14.3.2.27"). % dsaSHA1
 sha1_sig_algo("1.3.14.3.2.26"). % sha1NoSign
 sha1_sig_algo("1.2.840.10045.4.1"). % sha1ECDSA
+  
+% ecdsa
+ecdsa_sig_algo("1.2.840.10045.4.3.2").% ECDSA + SHA512
+ecdsa_sig_algo("1.2.840.10045.4.3.3").  % ECDSA + SHA384
+ecdsa_sig_algo("1.2.840.10045.4.3.4").  % ECDSA + SHA512
+
+% rsa
+rsa_sig_algo("1.2.840.113549.1.1.11").  % RSA + SHA256
+rsa_sig_algo("1.2.840.113549.1.1.12").  % RSA + SHA384
+rsa_sig_algo("1.2.840.113549.1.1.13").  % RSA + SHA512
+rsa_sig_algo("1.2.840.113549.1.1.10").  % RSA-PSS + SHA256
 
 algorithm(Oid):-
-    md2_sig_algo(Oid);
-    md4_sig_algo(Oid);
-    md5_sig_algo(Oid);
-    sha1_sig_algo(Oid).
+  md2_sig_algo(Oid);
+  md4_sig_algo(Oid);
+  md5_sig_algo(Oid);
+  sha1_sig_algo(Oid);
+  ecdsa_sig_algo(Oid);
+  rsa_sig_algo(Oid).
 
 basicConstraints(Bc):-
     Bc = [];

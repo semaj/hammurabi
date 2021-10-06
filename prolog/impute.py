@@ -14,7 +14,7 @@ fields = [
     ("CommonName", '""'),
     ("Lower", "1621487265"),
     ("Upper", "1621487270"),
-    ("Algorithm", '"1.2.840.10040.4.3"'),
+    ("Algorithm", '"1.2.840.113549.1.1.13"'),
     ("BasicConstraints", "[]"),
     ("KeyUsage", "[]"),
     ("ExtKeyUsage", "[]"),
