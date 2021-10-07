@@ -4,6 +4,7 @@
   verifiedLeaf/8
 ]).
 
+:- use_module(library(uri)).
 :- use_module(chrome_env).
 :- use_module(std).
 :- use_module(psl).
@@ -100,14 +101,18 @@ nameValid(Name) :-
   NameLabelsLength > 2,
   \+ isPublicSuffix(NameLabels).
 
-cleanName(Name, Name) :-
-  sub_string(Name, _, 1, 0, LastChar),
-  LastChar \= "." .
+cleanName(Name, Decoded) :-
+  uri_encoded(path, D, Name),
+  atom_string(D, Decoded),
+  sub_string(Decoded, _, 1, 0, LastChar),
+  LastChar \= ".".
 
 cleanName(Name, Cleaned) :-
-  sub_string(Name, _, 1, 0, LastChar),
+  uri_encoded(path, D, Name),
+  atom_string(D, Decoded),
+  sub_string(Decoded, _, 1, 0, LastChar),
   LastChar = ".",
-  sub_string(Name, 0, _, 1, Cleaned).
+  sub_string(Decoded, 0, _, 1, Cleaned).
 
 % Name-constrained name (any)
 dnsNameValid(Name, PermittedNames, ExcludedNames) :-
@@ -124,7 +129,7 @@ dnsNameValid(Name, PermittedNames, ExcludedNames) :-
       )),
       member(PermittedName, PermittedNames),
       cleanName(PermittedName, CleanPermittedName),
-      namePermitted(Name, PermittedName)
+      namePermitted(Name, CleanPermittedName)
     );
     PermittedNamesLength = 0
   ),
@@ -163,17 +168,17 @@ leafDurationValid(Lower, Upper):-
     (Lower >= Sep2020, Duration =< ThreeNinetyEightDays)
   ).
 
-nameConstraintValid(Fingerprint, _):-
+fingerprintValid(Fingerprint, _):-
   chrome_env:trusted(Fingerprint),
   \+chrome_env:anssiFingerprint(Fingerprint),
   \+chrome_env:indiaFingerprint(Fingerprint).
 
-nameConstraintValid(Fingerprint, Domain):-
+fingerprintValid(Fingerprint, Domain):-
   chrome_env:indiaFingerprint(Fingerprint),
   chrome_env:indiaDomain(Accepted),
   std:stringMatch(Accepted, Domain).
 
-nameConstraintValid(Fingerprint, Domain):-
+fingerprintValid(Fingerprint, Domain):-
   chrome_env:anssiFingerprint(Fingerprint),
   chrome_env:anssiDomain(Accepted),
   std:stringMatch(Accepted, Domain).
@@ -233,11 +238,10 @@ badSymantec(Fingerprint, Lower):-
   \+chrome_env:symantecManagedCA(Fingerprint),
   symantecUntrusted(Lower).
 
-
 isChromeRoot(Fingerprint):-
   chrome_env:trusted(Fingerprint),
   certs:envDomain(Domain),
-  nameConstraintValid(Fingerprint, Domain).
+  fingerprintValid(Fingerprint, Domain).
 
 notCrlSet(F):-
     var(F), F = "".
@@ -246,7 +250,6 @@ notCrlSet(F):-
     nonvar(F), \+chrome_env:crlSet(F).
 
 verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
-  std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage),
   std:isTimeValid(Lower, Upper),
   isChromeRoot(Fingerprint),
@@ -267,6 +270,7 @@ verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, Ke
   verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
 certVerifiedNonLeaf(Cert, LeafSANList):-
+  std:isCA(Cert),
   % Firefox does not have this restriction
   certs:version(Cert, 2),
   certs:fingerprint(Cert, Fingerprint),

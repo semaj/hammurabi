@@ -258,7 +258,6 @@ impl PrologCert<'_> {
     }
 
     pub fn emit_sign_alg(&self, hash: &String) -> String {
-        println!("{:?}", &self.cert.signature_algorithm.parameters);
         let parameters = match &self.cert.signature_algorithm.parameters {
             Some(params) => {
                 match params.as_slice() {
