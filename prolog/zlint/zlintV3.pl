@@ -2,7 +2,7 @@
 %:- use_module(std).
 %:- use_module(env).
 %:- use_module(ext).
-:- include(prolog/gen/job/certs).
+:- use_module("prolog/job/certs").
 %:- include(prolog/gen/job/std).
 %:- include(prolog/gen/env).
 	

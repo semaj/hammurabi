@@ -1,7 +1,7 @@
 %:- use_module(std).
 %:- use_module(certs).
 %:- use_module(env).
-:- include(prolog/gen/job/certs).
+:- use_module("prolog/job/certs").
 %:- include(prolog/gen/job/std).
 %:- include(prolog/gen/env).
 :- include(public_suffix_list).
