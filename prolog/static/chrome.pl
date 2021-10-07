@@ -249,15 +249,17 @@ isChromeRoot(Fingerprint):-
 
 % EC* algorithms don't have params
 isValidPKI(Cert) :-
-  \+spkiDSAParameters(Cert, _, _, _),
-  \+rsaModLength(Cert, _).
+  \+certs:spkiDSAParameters(Cert, _, _, _),
+  certs:rsaModLength(Cert, "NA").
 
 isValidPKI(Cert) :-
   certs:spkiDSAParameters(Cert, Length, _, _),
+  Length \== "NA",
   Length >= 1024.
 
 isValidPKI(Cert) :-
-  rsaModLength(Cert, Length),
+  certs:rsaModLength(Cert, Length),
+  Length \== "NA",
   Length >= 1024.
 
 notCrlSet(F):-
@@ -266,7 +268,12 @@ notCrlSet(F):-
 notCrlSet(F):-
     nonvar(F), \+chrome_env:crlSet(F).
 
+pathLengthValid(CertsSoFar, BasicConstraints):-
+  BasicConstraints = [_, Limit],
+  (Limit == none; CertsSoFar =< Limit).
+
 verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage):-
+  std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage),
   std:isTimeValid(Lower, Upper),
   isChromeRoot(Fingerprint),
@@ -275,6 +282,7 @@ verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage)
   extKeyUsageValid(ExtKeyUsage).
 
 verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
+  std:isCA(BasicConstraints),
   notCrlSet(Fingerprint),
   \+badSymantec(Fingerprint, Lower),
   std:isTimeValid(Lower, Upper),
@@ -283,14 +291,16 @@ verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, Key
   extKeyUsageValid(ExtKeyUsage).
 
 verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
-  extKeyUsageValid(ExtKeyUsage),
   certs:envDomain(Domain),
   std:nameMatchesSAN(Domain, SANList),
+  std:isTimeValid(Lower, Upper),
   leafDurationValid(Lower, Upper),
-  verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
+  notCrlSet(Fingerprint),
+  strongSignature(Algorithm),
+  keyUsageValid(BasicConstraints, KeyUsage),
+  extKeyUsageValid(ExtKeyUsage).
 
-certVerifiedNonLeaf(Cert, LeafSANList):-
-  std:isCA(Cert),
+certVerifiedNonLeaf(Cert, LeafSANList, CertsSoFar):-
   isValidPKI(Cert),
   % Firefox does not have this restriction
   certs:version(Cert, 2),
@@ -304,11 +314,12 @@ certVerifiedNonLeaf(Cert, LeafSANList):-
   OuterParams = InnerParams,
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  pathLengthValid(CertsSoFar, BasicConstraints),
   (
     (
       verifiedIntermediate(Fingerprint, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
       certs:issuer(Cert, Parent),
-      certVerifiedNonLeaf(Parent, LeafSANList),
+      certVerifiedNonLeaf(Parent, LeafSANList, CertsSoFar + 1),
       (
         (
           certs:nameConstraintsExt(Cert, true),
@@ -323,15 +334,13 @@ certVerifiedNonLeaf(Cert, LeafSANList):-
   ).
 
 % TODO
-isNotRevoked(Cert).
+isNotRevoked(_).
 
 certVerifiedLeaf(Cert, SANList):-
+  std:getEVStatus(Cert, EVStatus),
   (
-    \+std:isEV(Cert);
-    (
-      std:isEV(Cert),
-      isNotRevoked(Cert)
-    )
+    EVStatus = not_ev;
+    isNotRevoked(Cert)
   ),
   certs:fingerprint(Cert, Fingerprint),
   % Firefox does not have this restriction
@@ -356,7 +365,7 @@ certVerifiedChain(Cert):-
   maplist(cleanName, SANList, CleanSANList),
   certVerifiedLeaf(Cert, CleanSANList),
   certs:issuer(Cert, Parent),
-  certVerifiedNonLeaf(Parent, CleanSANList).
+  certVerifiedNonLeaf(Parent, CleanSANList, 0).
 
 main([CertsFile, Cert]):-
   statistics(walltime, _),
