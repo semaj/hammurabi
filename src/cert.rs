@@ -66,7 +66,9 @@ impl PrologCert<'_> {
                 self.emit_sign_alg(&hash),
                 self.emit_signature(&hash),
                 self.emit_subject_public_key_algorithm(&hash),
-                self.emit_rsa_pub_key(&hash),
+                self.emit_spki_rsa(&hash),
+                //self.emit_signature_rsa(&hash),
+                //self.emit_signature_algorithm_rsa(&hash),
                 self.emit_dsa_pub_key(&hash),
                 self.emit_key_len(&hash),
                 self.emit_extensions(&hash),
@@ -292,12 +294,12 @@ impl PrologCert<'_> {
             parameters,
         );
     }
-    pub fn emit_rsa_pub_key(&self, hash: &String) -> String { 
+    pub fn emit_spki_rsa(&self, hash: &String) -> String { 
         if self.cert.tbs_certificate.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
            let bytes = &self.cert.tbs_certificate.subject_pki.subject_public_key.data;
            let (n, e) = public_key_from_der(&bytes).unwrap();
             return format!( 
-                "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).\nrsaModLength({}, {:?}).", 
+                "spkiRSAModulus({}, {:?}).\nspkiRSAExponent({}, {:?}).\nspkiRSAModLength({}, {:?}).", 
                     hash, 
                     BigUint::from_bytes_be(&n),
                     hash, 
@@ -307,16 +309,67 @@ impl PrologCert<'_> {
                 );
         }
         return format!( 
-            "rsaModulus({}, {:?}).\nrsaExponent({}, {:?}).\nrsaModLength({}, {:?}).", 
-                hash, 
-                "NA",
-                hash, 
-                "NA",
+            "spkiRSAModulus({}, {}).\nspkiRSAExponent({}, {}).\nspkiRSAModLength({}, {}).", 
                 hash,
-                "NA"
+                "na",
+                hash,
+                "na",
+                hash,
+                "na"
             );
-         
     }
+
+    //pub fn emit_signature_rsa(&self, hash: &String) -> String { 
+        //if self.cert.tbs_certificate.signature.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
+           //let bytes = &self.cert.tbs_certificate.signature.algorithm.bytes();
+           //let (n, e) = public_key_from_der(&bytes).unwrap();
+            //return format!( 
+                //"signatureRSAModulus({}, {:?}).\nsignatureRSAExponent({}, {:?}).\nsignatureRSAModLength({}, {:?}).", 
+                    //hash, 
+                    //BigUint::from_bytes_be(&n),
+                    //hash, 
+                    //BigUint::from_bytes_be(&e),
+                    //hash, 
+                    //BigUint::from_bytes_be(&n).bits()
+                //);
+        //}
+        //return format!( 
+            //"signatureRSAModulus({}, {}).\nsignatureRSAExponent({}, {}).\nsignatureRSAModLength({}, {}).", 
+                //hash, 
+                //"na",
+                //hash, 
+                //"na",
+                //hash,
+                //"na"
+            //);
+         
+    //}
+
+    //pub fn emit_signature_algorithm_rsa(&self, hash: &String) -> String { 
+        //if self.cert.signature_algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
+           //let bytes = &self.cert.tbs_certificate.subject_pki.subject_public_key.data;
+           //let (n, e) = public_key_from_der(&bytes).unwrap();
+            //return format!( 
+                //"signatureAlgorithmRSAModulus({}, {:?}).\nsignatureAlgorithmRSAExponent({}, {:?}).\nsignatureRSAModLength({}, {:?}).", 
+                    //hash, 
+                    //BigUint::from_bytes_be(&n),
+                    //hash, 
+                    //BigUint::from_bytes_be(&e),
+                    //hash, 
+                    //BigUint::from_bytes_be(&n).bits()
+                //);
+        //}
+        //return format!( 
+            //"signatureAlgorithmRSAModulus({}, {}).\nsignatureAlgorithmRSAExponent({}, {}).\nsignatureAlgorithmRSAModLength({}, {}).", 
+                //hash, 
+                //"na",
+                //hash, 
+                //"na",
+                //hash,
+                //"na"
+            //);
+         
+    //}
 
     pub fn emit_dsa_pub_key(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
@@ -345,8 +398,10 @@ impl PrologCert<'_> {
                             _ => ()
                         }
                     }
-                    None => { answer.push(format!("DSAParameters Are Absent")); }
+                    None => answer.push(format!("spkiDSAParameters({}, na, na, na).", hash)),
                 }
+        } else {
+            answer.push(format!("spkiDSAParameters({}, na, na, na).", hash));
         }
         return answer.join("");
     }

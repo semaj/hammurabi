@@ -222,7 +222,7 @@ checkKeyCertSign(KeyUsage) :-
 
 extKeyUsageValid(ExtKeyUsage) :-
   ExtKeyUsage = []; 
-  % I'm unsure about this one
+  % I'm pretty sure about this one, firefox doesn't allow this
   member(any, ExtKeyUsage);
   member(serverAuth, ExtKeyUsage).
 
@@ -247,19 +247,17 @@ isChromeRoot(Fingerprint):-
   certs:envDomain(Domain),
   fingerprintValid(Fingerprint, Domain).
 
-% EC* algorithms don't have params
 isValidPKI(Cert) :-
-  \+certs:spkiDSAParameters(Cert, _, _, _),
-  certs:rsaModLength(Cert, "NA").
+  certs:spkiDSAParameters(Cert, na, na, na),
+  certs:spkiRSAModLength(Cert, na).
 
 isValidPKI(Cert) :-
   certs:spkiDSAParameters(Cert, Length, _, _),
-  Length \== "NA",
+  Length \= na,
   Length >= 1024.
 
 isValidPKI(Cert) :-
-  certs:rsaModLength(Cert, Length),
-  Length \== "NA",
+  certs:spkiRSAModLength(Cert, Length),
   Length >= 1024.
 
 notCrlSet(F):-
@@ -278,6 +276,7 @@ verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage)
   std:isTimeValid(Lower, Upper),
   isChromeRoot(Fingerprint),
   \+badSymantec(Fingerprint, Lower),
+  std:isCA(BasicConstraints),
   % Trust anchor WITH CONSTRAINTS
   extKeyUsageValid(ExtKeyUsage).
 

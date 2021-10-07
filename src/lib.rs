@@ -245,7 +245,6 @@ pub fn write_job_files(job_dir: &str, domain: &str, chain_facts: &str) -> io::Re
     spkiDSAParameters/4,
     envDomain/1
 ]).
-spkiDSAParameters(hack, a, b, c).
 \n"
     );
     fs::create_dir_all(job_dir)?;

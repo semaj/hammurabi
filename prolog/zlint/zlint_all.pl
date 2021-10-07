@@ -164,27 +164,27 @@ rsaApplies(Cert) :-
 
 % RSA: Public Exponent must be odd
 rsaPublicExponentOdd(Cert) :- 
-  certs:rsaExponent(Cert, Exp), 
+  certs:spkiRSAExponent(Cert, Exp), 
   modulus(1, Exp, 2).
 
 rsaPublicExponentNotTooSmall(Cert) :- 
-  certs:rsaExponent(Cert, Exp),
+  certs:spkiRSAExponent(Cert, Exp),
   geq(Exp, 3).
 
 rsaPublicExponentInRange(Cert) :- 
-  certs:rsaExponent(Cert, Exp),
+  certs:spkiRSAExponent(Cert, Exp),
   geq(Exp, 65537). 
 
 rsaPublicExponentInRange(Cert) :- 
-  certs:rsaExponent(Cert, Exp),
+  certs:spkiRSAExponent(Cert, Exp),
   \+geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
 
 rsaModOdd(Cert) :- 
-  certs:rsaModulus(Cert, Mod), 
+  certs:spkiRSAModulus(Cert, Mod), 
   modulus(1, Mod, 2).
 
 rsaModFactorsSmallerThan752(Cert) :- 
-  certs:rsaModulus(Cert, Modulus),
+  certs:spkiRSAModulus(Cert, Modulus),
   prime_num(Mod),
   modulus(0, Modulus, Mod).
 
@@ -192,7 +192,7 @@ rsaModNoFactorsSmallerThan752(Cert) :-
   \+rsaModFactorsSmallerThan752(Cert).
 
 rsaModMoreThan2048Bits(Cert) :- 
-  certs:rsaModLength(Cert, Length), 
+  certs:spkiRSA(Cert, Length), 
   geq(Length, 2048).
 
 
