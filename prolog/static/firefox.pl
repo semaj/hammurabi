@@ -246,6 +246,19 @@ notCrl(F):-
 notCrl(F):-
     nonvar(F), \+firefox_env:oneCrl(F).
 
+isValidPKI(Cert) :-
+  certs:spkiDSAParameters(Cert, na, na, na),
+  certs:spkiRSAModLength(Cert, na).
+
+isValidPKI(Cert) :-
+  certs:spkiDSAParameters(Cert, Length, _, _),
+  Length \= na,
+  Length >= 1024.
+
+isValidPKI(Cert) :-
+  certs:spkiRSAModLength(Cert, Length),
+  Length >= 1024.
+
 verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   firefox_env:trustedRoots(Fingerprint),
   \+firefox_env:symantecFingerprint(Fingerprint),
@@ -269,6 +282,7 @@ verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, Algorithm, BasicCon
   verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
 certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
+  isValidPKI(Cert),
   certs:fingerprint(Cert, Fingerprint),
   certs:notBefore(Cert, Lower),
   certs:notAfter(Cert, Upper),
@@ -300,6 +314,7 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
   ).
 
 certVerifiedLeaf(Cert, SANList, EVStatus):-
+  isValidPKI(Cert),
   certs:fingerprint(Cert, Fingerprint),
   length(SANList, SANListLength),
   certs:commonName(Cert, CommonName),
