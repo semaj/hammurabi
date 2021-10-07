@@ -85,6 +85,7 @@ keyUsageList(L):-
   N in 0..4, label([N]), length(L, N),
   maplist(keyUsageVal, L), is_set(L).
   
+extKeyUsageVal(any).
 extKeyUsageVal(serverAuth).
 extKeyUsageVal(clientAuth).
 extKeyUsageVal(oCSPSigning).

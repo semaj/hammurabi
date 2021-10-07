@@ -598,7 +598,6 @@ impl PrologCert<'_> {
                 if eku.ocscp_signing {
                     answer.push(format!("{} oCSPSigning).", prefix));
                 }
-                // TODO: Use this in Prolog
                 if eku.any {
                     answer.push(format!("{} any).", prefix));
                 }

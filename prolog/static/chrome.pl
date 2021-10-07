@@ -217,10 +217,14 @@ keyUsageValid(BasicConstraints, KeyUsage) :-
   \+member(keyCertSign, KeyUsage).
 
 checkKeyCertSign(KeyUsage) :-
-  (KeyUsage = []; member(keyCertSign, KeyUsage)).
+  KeyUsage = []; 
+  member(keyCertSign, KeyUsage).
 
 extKeyUsageValid(ExtKeyUsage) :-
-  (ExtKeyUsage = []; member(serverAuth, ExtKeyUsage)).
+  ExtKeyUsage = []; 
+  % I'm unsure about this one
+  member(any, ExtKeyUsage);
+  member(serverAuth, ExtKeyUsage).
 
 symantecUntrusted(Lower):-
   June2016 = 1464739200,
@@ -243,17 +247,32 @@ isChromeRoot(Fingerprint):-
   certs:envDomain(Domain),
   fingerprintValid(Fingerprint, Domain).
 
+% EC* algorithms don't have params
+isValidPKI(Cert) :-
+  \+spkiDSAParameters(Cert, _, _, _),
+  \+rsaModLength(Cert, _).
+
+isValidPKI(Cert) :-
+  certs:spkiDSAParameters(Cert, Length, _, _),
+  Length >= 1024.
+
+isValidPKI(Cert) :-
+  rsaModLength(Cert, Length),
+  Length >= 1024.
+
 notCrlSet(F):-
     var(F), F = "".
 
 notCrlSet(F):-
     nonvar(F), \+chrome_env:crlSet(F).
 
-verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
+verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage):-
   checkKeyCertSign(KeyUsage),
   std:isTimeValid(Lower, Upper),
   isChromeRoot(Fingerprint),
-  \+badSymantec(Fingerprint, Lower).
+  \+badSymantec(Fingerprint, Lower),
+  % Trust anchor WITH CONSTRAINTS
+  extKeyUsageValid(ExtKeyUsage).
 
 verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
   notCrlSet(Fingerprint),
@@ -264,6 +283,7 @@ verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, Key
   extKeyUsageValid(ExtKeyUsage).
 
 verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
+  extKeyUsageValid(ExtKeyUsage),
   certs:envDomain(Domain),
   std:nameMatchesSAN(Domain, SANList),
   leafDurationValid(Lower, Upper),
@@ -271,6 +291,7 @@ verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, Ke
 
 certVerifiedNonLeaf(Cert, LeafSANList):-
   std:isCA(Cert),
+  isValidPKI(Cert),
   % Firefox does not have this restriction
   certs:version(Cert, 2),
   certs:fingerprint(Cert, Fingerprint),
@@ -298,10 +319,20 @@ certVerifiedNonLeaf(Cert, LeafSANList):-
         certs:nameConstraintsExt(Cert, false)
       )
     );
-    verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
+    verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage)
   ).
 
+% TODO
+isNotRevoked(Cert).
+
 certVerifiedLeaf(Cert, SANList):-
+  (
+    \+std:isEV(Cert);
+    (
+      std:isEV(Cert),
+      isNotRevoked(Cert)
+    )
+  ),
   certs:fingerprint(Cert, Fingerprint),
   % Firefox does not have this restriction
   certs:version(Cert, 2),
@@ -317,6 +348,7 @@ certVerifiedLeaf(Cert, SANList):-
   std:getBasicConstraints(Cert, BasicConstraints),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  isValidPKI(Cert),
   verifiedLeaf(Fingerprint, SANList, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
 certVerifiedChain(Cert):-
