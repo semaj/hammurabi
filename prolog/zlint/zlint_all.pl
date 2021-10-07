@@ -1,5 +1,6 @@
 % Master zlint file - has all the lints in it
 :- use_module("prolog/job/certs").
+:- include(const).
 % The following functions are taken from zlint
 % specifically the cabf_br tests  
 % but reimplemented using Prolog 
