@@ -119,7 +119,7 @@ impl PrologCert<'_> {
 
     fn emit_common_name(&self, hash: &String) -> String {
         let mut cn: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.3" => {
                     cn = PrologCert::str_from_rdn(f)
@@ -132,7 +132,7 @@ impl PrologCert<'_> {
 
     fn emit_country(&self, hash: &String) -> String { 
         let mut country: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.6" => {
                     country = PrologCert::str_from_rdn(f)
@@ -144,7 +144,7 @@ impl PrologCert<'_> {
     }
     fn emit_organization(&self, hash: &String) -> String { 
         let mut org: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.10" => {
                     org = PrologCert::str_from_rdn(f)
@@ -156,7 +156,7 @@ impl PrologCert<'_> {
     }
     fn emit_given_name(&self, hash: &String) -> String { 
         let mut given: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.42" => {
                     given = PrologCert::str_from_rdn(f)
@@ -168,7 +168,7 @@ impl PrologCert<'_> {
     }
     fn emit_surname(&self, hash: &String) -> String { 
         let mut surname: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.4" => {
                     surname = PrologCert::str_from_rdn(f)
@@ -180,7 +180,7 @@ impl PrologCert<'_> {
     }
     fn emit_state_or_prov(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.8" => {
                     loc = PrologCert::str_from_rdn(f)
@@ -192,7 +192,7 @@ impl PrologCert<'_> {
     }
     fn emit_street_address(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.9" => {
                     loc = PrologCert::str_from_rdn(f)
@@ -204,7 +204,7 @@ impl PrologCert<'_> {
     }
     fn emit_locality(&self, hash: &String) -> String { 
         let mut loc: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.7" => {
                     loc = PrologCert::str_from_rdn(f)
@@ -216,7 +216,7 @@ impl PrologCert<'_> {
     }
     fn emit_postal_code(&self, hash: &String) -> String { 
         let mut code: String = String::from("");
-        &self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.17" => {
                     code = PrologCert::str_from_rdn(f)

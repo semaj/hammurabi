@@ -120,7 +120,7 @@ pub fn get_chain_facts(
         subject_ref = intermediate_ref;
         cert_index += 1;
     }
-    println!("Translation time: {}ms", translation_time);
+    //println!("Translation time: {}ms", translation_time);
 
     let mut facts = repr.split("\n").collect::<Vec<&str>>();
     facts.sort_by(|a, b| a.cmp(b));
@@ -137,8 +137,8 @@ pub fn verify_chain(job_dir: &str, client: &str) -> Result<(), Error> {
         .expect("failed to execute process");
 
     let output = verifier.wait_with_output().unwrap();
-    print!("{}", String::from_utf8(output.stdout).unwrap());
-    println!("Binary running time: {}ms", start.elapsed().as_millis());
+    //print!("{}", String::from_utf8(output.stdout).unwrap());
+    //println!("Binary running time: {}ms", start.elapsed().as_millis());
     match output.status.code().unwrap() {
         0 => Ok(()),
         10 => Err(Error::CertNotTimeValid),

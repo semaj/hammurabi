@@ -3,6 +3,10 @@ use serde::Deserialize;
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
+use rayon;
+use std::thread;
+use rayon::prelude::*;
+use std::sync::Arc;
 
 use docopt::Docopt;
 
@@ -12,7 +16,7 @@ Verifies certificate at <path> for host <hostname> using policy for client <clie
 <path> should be an absolute path, because rustls has some silly behavior regarding paths.
 
 Usage:
-  localcheck [options] <client> <mappingfile> <intpath> <outputfile> [--ocsp]
+  localcheck [options] <client> <mappingpath> <intpath> <outpath> --start=<start> --end=<end> [--ocsp] 
   localcheck (--version | -v)
   localcheck (--help | -h)
 
@@ -26,10 +30,11 @@ const FOOTER: &'static str = "-----END CERTIFICATE-----";
 #[derive(Debug, Deserialize)]
 struct Args {
     arg_client: String,
-    arg_mappingfile: String,
+    arg_mappingpath: String,
     arg_intpath: String,
-    //arg_workingPath: String, (thread-safety)
-    arg_outputfile: String,
+    arg_outpath: String,
+    flag_start: usize,
+    flag_end: usize,
     flag_ocsp: bool,
 }
 
@@ -68,36 +73,38 @@ fn main() {
         .and_then(|d| Ok(d.version(Some(version))))
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
-    let mut rdr = csv::ReaderBuilder::new()
-        .has_headers(false)
-        .flexible(true)
-        .from_path(&args.arg_mappingfile).unwrap();
-    let mut out_file = File::create(&args.arg_outputfile).unwrap();
-    rdr.records().for_each(|f| {
-        let record = f.unwrap();
-        let row: Row = record.deserialize(None).unwrap();
-        let chain_raw = form_chain(&row.certificate_bytes, &args.arg_intpath, &row.ints);
-        let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
-        let domain = row.domain.as_str();
-        let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
-        let job_dir = format!("prolog/job{}", jobindex);
+    //let pool = rayon::ThreadPoolBuilder::new().num_threads(args.arg_threads.unwrap_or(8)).build().unwrap();
+    let arc = Arc::new(args);
+    (arc.flag_start..=arc.flag_end).into_par_iter().for_each(|n| {
+        let arc = Arc::clone(&arc);
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .flexible(true)
+            .from_path(format!("{}/cert-list-part-{}.txt", &arc.arg_mappingpath, n)).unwrap();
+        let mut out_file = File::create(format!("{}/cert-list-part-{}.csv", &arc.arg_outpath, n)).unwrap();
+        rdr.records().for_each(|f| {
+                let index = rayon::current_thread_index().unwrap();
+                //let index = thread::current().id();
+                let record = f.unwrap();
+                let row: Row = record.deserialize(None).unwrap();
+                let chain_raw = form_chain(&row.certificate_bytes, &arc.arg_intpath, &row.ints);
+                let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
+                let domain = row.domain.as_str();
+                let job_dir = format!("prolog/job/{}", index);
 
-        let facts = acclib::get_chain_facts(&mut chain, None, args.flag_ocsp, false).unwrap();
-        acclib::write_job_files(&job_dir, domain, &facts).unwrap();
-        let result = acclib::verify_chain(&args.arg_client, &domain);
-        let result_str = match result {
-            Ok(_) => "OK".to_string(),
-            Err(e) => format!("{:?}", e),
-        };
-        out_file.write_all(
-            format!("{},{},{}\n",
-                    row.sha256,
-                    domain,
-                    result_str).as_bytes()
-            ).unwrap();
-
+                let facts = acclib::get_chain_facts(&mut chain, None, arc.flag_ocsp, false).unwrap();
+                acclib::write_job_files(&job_dir, domain, &facts).unwrap();
+                let result = acclib::verify_chain(&job_dir, &arc.arg_client);
+                let result_str = match result {
+                    Ok(_) => "OK".to_string(),
+                    Err(e) => format!("{:?}", e),
+                };
+                println!("{}", result_str);
+                write!(out_file, "{},{},{}\n", row.sha256, domain, result_str).unwrap();
+            //pool.spawn(move || {
+            //});
+        });
     });
-
 }
 
 

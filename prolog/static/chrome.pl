@@ -258,6 +258,7 @@ isValidPKI(Cert) :-
 
 isValidPKI(Cert) :-
   certs:spkiRSAModLength(Cert, Length),
+  Length \= na,
   Length >= 1024.
 
 notCrlSet(F):-
@@ -338,11 +339,11 @@ isNotRevoked(_).
 certVerifiedLeaf(Cert, SANList):-
   % Firefox does not have this restriction
   pathLimit(Cert, none),
-  std:getEVStatus(Cert, EVStatus),
-  (
-    EVStatus = not_ev;
-    isNotRevoked(Cert)
-  ),
+  %std:getEVStatus(Cert, EVStatus),
+  %(
+    %EVStatus = not_ev;
+    %isNotRevoked(Cert)
+  %),
   certs:fingerprint(Cert, Fingerprint),
   % Firefox does not have this restriction
   certs:version(Cert, 2),
@@ -371,10 +372,10 @@ certVerifiedChain(Cert):-
 main([CertsFile, Cert]):-
   statistics(walltime, _),
   consult(CertsFile),
-  statistics(walltime, [_ | [LoadTime]]),
-  write('Cert facts loading time: '), write(LoadTime), write('ms\n'),
+  %statistics(walltime, [_ | [LoadTime]]),
+  %write('Cert facts loading time: '), write(LoadTime), write('ms\n'),
   statistics(walltime, _),
-  certVerifiedChain(Cert),
-  statistics(walltime, [_ | [VerifyTime]]),
-  write('Cert verification time: '), write(VerifyTime), write('ms\n').
+  certVerifiedChain(Cert).
+  %statistics(walltime, [_ | [VerifyTime]]).
+  %write('Cert verification time: '), write(VerifyTime), write('ms\n').
   
