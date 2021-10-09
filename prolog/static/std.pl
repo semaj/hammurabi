@@ -91,7 +91,7 @@ getBasicConstraints(Cert, BasicConstraints):-
 isEVChain(Cert) :-
   certs:certificatePoliciesExt(Cert, true),
   certs:certificatePolicies(Cert, Oid), 
-  evPolicyOid(Oid, _, _, _, _, _),
+  ev:evPolicyOid(Oid, _, _, _, _, _),
   certs:issuer(Cert, P),
   isEVIntermediate(P, Oid).
 
