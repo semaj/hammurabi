@@ -259,6 +259,10 @@ isValidPKI(Cert) :-
   certs:spkiRSAModLength(Cert, Length),
   Length >= 1024.
 
+pathLengthValid(CertsSoFar, BasicConstraints):-
+  BasicConstraints = [_, Limit],
+  (Limit == none; CertsSoFar =< Limit).
+
 verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   firefox_env:trustedRoots(Fingerprint),
   \+firefox_env:symantecFingerprint(Fingerprint),
@@ -281,7 +285,7 @@ verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, Algorithm, BasicCon
   leafDurationValid(EVStatus, Lower, Upper),
   verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
-certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
+certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus, CertsSoFar):-
   isValidPKI(Cert),
   certs:fingerprint(Cert, Fingerprint),
   certs:notBefore(Cert, Lower),
@@ -295,11 +299,12 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus):-
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
   certs:stapledResponse(Cert, StapledResponse),
   certs:ocspResponse(Cert, OcspResponse),
+  pathLengthValid(CertsSoFar, BasicConstraints),
   (
     (
       verifiedIntermediate(Fingerprint, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse), 
       certs:issuer(Cert, Parent),
-      certVerifiedNonLeaf(Parent, LeafCommonName, LeafSANList, EVStatus),
+      certVerifiedNonLeaf(Parent, LeafCommonName, LeafSANList, EVStatus, CertsSoFar + 1),
       (
         (
           certs:nameConstraintsExt(Cert, true),
@@ -347,7 +352,7 @@ certVerifiedChain(Cert):-
   certVerifiedLeaf(Cert, SANList, EVStatus),
   certs:commonName(Cert, CommonName),
   certs:issuer(Cert, Parent),
-  certVerifiedNonLeaf(Parent, CommonName, SANList, EVStatus).
+  certVerifiedNonLeaf(Parent, CommonName, SANList, EVStatus, 0).
 
 main([CertsFile, Cert]):-
   statistics(walltime, _),
