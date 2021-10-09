@@ -4,7 +4,6 @@ use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 use rayon;
-use std::thread;
 use rayon::prelude::*;
 use std::sync::Arc;
 
@@ -90,7 +89,7 @@ fn main() {
                 let chain_raw = form_chain(&row.certificate_bytes, &arc.arg_intpath, &row.ints);
                 let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
                 let domain = row.domain.as_str();
-                let job_dir = format!("prolog/job/{}", index);
+                let job_dir = format!("prolog/job/{}-{}", n, index);
 
                 let facts = acclib::get_chain_facts(&mut chain, None, arc.flag_ocsp, false).unwrap();
                 acclib::write_job_files(&job_dir, domain, &facts).unwrap();

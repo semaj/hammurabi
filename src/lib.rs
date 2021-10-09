@@ -128,7 +128,7 @@ pub fn get_chain_facts(
 }
 
 pub fn verify_chain(job_dir: &str, client: &str) -> Result<(), Error> {
-    let start = Instant::now();
+    //let start = Instant::now();
 
     let verifier = Command::new("sh")
         .arg("-c")
