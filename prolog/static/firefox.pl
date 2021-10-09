@@ -4,6 +4,7 @@
 ]).
 
 :- use_module(firefox_env).
+:- use_module(ev).
 :- use_module(std).
 
 :- initialization(main, main).
@@ -134,6 +135,30 @@ internationalValid(LeafSANList, RootFingerprint) :-
   firefox_env:anssiSubtree(Tree),
   member(Name, LeafSANList),
   std:stringMatch(Tree, Name).
+
+isEVChain(Cert) :-
+  certs:certificatePoliciesExt(Cert, true),
+  certs:certificatePolicies(Cert, Oid), 
+  ev:evPolicyOid(Oid, _, _, _, _, _),
+  certs:issuer(Cert, P),
+  isEVIntermediate(P, Oid).
+
+isEVIntermediate(Cert, Oid) :-
+  certs:fingerprint(Cert, RootFingerprint),
+  firefox_env:trustedRoots(RootFingerprint),
+  certs:serialNumber(Cert, Serial),
+  ev:evPolicyOid(Oid, Serial).
+
+isEVIntermediate(Cert, Oid) :-
+  certs:certificatePoliciesExt(Cert, true),
+  (ev:evPolicyOid(Oid, _); ev:anyPolicyOid(Oid)),
+  certs:certificatePolicies(Cert, Oid),
+  certs:issuer(Cert, P),
+  isEVIntermediate(P, Oid).
+
+getEVStatus(Cert, EVStatus):-
+  (isEVChain(Cert), EVStatus = ev);
+  EVStatus = not_ev.
 
 notRevoked(Lower, Upper, EVStatus, StapledResponse, OcspResponse) :-
   shortLived(Lower, Upper);
@@ -347,7 +372,7 @@ certVerifiedLeaf(Cert, SANList, EVStatus):-
   verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
 
 certVerifiedChain(Cert):-
-  std:getEVStatus(Cert, EVStatus),
+  getEVStatus(Cert, EVStatus),
   findall(Name, certs:san(Cert, Name), SANList),
   certVerifiedLeaf(Cert, SANList, EVStatus),
   certs:commonName(Cert, CommonName),

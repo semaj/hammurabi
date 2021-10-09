@@ -4,11 +4,8 @@
     nameMatchesCN/2,
     isTimeValid/2,
     isCA/1,
-    getBasicConstraints/2,
-    getEVStatus/2
+    getBasicConstraints/2
 ]).
-
-:- use_module(ev).
 
 % md2
 md2_sig_algo("1.2.840.113549.1.1.2").
@@ -87,27 +84,3 @@ getBasicConstraints(Cert, BasicConstraints):-
     certs:isCA(Cert, IsCA),
     certs:pathLimit(Cert, PathLimit),
     BasicConstraints = [IsCA, PathLimit].
-
-isEVChain(Cert) :-
-  certs:certificatePoliciesExt(Cert, true),
-  certs:certificatePolicies(Cert, Oid), 
-  ev:evPolicyOid(Oid, _, _, _, _, _),
-  certs:issuer(Cert, P),
-  isEVIntermediate(P, Oid).
-
-isEVIntermediate(Cert, Oid) :-
-  certs:fingerprint(Cert, RootFingerprint),
-  firefox_env:trustedRoots(RootFingerprint),
-  certs:serialNumber(Cert, Serial),
-  ev:evPolicyOid(Oid, Serial).
-
-isEVIntermediate(Cert, Oid) :-
-  certs:certificatePoliciesExt(Cert, true),
-  (ev:evPolicyOid(Oid, _); ev:anyPolicyOid(Oid)),
-  certs:certificatePolicies(Cert, Oid),
-  certs:issuer(Cert, P),
-  isEVIntermediate(P, Oid).
-
-getEVStatus(Cert, EVStatus):-
-  (isEVChain(Cert), EVStatus = ev);
-  EVStatus = not_ev.
