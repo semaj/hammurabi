@@ -92,7 +92,7 @@ impl PrologCert<'_> {
         let mut ln: String = String::from("");
         let mut spn: String = String::from("");
         let mut on: String = String::from("");
-        &name.rdn_seq.iter().for_each(|f| {
+        name.rdn_seq.iter().for_each(|f| {
             match f.set[0].attr_type.to_string().as_str() {
                 "2.5.4.3" => {
                     cn = PrologCert::str_from_rdn(f)

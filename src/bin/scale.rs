@@ -82,7 +82,7 @@ fn main() {
             .from_path(format!("{}/cert-list-part-{}.txt", &arc.arg_mappingpath, n)).unwrap();
         let mut out_file = File::create(format!("{}/cert-list-part-{}.csv", &arc.arg_outpath, n)).unwrap();
         rdr.records().for_each(|f| {
-                let index = rayon::current_thread_index().unwrap();
+                let index = rayon::current_thread_index().unwrap_or(1);
                 //let index = thread::current().id();
                 let record = f.unwrap();
                 let row: Row = record.deserialize(None).unwrap();
