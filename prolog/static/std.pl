@@ -33,17 +33,20 @@ sha1_sig_algo("1.2.840.10045.4.1"). % sha1ECDSA
 count(L, E, N) :-
     include(=(E), L, L2), length(L2, N).
 
-stringMatch(Pattern, CommonName):-
-    var(CommonName),
-    Pattern = ['*' , '.' | ToMatch],
-    nth1(1, ToMatch, _),
-    ( CommonName = ToMatch; (
-        append(Prefix, ['.' | ToMatch], CommonName),
-        nth1(1, Prefix, _)
-    )).
+% stringMatch(PatternStr, CommonNameStr):-
+%     var(CommonName),
+%     string_chars(PatternStr, Pattern),
+%     string_chars(CommonNameStr, CommonName),
+%     Pattern = ['*' , '.' | ToMatch],
+%     nth1(1, ToMatch, _),
+%     ( CommonName = ToMatch; (
+%         append(Prefix, ['.' | ToMatch], CommonName),
+%         nth1(1, Prefix, _)
+%     )).
 
-stringMatch(Pattern, CommonName):-
-    nonvar(CommonName),
+stringMatch(PatternStr, CommonNameStr):-
+    string_chars(PatternStr, Pattern),
+    string_chars(CommonNameStr, CommonName),
     Pattern = ['*' , '.' | ToMatch],
     nth1(1, ToMatch, _),
     ( CommonName = ToMatch; (
@@ -52,8 +55,10 @@ stringMatch(Pattern, CommonName):-
         \+member('.', Prefix)
     )).
 
-stringMatch(Pattern, CommonName):-
+stringMatch(PatternStr, CommonNameStr):-
     CommonName = Pattern,
+    string_chars(PatternStr, Pattern),
+    string_chars(CommonNameStr, CommonName),
     Pattern \= ['*' , '.' | _].
 
 % domain name matches one of the names in SAN
