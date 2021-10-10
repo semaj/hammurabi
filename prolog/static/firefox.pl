@@ -285,6 +285,7 @@ isValidPKI(Cert) :-
   Length >= 1024.
 
 pathLengthValid(CertsSoFar, BasicConstraints):-
+  CertsSoFar =< 6,            % global max intermediates limit in Firefox
   BasicConstraints = [_, Limit],
   (Limit == none; CertsSoFar =< Limit).
 
