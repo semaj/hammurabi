@@ -146,12 +146,12 @@ isEVChain(Cert) :-
 isEVIntermediate(Cert, Oid) :-
   certs:fingerprint(Cert, RootFingerprint),
   firefox_env:trustedRoots(RootFingerprint),
-  certs:serialNumber(Cert, Serial),
-  ev:evPolicyOid(Oid, Serial).
+  certs:subject(Cert, C, Cn, L, S, O),
+  ev:evPolicyOid(Oid, C, Cn, L, S, O).
 
 isEVIntermediate(Cert, Oid) :-
   certs:certificatePoliciesExt(Cert, true),
-  (ev:evPolicyOid(Oid, _); ev:anyPolicyOid(Oid)),
+  (ev:evPolicyOid(Oid, _, _, _, _, _); ev:anyPolicyOid(Oid)),
   certs:certificatePolicies(Cert, Oid),
   certs:issuer(Cert, P),
   isEVIntermediate(P, Oid).

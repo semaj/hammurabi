@@ -52,6 +52,7 @@ impl PrologCert<'_> {
             vec![
                 self.emit_serial(&hash),
                 self.emit_validity(&hash),
+                self.emit_subject(&hash),
                 self.emit_common_name(&hash),
                 self.emit_country(&hash),
                 self.emit_organization(&hash),
@@ -61,7 +62,6 @@ impl PrologCert<'_> {
                 self.emit_street_address(&hash), 
                 self.emit_locality(&hash),
                 self.emit_postal_code(&hash),
-                // self.emit_subject(&hash),
                 self.emit_version(&hash),
                 self.emit_sign_alg(&hash),
                 self.emit_signature(&hash),
@@ -86,36 +86,34 @@ impl PrologCert<'_> {
         ).replace("\"", "\\\"")
     }
 
-    // fn name_from_rdn(name: &x509_parser::x509::X509Name) -> String {
-    //     let mut cn: String = String::from("");
-    //     let mut cnt_n: String = String::from("");
-    //     let mut ln: String = String::from("");
-    //     let mut spn: String = String::from("");
-    //     let mut on: String = String::from("");
-    //     &name.rdn_seq.iter().for_each(|f| {
-    //         //println!("{:?}", f.set);
-    //         // TODO: This should PROBABLY be a foldLeft() equivilant instead of a foreach()
-    //         match f.set[0].attr_type.to_string().as_str() {
-    //             "2.5.4.3" => {
-    //                 cn = PrologCert::str_from_rdn(f)
-    //             }
-    //             "2.5.4.6" => {
-    //                 cnt_n = PrologCert::str_from_rdn(f)
-    //             }
-    //             "2.5.4.7" => {
-    //                 ln = PrologCert::str_from_rdn(f)
-    //             }
-    //             "2.5.4.8" => {
-    //                 spn = PrologCert::str_from_rdn(f)
-    //             }
-    //             "2.5.4.10" => {
-    //                 on = PrologCert::str_from_rdn(f)
-    //             }
-    //             _ => (),
-    //         }
-    //     });
-    //     format!("\"{}\", \"{}\", \"{}\", \"{}\", \"{}\"", cn, cnt_n, ln, spn, on)
-    // }
+    fn name_from_rdn(name: &x509_parser::x509::X509Name) -> String {
+        let mut cn: String = String::from("");
+        let mut cnt_n: String = String::from("");
+        let mut ln: String = String::from("");
+        let mut spn: String = String::from("");
+        let mut on: String = String::from("");
+        &name.rdn_seq.iter().for_each(|f| {
+            match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.3" => {
+                    cn = PrologCert::str_from_rdn(f)
+                }
+                "2.5.4.6" => {
+                    cnt_n = PrologCert::str_from_rdn(f)
+                }
+                "2.5.4.7" => {
+                    ln = PrologCert::str_from_rdn(f)
+                }
+                "2.5.4.8" => {
+                    spn = PrologCert::str_from_rdn(f)
+                }
+                "2.5.4.10" => {
+                    on = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+            }
+        });
+        format!("\"{}\", \"{}\", \"{}\", \"{}\", \"{}\"", cn, cnt_n, ln, spn, on)
+    }
 
     fn emit_common_name(&self, hash: &String) -> String {
         let mut cn: String = String::from("");
@@ -237,13 +235,13 @@ impl PrologCert<'_> {
         )
     }
 
-    // pub fn emit_subject(&self, hash: &String) -> String {
-    //     format!(
-    //         "subject({}, {}).",
-    //         hash,
-    //         PrologCert::name_from_rdn(&self.cert.tbs_certificate.subject).to_lowercase()
-    //     )
-    // }
+    pub fn emit_subject(&self, hash: &String) -> String {
+        format!(
+            "subject({}, {}).",
+            hash,
+            PrologCert::name_from_rdn(&self.cert.tbs_certificate.subject)
+        )
+    }
 
     pub fn emit_serial(&self, hash: &String) -> String {
         format!("serialNumber({}, \"{}\").", hash, self.serial)
