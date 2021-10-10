@@ -1,3 +1,4 @@
+require 'pry'
 require 'uri'
 require 'net/http'
 
@@ -19,4 +20,17 @@ res = Net::HTTP.post_form(
   'pem' => leaf_pem,
   'submit_btn' => "Generate Chain",
 )
-puts res.body
+filename = "/tmp/#{sha256}.pem"
+File.open(filename, "w") do |f|
+  f.puts(res.body)
+end
+
+
+cert = OpenSSL::X509::Certificate.new(File.read(filename))
+san = cert.extensions.find { |e| e.oid == "subjectAltName" }.value
+actual = san.gsub("DNS:", "").gsub(" ", "").split(",").find { |s| !s.split('').include?('*') }
+fn = "certs/#{actual}.pem"
+File.open(fn, "w") do |f|
+  f.puts(res.body)
+end
+puts fn
