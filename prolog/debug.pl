@@ -14,6 +14,7 @@ main([Client]):-
   % only show failures
   visible(-all),
   visible(+fail),
+  visible(+exit),
   % enable trace
   trace,
   % attempt chain verification

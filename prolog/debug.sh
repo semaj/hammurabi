@@ -3,7 +3,7 @@
 CLIENT=$1
 
 # WATCH dictates which predicate failures should be visible
-WATCH="leafDurationValid|std:isTimeValid"
+WATCH="std:isCA|std:nameMatchesSAN|leafDurationValid|isTimeValid|notCrlSet|strongSignature|keyUsageValid|extKeyUsageValid"
 # filter debug output
 ./prolog/debug.pl $CLIENT 2>&1 | grep --color=always -E $WATCH
 # load the client file and load into REPL
