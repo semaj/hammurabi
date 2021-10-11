@@ -102,13 +102,15 @@ nameValid(Name) :-
   \+ isPublicSuffix(NameLabels).
 
 cleanName(Name, Decoded) :-
-  uri_encoded(path, D, Name),
+  string_lower(Name, Lower),
+  uri_encoded(path, D, Lower),
   atom_string(D, Decoded),
   sub_string(Decoded, _, 1, 0, LastChar),
   LastChar \= ".".
 
 cleanName(Name, Cleaned) :-
-  uri_encoded(path, D, Name),
+  string_lower(Name, Lower),
+  uri_encoded(path, D, Lower),
   atom_string(D, Decoded),
   sub_string(Decoded, _, 1, 0, LastChar),
   LastChar = ".",
@@ -369,6 +371,7 @@ certVerifiedLeaf(Cert, SANList):-
   verifiedLeaf(Fingerprint, SANList, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage).
 
 certVerifiedChain(Cert):-
+  certs:sanExt(Cert, true),
   findall(Name, certs:san(Cert, Name), SANList),
   maplist(cleanName, SANList, CleanSANList),
   certVerifiedLeaf(Cert, CleanSANList),
@@ -376,11 +379,11 @@ certVerifiedChain(Cert):-
   certVerifiedNonLeaf(Parent, CleanSANList, 0).
 
 main([CertsFile, Cert]):-
-  statistics(walltime, _),
+  %statistics(walltime, _),
   consult(CertsFile),
   %statistics(walltime, [_ | [LoadTime]]),
   %write('Cert facts loading time: '), write(LoadTime), write('ms\n'),
-  statistics(walltime, _),
+  %statistics(walltime, _),
   certVerifiedChain(Cert).
   %statistics(walltime, [_ | [VerifyTime]]).
   %write('Cert verification time: '), write(VerifyTime), write('ms\n').

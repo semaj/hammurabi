@@ -54,6 +54,7 @@ pub fn get_chain_facts(
         chain.push(leaf.clone());
     }
     counter += 1;
+    let mut found_root = false;
     for part in root_chain.split(separator) {
         if part.trim().is_empty() {
             continue;
@@ -75,6 +76,7 @@ pub fn get_chain_facts(
                 //println!("hello! {:?}", root_x509.issued(&intermediate_x509));
             //}
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
+                found_root = true;
                 has_issued_one = true;
                 //found_issuer = true;
                 start = Instant::now();
@@ -109,6 +111,9 @@ pub fn get_chain_facts(
         }
 
         store_builder.add_cert(root_x509).unwrap();
+    }
+    if !found_root {
+        return Err(Error::ROOTSKIPPED);
     }
     //if !found_issuer {
         //repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));

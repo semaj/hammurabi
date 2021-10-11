@@ -25,6 +25,7 @@ pub enum Error {
     LeafValidForTooLong,
     /// Some unkown Prolog failure
     UnknownError,
+    ROOTSKIPPED,
 }
 
 impl fmt::Display for Error {

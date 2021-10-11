@@ -29,6 +29,7 @@ Vagrant.configure("2") do |config|
   # This option is needed otherwise the Intel DPDK takes over the entire adapter
   #config.vm.network "private_network", ip: "192.168.10.10"
   config.ssh.forward_agent = true;
+ config.ssh.forward_x11 = true
 
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on

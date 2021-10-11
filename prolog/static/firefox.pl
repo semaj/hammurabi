@@ -382,18 +382,27 @@ certVerifiedLeaf(Cert, SANList, EVStatus):-
 
 certVerifiedChain(Cert):-
   getEVStatus(Cert, EVStatus),
-  findall(Name, certs:san(Cert, Name), SANList),
+  (
+    ( 
+      certs:sanExt(Cert, true), 
+      findall(Lower, (
+        certs:san(Cert, Name),
+        string_lower(Name, Lower)
+      ), SANList)
+    );
+    ( certs:sanExt(Cert, false), SANList = [] )
+  ),
   certVerifiedLeaf(Cert, SANList, EVStatus),
   certs:commonName(Cert, CommonName),
   certs:issuer(Cert, Parent),
   certVerifiedNonLeaf(Parent, CommonName, SANList, EVStatus, 0).
 
 main([CertsFile, Cert]):-
-  statistics(walltime, _),
+  %statistics(walltime, _),
   consult(CertsFile),
-  statistics(walltime, [_ | [LoadTime]]),
-  write('Cert facts loading time: '), write(LoadTime), write('ms\n'),
-  statistics(walltime, _),
-  certVerifiedChain(Cert),
-  statistics(walltime, [_ | [VerifyTime]]),
-  write('Cert verification time: '), write(VerifyTime), write('ms\n').
+  %statistics(walltime, [_ | [LoadTime]]),
+  %write('Cert facts loading time: '), write(LoadTime), write('ms\n'),
+  %statistics(walltime, _),
+  certVerifiedChain(Cert).
+  %statistics(walltime, [_ | [VerifyTime]]),
+  %write('Cert verification time: '), write(VerifyTime), write('ms\n').

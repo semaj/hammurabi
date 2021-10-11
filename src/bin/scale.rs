@@ -6,6 +6,7 @@ use std::io::{Read, Write};
 use rayon;
 use rayon::prelude::*;
 use std::sync::Arc;
+use ipaddress::IPAddress;
 
 use docopt::Docopt;
 
@@ -88,18 +89,35 @@ fn main() {
                 let row: Row = record.deserialize(None).unwrap();
                 let chain_raw = form_chain(&row.certificate_bytes, &arc.arg_intpath, &row.ints);
                 let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
-                let domain = row.domain.as_str();
-                let job_dir = format!("prolog/job/{}-{}", n, index);
+                match IPAddress::parse(row.domain.clone()) {
+                    Ok(_) => {
+                        println!("Skipping IP {}", row.domain);
+                        write!(out_file, "{},{},SKIPPED\n", row.sha256, row.domain).unwrap();
+                        return
+                    },
+                    _ => {}
+                }
+                let domain = &row.domain.to_lowercase();
+                let job_dir = format!("prolog/job/{}-{}-{}", &arc.arg_client, n, index);
 
-                let facts = acclib::get_chain_facts(&mut chain, None, arc.flag_ocsp, false).unwrap();
-                acclib::write_job_files(&job_dir, domain, &facts).unwrap();
-                let result = acclib::verify_chain(&job_dir, &arc.arg_client);
-                let result_str = match result {
-                    Ok(_) => "OK".to_string(),
-                    Err(e) => format!("{:?}", e),
-                };
-                println!("{}", result_str);
-                write!(out_file, "{},{},{}\n", row.sha256, domain, result_str).unwrap();
+                match acclib::get_chain_facts(&mut chain, None, arc.flag_ocsp, false) {
+                    Ok(facts) => {
+                        acclib::write_job_files(&job_dir, domain, &facts).unwrap();
+                        let result = acclib::verify_chain(&job_dir, &arc.arg_client);
+                        let result_str = match result {
+                            Ok(_) => "OK".to_string(),
+                            Err(e) =>{
+                                format!("{:?}", e)
+                            }
+                        };
+                        println!("{},{}", row.sha256, result_str);
+                        write!(out_file, "{},{},{}\n", row.sha256, domain, result_str).unwrap();
+                    }
+                    Err(e) => {
+                        println!("{},{:?}", row.sha256, e);
+                        write!(out_file, "{},{},{:?}\n", row.sha256, domain, e).unwrap();
+                    }
+                }
             //pool.spawn(move || {
             //});
         });
