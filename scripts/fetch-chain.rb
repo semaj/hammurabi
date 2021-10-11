@@ -28,7 +28,8 @@ end
 
 cert = OpenSSL::X509::Certificate.new(File.read(filename))
 san = cert.extensions.find { |e| e.oid == "subjectAltName" }.value
-actual = san.gsub("DNS:", "").gsub(" ", "").split(",").find { |s| !s.split('').include?('*') }
+actual = san.gsub("DNS:", "").gsub(" ", "").split(",").first
+actual.gsub!("*", "www")
 fn = "certs/#{actual}.pem"
 File.open(fn, "w") do |f|
   f.puts(res.body)
