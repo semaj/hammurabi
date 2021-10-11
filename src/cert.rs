@@ -83,7 +83,7 @@ impl PrologCert<'_> {
                 name.set[0].attr_value.content.as_slice().
                 unwrap()
             ).unwrap(),
-        ).replace("\"", "\\\"").replace("\\", "\\\\")
+        ).replace("\"", "'").replace("\\", "\\\\")
     }
 
     fn name_from_rdn(name: &x509_parser::x509::X509Name) -> String {
