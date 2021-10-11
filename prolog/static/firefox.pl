@@ -282,6 +282,7 @@ isValidPKI(Cert) :-
 
 isValidPKI(Cert) :-
   certs:spkiRSAModLength(Cert, Length),
+  Length \= na,
   Length >= 1024.
 
 pathLengthValid(CertsSoFar, BasicConstraints):-
