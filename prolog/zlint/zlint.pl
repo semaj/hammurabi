@@ -6,42 +6,50 @@
 % but reimplemented using Prolog 
 % See www.github.com/zmap/zlint for more information 
 
-isCert(Cert) :-
-  \+certs:serialNumber(Cert, "").
+getCertFields(Cert):-
+  certs:serialNumber(Cert, SerialNumber),
+  certs:commonName(Cert, CommonName),
+  certs:country(Cert, Country),
+  certs:basicConstraintsExt(Cert, BasicConstExt),
+  certs:isCA(Cert, IsCA),
+  certs:givenName(Cert, GivenName),
+  certs:surname(Cert, Surname).
+
+isCert(SerialNumber) :-
+  \+equal(SerialNumber, "").
 
 % Checks whether or not the common 
 % name is missing
-caCommonNameMissing(Cert) :- 
-    certs:commonName(Cert, "").
+caCommonNameMissing(CommonName) :- 
+    equal(CommonName, "").
 
 % Checks whether the country name 
 % is invalid
-caCountryNameValidApplies(Cert) :-
-  isCa(Cert), 
-  caCountryNamePresent(Cert). 
+caCountryNameValidApplies(Country, BasicConstExt, IsCA) :-
+  isCa(BasicConstExt, IsCA), 
+  caCountryNamePresent(Country). 
 
-caCountryNameValid(Cert) :- 
-  certs:country(Cert, Country), 
+caCountryNameValid(Country) :- 
   val_country(Country).
 
 % Checks whether or not country name 
 % is missing 
-caCountryNameMissing(Cert) :- 
-    certs:country(Cert, "").
+caCountryNameMissing(Country) :- 
+    equal(Country, "").
 
-caCountryNamePresent(Cert) :- 
-  \+caCountryNameMissing(Cert).
+caCountryNamePresent(Country) :- 
+  \+caCountryNameMissing(Country).
 
 % countryName must not appear if 
 % the organizationName, givenName, 
 % and surname are absent
-countryNameMustNotAppearApplies(Cert) :- 
-  givenNameMissing(Cert), 
-  surnameMissing(Cert),
-  caCountryNameMissing(Cert).
+countryNameMustNotAppearApplies(GivenName, Surname, Country) :- 
+  givenNameMissing(GivenName), 
+  surnameMissing(Surname),
+  caCountryNameMissing(Country).
 
-countryNameMustNotAppear(Cert) :- 
-  caCountryNameMissing(Cert).
+countryNameMustNotAppear(Country) :- 
+  caCountryNameMissing(Country).
 
 % Country Name must appear if 
 % organizationName, givenName 
@@ -60,8 +68,8 @@ countryNameMustAppear(Cert) :-
 
 countryNameMustAppear(Cert) :- 
   organizationNameMissing(Cert), 
-  givenNameMissing(Cert), 
-  surnameMissing(Cert).
+  givenNameMissing(GivenName), 
+  surnameMissing(Surname).
 
 % If certificate asserts policy identifier 
 % 2.23.140.1.2.3 then it must include either 
@@ -76,8 +84,8 @@ certPolicyIvApplies(Cert) :-
 certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
   \+organizationNameMissing(Cert). 
 
-certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
-  \+givenNameMissing(Cert). 
+certPolicyIvRequiresOrgGivenOrSurname(GivenName) :- 
+  \+givenNameMissing(GivenName). 
 
 certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
   \+surnameMissing(Cert).
@@ -122,8 +130,8 @@ certPolicyOvRequires(Cert) :-
 postalCodeProhibtedApplies(Cert) :- 
   organizationNameMissing(Cert).
 
-postalCodeProhibtedApplies(Cert) :- 
-  givenNameMissing(Cert).
+postalCodeProhibtedApplies(GivenName) :- 
+  givenNameMissing(GivenName).
 
 postalCodeProhibtedApplies(Cert) :- 
   surnameMissing(Cert).
@@ -361,9 +369,13 @@ dnsNameWildCardOnlyInLeftLabel(Cert) :-
 
 % Basic Constraints checks
 % CA bit set
-isCa(Cert) :-
-  certs:basicConstraintsExt(Cert, true),
-  certs:isCA(Cert, true).
+isCa(BasicConstExt, IsCA) :-
+  BasicConstExt == true,
+  IsCA == true.
+  %equal(BasicConstExt, true),
+  %equal(IsCA, true).
+  %certs:basicConstraintsExt(Cert, true),
+  %certs:isCA(Cert, true).
 
 isNotCa(Cert) :- 
   \+isCa(Cert).
@@ -372,11 +384,13 @@ isNotCa(Cert) :-
 organizationNameMissing(Cert) :- 
   certs:organizationName(Cert, "").
 
-givenNameMissing(Cert) :- 
-  certs:givenName(Cert, "").
+givenNameMissing(GivenName) :- 
+  equal(GivenName, "").
+  %certs:givenName(Cert, "").
 
-surnameMissing(Cert) :- 
-  certs:surname(Cert, "").
+surnameMissing(Surname) :- 
+  equal(Surname, "").
+  %certs:surname(Cert, "").
 
 stateOrProvinceNameMissing(Cert) :- 
   certs:stateOrProvinceName(Cert, ""). 
