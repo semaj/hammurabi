@@ -288,7 +288,13 @@ isValidPKI(Cert) :-
 pathLengthValid(CertsSoFar, BasicConstraints):-
   CertsSoFar =< 6,            % global max intermediates limit in Firefox
   BasicConstraints = [_, Limit],
-  (Limit == none; CertsSoFar =< Limit).
+  Limit == none.
+
+pathLengthValid(CertsSoFar, BasicConstraints):-
+  CertsSoFar =< 6,            % global max intermediates limit in Firefox
+  BasicConstraints = [_, Limit],
+  Limit \= none, 
+  CertsSoFar =< Limit.
 
 verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
   firefox_env:trustedRoots(Fingerprint),
