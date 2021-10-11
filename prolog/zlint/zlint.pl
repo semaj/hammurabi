@@ -13,7 +13,8 @@ getCertFields(Cert):-
   certs:basicConstraintsExt(Cert, BasicConstExt),
   certs:isCA(Cert, IsCA),
   certs:givenName(Cert, GivenName),
-  certs:surname(Cert, Surname).
+  certs:surname(Cert, Surname),
+  certs:organizationName(Cert, OrgName).
 
 isCert(SerialNumber) :-
   \+equal(SerialNumber, "").
@@ -63,11 +64,11 @@ countryNameMustNotAppear(Country) :-
 %countryNameMustAppearApplies(Cert) :- 
 %  \+surnameMissing(Cert).
 
-countryNameMustAppear(Cert) :- 
-  \+caCountryNameMissing(Cert).
+countryNameMustAppear(Country) :- 
+  \+caCountryNameMissing(Country).
 
-countryNameMustAppear(Cert) :- 
-  organizationNameMissing(Cert), 
+countryNameMustAppear(OrgName, GivenName, Surname) :- 
+  organizationNameMissing(OrgName), 
   givenNameMissing(GivenName), 
   surnameMissing(Surname).
 
@@ -81,8 +82,8 @@ countryNameMustAppear(Cert) :-
 certPolicyIvApplies(Cert) :- 
   certs:certificatePolicies(Cert,  "2.23.140.1.2.3").
 
-certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
-  \+organizationNameMissing(Cert). 
+certPolicyIvRequiresOrgGivenOrSurname(OrgName) :- 
+  \+organizationNameMissing(OrgName). 
 
 certPolicyIvRequiresOrgGivenOrSurname(GivenName) :- 
   \+givenNameMissing(GivenName). 
@@ -114,11 +115,11 @@ certPolicyIvRequiresCountry(Cert) :-
 certPolicyOvApplies(Cert) :- 
   certs:certificatePolicies(Cert, "2.23.140.1.2.2").
 
-certPolicyRequiresOrg(Cert) :- 
-  \+organizationNameMissing(Cert). 
+certPolicyRequiresOrg(OrgName) :- 
+  \+organizationNameMissing(OrgName). 
 
-certPolicyOvRequires(Cert) :- 
-  \+organizationNameMissing(Cert), 
+certPolicyOvRequires(Orgname) :- 
+  \+organizationNameMissing(Orgname), 
   \+localityNameMissing(Cert), 
   \+stateOrProvinceNameMissing(Cert), 
   \+caCountryNameMissing(Cert).
@@ -127,8 +128,8 @@ certPolicyOvRequires(Cert) :-
 % organizationName, givenName, or 
 % surname fields are absent 
 
-postalCodeProhibtedApplies(Cert) :- 
-  organizationNameMissing(Cert).
+postalCodeProhibtedApplies(OrgName) :- 
+  organizationNameMissing(OrgName).
 
 postalCodeProhibtedApplies(GivenName) :- 
   givenNameMissing(GivenName).
@@ -381,8 +382,9 @@ isNotCa(Cert) :-
   \+isCa(Cert).
 
 % All of the helper methods will be posted below 
-organizationNameMissing(Cert) :- 
-  certs:organizationName(Cert, "").
+organizationNameMissing(OrgName) :- 
+  OrgName == "".
+  %certs:organizationName(Cert, "").
 
 givenNameMissing(GivenName) :- 
   equal(GivenName, "").
