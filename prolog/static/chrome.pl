@@ -267,9 +267,13 @@ notCrlSet(F):-
 notCrlSet(F):-
     nonvar(F), \+chrome_env:crlSet(F).
 
+pathLengthValid(_, BasicConstraints):-
+  BasicConstraints = [_, Limit],
+  Limit == none.
+
 pathLengthValid(CertsSoFar, BasicConstraints):-
   BasicConstraints = [_, Limit],
-  (Limit == none; CertsSoFar =< Limit).
+  Limit \= none, CertsSoFar =< Limit.
 
 verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage):-
   std:isCA(BasicConstraints),
