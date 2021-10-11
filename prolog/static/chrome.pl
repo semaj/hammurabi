@@ -323,6 +323,7 @@ certVerifiedNonLeaf(Cert, LeafSANList, CertsSoFar):-
     (
       verifiedIntermediate(Fingerprint, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
       certs:issuer(Cert, Parent),
+      Cert \= Parent,
       certVerifiedNonLeaf(Parent, LeafSANList, CertsSoFar + 1),
       (
         (

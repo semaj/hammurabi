@@ -49,30 +49,41 @@ pub fn get_chain_facts(
     // get root certs
     let separator = "-----END CERTIFICATE-----";
     let root_chain = fs::read_to_string("assets/roots.pem").unwrap();
-    let mut found_issuer = false;
+    //let mut found_issuer = false;
     if chain.len() == 0 {
         chain.push(leaf.clone());
     }
+    counter += 1;
     for part in root_chain.split(separator) {
         if part.trim().is_empty() {
             continue;
         }
+        let mut has_issued_one = false;
+        //let root_counter = counter;
 
         let cert_pem = [part, separator].join("");
         let temp = parse_x509_pem(cert_pem.as_bytes()).unwrap().1.contents;
         let root_x509 = X509::from_der(&temp).unwrap();
+        let fp = hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase();
         //println!("ROOT: {:?}", root_x509.subject_name());
+        let mut intermediate_counter = 0;
         for intermediate_x509 in chain.iter() {
+            intermediate_counter += 1;
+            //let ifp = hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase();
+            //if ifp == "F55F9FFCB83C73453261601C7E044DB15A0F034B93C05830F28635EF889CF670" && 
+                //fp == "8ECDE6884F3D87B1125BA31AC3FCB13D7016DE7F57CC904FE1CB97C6AE98196E" {
+                //println!("hello! {:?}", root_x509.issued(&intermediate_x509));
+            //}
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
-                counter += 1;
-                found_issuer = true;
+                has_issued_one = true;
+                //found_issuer = true;
                 start = Instant::now();
                 let root_x509_for_stack = X509::from_der(&temp).unwrap();
                 stack.push(root_x509_for_stack).unwrap();
                 repr.push_str(&format!(
                     "fingerprint(cert_{}, \"{}\").\n",
                     counter,
-                    hex::encode(root_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase()
+                    fp,
                 ));
                 let v = match cert::PrologCert::from_der(&temp) {
                     Ok(p) => p,
@@ -85,19 +96,24 @@ pub fn get_chain_facts(
                 repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
                 repr.push_str(&format!(
                     "issuer(cert_{}, cert_{}).\n",
-                    counter - 1,
+                    intermediate_counter,
                     counter
                 ));
                 translation_time += start.elapsed().as_millis();
+                repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
+                repr.push_str(&format!("issuer(cert_{}, cert_{}). % Self-signing root\n", counter, counter));
             }
+        }
+        if has_issued_one {
+            counter += 1;
         }
 
         store_builder.add_cert(root_x509).unwrap();
     }
-    if !found_issuer {
-        repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
-        repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter, counter));
-    }
+    //if !found_issuer {
+        //repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
+        //repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter, counter));
+    //}
     let store = store_builder.build();
     let subject_x509 = leaf;
 
