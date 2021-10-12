@@ -60,17 +60,29 @@ fn main() {
     let arc = Arc::new(args);
     (arc.flag_start..=arc.flag_end).into_par_iter().for_each(|n| {
         let arc = Arc::clone(&arc);
-        let mut out_file = File::create(format!("{}/{}-out-{}.csv", &arc.arg_outpath, &arc.arg_client,  n)).unwrap();
         let index = rayon::current_thread_index().unwrap_or(1);
+        let mut out_file = File::create(format!("{}/{}-out-{}.csv", &arc.arg_outpath, &arc.arg_client,  n)).unwrap();
         let chain_raw = read_disk_certificate(&format!("{}/frankencert-{}.pem", &arc.arg_chainpath, n)).unwrap();
         let mut chain = X509::stack_from_pem(&chain_raw.as_bytes()).unwrap();
         let name = match chain[0].subject_alt_names() {
             Some(san) => {
-                san[0].dnsname().unwrap().to_string()
+                match san[0].dnsname() {
+                    Some(s) => s.to_string(),
+                    None => "nope".to_string(),
+                }
             },
             None => {
                 //"test"
-                format!("{}", chain[0].subject_name().entries_by_nid(Nid::COMMONNAME).next().unwrap().data().as_utf8().unwrap())
+                match chain[0].subject_name().entries_by_nid(Nid::COMMONNAME).next() {
+                    Some(x) => {
+                        println!("{:?}", x);
+                        match x.data().as_utf8() {
+                            Ok(y) => format!("{}", y),
+                            Err(_) => "nope".to_string(),
+                        }
+                    },
+                    None => "nope".to_string(),
+                }
             }
         }.replace("*", "www");
         //match IPAddress::parse(name) {

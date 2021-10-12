@@ -119,9 +119,9 @@ cleanName(Name, Cleaned) :-
 % Name-constrained name (any)
 dnsNameValid(Name, PermittedNames, ExcludedNames) :-
   length(PermittedNames, PermittedNamesLength),
-  length(ExcludedNames, ExcludedNamesLength),
+  %length(ExcludedNames, ExcludedNamesLength),
   % RFC 5280 says both cannot be empty
-  ( PermittedNamesLength > 0; ExcludedNamesLength > 0),
+  %( PermittedNamesLength > 0; ExcludedNamesLength > 0),
   (
     (
       PermittedNamesLength > 0,
@@ -330,9 +330,12 @@ certVerifiedNonLeaf(Cert, LeafSANList, CertsSoFar):-
       (
         (
           certs:nameConstraintsExt(Cert, true),
-          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), Permitted),
-          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), Excluded),
-          dnsNameConstrained(_, LeafSANList, Permitted, Excluded)
+          findall(PermittedT, certs:nameConstraintsPermitted(Cert, _, PermittedT), Permitted),
+          findall(ExcludedT, certs:nameConstraintsExcluded(Cert, _, ExcludedT), Excluded),
+          ( Permitted \= []; Excluded \= []),
+          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), PermittedNames),
+          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), ExcludedNames),
+          dnsNameConstrained(_, LeafSANList, PermittedNames, ExcludedNames)
         );
         certs:nameConstraintsExt(Cert, false)
       )

@@ -89,9 +89,7 @@ nameValid(Name) :-
 % Name-constrained name (any)
 dnsNameValid(Name, PermittedNames, ExcludedNames) :-
   length(PermittedNames, PermittedNamesLength),
-  length(ExcludedNames, ExcludedNamesLength),
-  % RFC 5280 says both cannot be empty
-  ( PermittedNamesLength > 0; ExcludedNamesLength > 0),
+  %length(ExcludedNames, ExcludedNamesLength),
   (
     (
       PermittedNamesLength > 0,
@@ -313,7 +311,7 @@ verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, Key
   notRevoked(Lower, Upper, EVStatus, StapledResponse, OcspResponse).
 
 verifiedLeaf(Fingerprint, SANList, CommonName, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse):- 
-  \+std:isCA(BasicConstraints),
+  %\+std:isCA(BasicConstraints),
   firefoxNameMatches(SANList, CommonName),
   leafDurationValid(EVStatus, Lower, Upper),
   verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage, EVStatus, StapledResponse, OcspResponse).
@@ -342,9 +340,12 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus, CertsSoFar):-
       (
         (
           certs:nameConstraintsExt(Cert, true),
-          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), Permitted),
-          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), Excluded),
-          dnsNameConstrained(LeafCommonName, LeafSANList, Permitted, Excluded)
+          findall(PermittedT, certs:nameConstraintsPermitted(Cert, _, PermittedT), Permitted),
+          findall(ExcludedT, certs:nameConstraintsExcluded(Cert, _, ExcludedT), Excluded),
+          ( Permitted \= []; Excluded \= []),
+          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), PermittedNames),
+          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), ExcludedNames),
+          dnsNameConstrained(LeafCommonName, LeafSANList, PermittedNames, ExcludedNames)
         );
         certs:nameConstraintsExt(Cert, false)
       )
