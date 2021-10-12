@@ -346,7 +346,7 @@ isNotRevoked(_).
 certVerifiedLeaf(Cert, SANList):-
   % Firefox does not have this restriction
 
-  ( certs:pathLimit(Cert, none); certs:basicConstraintsExt(Cert, false) ),
+  %( certs:pathLimit(Cert, none); certs:basicConstraintsExt(Cert, false) ),
   %std:getEVStatus(Cert, EVStatus),
   %(
     %EVStatus = not_ev;
