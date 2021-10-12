@@ -21,7 +21,13 @@ getCertFields(Cert):-
   certs:keyUsageExt(Cert, KeyUsageExt),
   certs:postalCode(Cert, PostalCode),
   certs:san(Cert, San),
-  certs:keyUsageCritical(Cert, KeyUsageCritical).
+  certs:keyUsageCritical(Cert, KeyUsageCritical),
+  certs:certificatePoliciesExt(Cert, CertPoliciesExt),
+  certs:certificatePoliciesCritical(Cert, CertPoliciesCrit),
+  certs:basicConstraintsExt(Cert, BasicConstraintsExt),
+	certs:basicConstraintsCritical(Cert, BasicConstraintsCrit),
+  certs:pathLimit(Cert, PathLimit),
+  certs:extendedKeyUsageExt(Cert, ExtendedKeyUsageExt).
 
 isCert(SerialNumber) :-
   SerialNumber \= "".
@@ -519,45 +525,52 @@ caKeyUsageCritical(KeyUsageExt, KeyUsageCritical) :-
 
 %  Subordinate CA Certificate: certificatePolicies 
 %  MUST be present and SHOULD NOT be marked critical.
-subCaCertPoliciesExtPresent(Cert) :-
-	isSubCA(Cert),
-	certs:certificatePoliciesExt(Cert, true).
+subCaCertPoliciesExtPresent(CertPoliciesExt) :-
+  CertPoliciesExt = true.
+	%isSubCA(Cert),
+	%certs:certificatePoliciesExt(Cert, true).
 
 %subCaCertPoliciesExtPresent(Cert) :-
 %	\+isSubCA(Cert).
 
-subCaCertPoliciesNotMarkedCritical(Cert) :-
-	subCaCertPoliciesExtPresent(Cert),
-	certs:certificatePoliciesCritical(Cert, false).	
+subCaCertPoliciesNotMarkedCritical(CertPoliciesExt, CertPoliciesCrit) :-
+  CertPoliciesExt = true,
+  CertPoliciesCrit = false.
+	%subCaCertPoliciesExtPresent(Cert),
+	%certs:certificatePoliciesCritical(Cert, false).	
 
-subCaCertPoliciesNotMarkedCritical(Cert) :-
-	\+isSubCA(Cert).
+%subCaCertPoliciesNotMarkedCritical(Cert) :-
+%	\+isSubCA(Cert).
 
 
 %  Root CA Certificate: basicConstraints MUST appear as a critical extension
-rootBasicConstraintsCritical(Cert) :-
-	certs:basicConstraintsExt(Cert, true),
-	certs:basicConstraintsCritical(Cert, true).
+rootBasicConstraintsCritical(BasicConstraintsExt, BasicConstraintsCrit) :-
+  BasicConstraintsExt = true,
+  BasicConstraintsCrit = true.
+	%certs:basicConstraintsExt(Cert, true),
+	%certs:basicConstraintsCritical(Cert, true).
 
-rootBasicConstraintsCritical(Cert) :-
-	\+isRoot(Cert).
+%rootBasicConstraintsCritical(Cert) :-
+%	\+isRoot(Cert).
 
 
 %  Root CA Certificate: The pathLenConstraintField SHOULD NOT be present.
 % Checks root CA for no length constraint
-rootPathLenNotPresent(Cert) :-
-	certs:pathLimit(Cert, none).
+rootPathLenNotPresent(PathLimit) :-
+  PathLimit = none.
+	%certs:pathLimit(Cert, none).
 
-rootPathLenNotPresent(Cert) :-
-	\+isRoot(Cert).
+%rootPathLenNotPresent(Cert) :-
+%	\+isRoot(Cert).
 
 
 %  Root CA Certificate: extendedKeyUsage MUST NOT be present.
-rootExtKeyUseNotPresent(Cert) :-
-	certs:extendedKeyUsageExt(Cert, false).
+rootExtKeyUseNotPresent(ExtendedKeyUsageExt) :-
+  ExtendedKeyUsageExt = false.
+	%certs:extendedKeyUsageExt(Cert, false).
 
-rootExtKeyUseNotPresent(Cert) :-
-	\+isRoot(Cert).
+%rootExtKeyUseNotPresent(Cert) :-
+%	\+isRoot(Cert).
 
 
 %  Root CA Certificate: certificatePolicies SHOULD NOT be present.
