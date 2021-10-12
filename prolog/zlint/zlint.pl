@@ -34,7 +34,9 @@ getCertFields(Cert):-
   %certs:spkiRSAExponent(Cert, Exp).
   certs:rsaExponent(Cert, Exp),
   certs:rsaModulus(Cert, Mod),
-  certs:keyAlgorithm(Cert, KeyAlgorithm).
+  certs:keyAlgorithm(Cert, KeyAlgorithm),
+  certs:extendedKeyUsage(Cert, ExtendedKeyUsage),
+  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage).
 
 isCert(SerialNumber) :-
   SerialNumber \= "".
@@ -621,21 +623,55 @@ allowed_EKU(clientAuth).
 allowed_EKU(emailProtection).
 
 % helper function: checks for not allowed EKU
-subCertEkuValuesNotAllowed(Cert) :-
-	certs:extendedKeyUsage(Cert, Value),
-	\+allowed_EKU(Value).
+%subCertEkuValuesNotAllowed(Cert) :-
+%	certs:extendedKeyUsage(Cert, Value),
+%	\+allowed_EKU(Value).
 
 % subscriber cert: Extended key usage values allowed
-subCertEkuValidFields(Cert) :-
-	certs:extendedKeyUsage(Cert, serverAuth),
-	\+subCertEkuValuesNotAllowed(Cert).
+%subCertEkuValidFields(Cert) :-
+%	certs:extendedKeyUsage(Cert, serverAuth),
+%	\+subCertEkuValuesNotAllowed(Cert).
 
-subCertEkuValidFields(Cert) :-
-	certs:extendedKeyUsage(Cert, clientAuth),
-	\+subCertEkuValuesNotAllowed(Cert).
+%subCertEkuValidFields(Cert) :-
+%	certs:extendedKeyUsage(Cert, clientAuth),
+%	\+subCertEkuValuesNotAllowed(Cert).
 
-subCertEkuValidFields(Cert) :-
-	\+isSubCert(Cert).
+% helper function: checks for not allowed EKU
+subCertEkuValuesNotAllowed(ExtendedKeyUsage) :-
+	\+allowed_EKU(ExtendedKeyUsage).
+
+% subscriber cert: Extended key usage values allowed
+subCertEkuValidFields(ExtKeyUsage) :-
+  member(serverAuth, ExtKeyUsage).
+  \+member(codeSigning, ExtKeyUsage),
+  \+member(emailProtection, ExtKeyUsage),
+  \+member(timeStamping, ExtKeyUsage),
+  \+member(oCSPSigning, ExtKeyUsage),
+  \+member(any, ExtKeyUsage),
+  \+member(hasOther, ExtKeyUsage).
+
+  %ExtendedKeyUsage = serverAuth,
+	%\+subCertEkuValuesNotAllowed(ExtendedKeyUsage).
+
+subCertEkuValidFields(ExtendedKeyUsage) :-
+	member(clientAuth, ExtKeyUsage),
+  \+member(codeSigning, ExtKeyUsage),
+  \+member(emailProtection, ExtKeyUsage),
+  \+member(timeStamping, ExtKeyUsage),
+  \+member(oCSPSigning, ExtKeyUsage),
+  \+member(any, ExtKeyUsage),
+  \+member(hasOther, ExtKeyUsage).
+
+%subCertEkuValidFields(ExtendedKeyUsage) :-
+%  (
+%    member(serverAuth, ExtKeyUsage);
+%	  member(clientAuth, ExtKeyUsage)
+%  ).
+  %member(serverAuth, ExtKeyUsage),
+	%member(clientAuth, ExtKeyUsage).
+
+%subCertEkuValidFields(Cert) :-
+%	\+isSubCert(Cert).
 
 %  To be considered Technically Constrained, the
 %  Subordinate CA: Must include an EKU extension.
