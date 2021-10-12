@@ -14,15 +14,22 @@ getCertFields(Cert):-
   certs:isCA(Cert, IsCA),
   certs:givenName(Cert, GivenName),
   certs:surname(Cert, Surname),
-  certs:organizationName(Cert, OrgName).
+  certs:organizationName(Cert, OrgName),
+  certs:localityName(Cert, LocalityName),
+  certs:stateOrProvinceName(Cert, StOrProvName),
+  certs:fingerprint(Cert, Fingerprint),
+  certs:keyUsageExt(Cert, KeyUsageExt),
+  certs:postalCode(Cert, PostalCode),
+  certs:san(Cert, San),
+  certs:keyUsageCritical(Cert, KeyUsageCritical).
 
 isCert(SerialNumber) :-
-  \+equal(SerialNumber, "").
+  SerialNumber \= "".
 
 % Checks whether or not the common 
 % name is missing
 caCommonNameMissing(CommonName) :- 
-    equal(CommonName, "").
+    CommonName = "".
 
 % Checks whether the country name 
 % is invalid
@@ -36,7 +43,7 @@ caCountryNameValid(Country) :-
 % Checks whether or not country name 
 % is missing 
 caCountryNameMissing(Country) :- 
-    equal(Country, "").
+    Country = "".
 
 caCountryNamePresent(Country) :- 
   \+caCountryNameMissing(Country).
@@ -92,17 +99,17 @@ certPolicyIvRequiresOrgGivenOrSurname(Cert) :-
   \+surnameMissing(Cert).
 
 certPolicyIvRequireslocalityName(Cert) :- 
-  \+localityNameMissing(Cert).
+  \+localityNameMissing(LocalityName).
 
 certPolicyIvRequiresStateOrProvinceName(Cert) :- 
-  \+stateOrProvinceNameMissing(Cert).
+  \+stateOrProvinceNameMissing(StOrProvName).
 
 % Seems off but taken from zlint github
 certPolicyIvRequiresLocalityOrProvinceName(Cert) :- 
-  \+localityNameMissing(Cert).
+  \+localityNameMissing(LocalityName).
 
 certPolicyIvRequiresLocalityOrProvinceName(Cert) :- 
-  \+stateOrProvinceNameMissing(Cert).
+  \+stateOrProvinceNameMissing(StOrProvName).
 
 certPolicyIvRequiresCountry(Cert) :- 
   \+caCountryNameMissing(Cert). 
@@ -118,11 +125,11 @@ certPolicyOvApplies(Cert) :-
 certPolicyRequiresOrg(OrgName) :- 
   \+organizationNameMissing(OrgName). 
 
-certPolicyOvRequires(Orgname) :- 
+certPolicyOvRequires(Orgname, LocalityName, StOrProvName, Country) :- 
   \+organizationNameMissing(Orgname), 
-  \+localityNameMissing(Cert), 
-  \+stateOrProvinceNameMissing(Cert), 
-  \+caCountryNameMissing(Cert).
+  \+localityNameMissing(LocalityName), 
+  \+stateOrProvinceNameMissing(StOrProvName), 
+  \+caCountryNameMissing(Country).
 
 % Postal Code must not appear if 
 % organizationName, givenName, or 
@@ -371,8 +378,8 @@ dnsNameWildCardOnlyInLeftLabel(Cert) :-
 % Basic Constraints checks
 % CA bit set
 isCa(BasicConstExt, IsCA) :-
-  BasicConstExt == true,
-  IsCA == true.
+  BasicConstExt = true,
+  IsCA = true.
   %equal(BasicConstExt, true),
   %equal(IsCA, true).
   %certs:basicConstraintsExt(Cert, true),
@@ -383,25 +390,28 @@ isNotCa(Cert) :-
 
 % All of the helper methods will be posted below 
 organizationNameMissing(OrgName) :- 
-  OrgName == "".
+  OrgName = "".
   %certs:organizationName(Cert, "").
 
 givenNameMissing(GivenName) :- 
-  equal(GivenName, "").
+  GivenName = "".
   %certs:givenName(Cert, "").
 
 surnameMissing(Surname) :- 
-  equal(Surname, "").
+  Surname = "".
   %certs:surname(Cert, "").
 
-stateOrProvinceNameMissing(Cert) :- 
-  certs:stateOrProvinceName(Cert, ""). 
+stateOrProvinceNameMissing(StOrProvName) :- 
+  StOrProvName = "".
+  %certs:stateOrProvinceName(Cert, ""). 
 
-localityNameMissing(Cert) :- 
+localityNameMissing(LocalityName) :- 
+  LocalityName = "".
   certs:localityName(Cert, "").
 
-postalCodeMissing(Cert) :- 
-  certs:postalCode(Cert, "").
+postalCodeMissing(PostalCode) :- 
+  PostalCode = ""/
+  %certs:postalCode(Cert, "").
 
 equal(X, Y):-
     X == Y.
@@ -440,15 +450,16 @@ isIPv4(Addr):-
         number_string(NB, SNB), B = SNB /* to avoid leading zeroes */
     )).
 
-commonNameIsIPv4(Cert) :- 
-  certs:commonName(Cert, CommonName), 
+commonNameIsIPv4(CommonName) :- 
   isIPv4(CommonName). 
 
-notEmptyNamesExist(Cert) :- 
-  \+certs:commonName(Cert, "").
+notEmptyNamesExist(CommonName) :- 
+  CommonName \= "".
+  %\+certs:commonName(Cert, "").
 
-notEmptyNamesExist(Cert) :- 
-  \+certs:san(Cert, "").
+notEmptyNamesExist(San) :- 
+  San \= "".
+  %\+certs:san(Cert, "").
 
 secondToLast([SLD,_], SLD). 
 secondToLast([_|Rest], SLD) :- secondToLast(Rest, SLD).
@@ -465,8 +476,8 @@ topLevelDomain(DNSName, TLD) :-
 
 % Start of zlintV2
 % check if Cert is a trusted root
-isRoot(Cert):-
-    certs:fingerprint(Cert, Fingerprint),
+isRoot(Fingerprint):-
+    %certs:fingerprint(Cert, Fingerprint),
     trusted_roots(Fingerprint).
 
 % Helper methods up here
@@ -477,9 +488,10 @@ rootApplies(Cert) :-
 	%certs:fingerprint(Cert, Fingerprint),
     %trusted_roots(Fingerprint).
 
-isSubCA(Cert) :-
-	certs:isCA(Cert, true),
-	\+isRoot(Cert).
+isSubCA(IsCA, Fingerprint) :-
+  IsCA = true.
+	\+isRoot(Fingerprint).
+  %certs:isCA(Cert, true),
 
 % check for if it is a subscriber certificate
 isSubCert(Cert) :-
@@ -491,15 +503,18 @@ isSubCert(Cert) :-
 caKeyUsagePresentAndCriticalApplies(Cert) :-
 	certs:isCA(Cert, true).
 
-caKeyUsagePresent(Cert) :-
-	certs:keyUsageExt(Cert, true).
+caKeyUsagePresent(KeyUsageExt) :-
+  KeyUsageExt = true.
+	%certs:keyUsageExt(Cert, true).
 
 %caKeyUsageCritical(Cert) :-
 %	\+caKeyUsagePresentAndCriticalApplies(Cert).
 
-caKeyUsageCritical(Cert) :-
-	certs:keyUsageExt(Cert, true),
-	certs:keyUsageCritical(Cert, true).
+caKeyUsageCritical(KeyUsageExt, KeyUsageCritical) :-
+  KeyUsageExt = true,
+  KeyUsageCritical = true.
+	%certs:keyUsageExt(Cert, true),
+	%certs:keyUsageCritical(Cert, true).
 
 
 %  Subordinate CA Certificate: certificatePolicies 
