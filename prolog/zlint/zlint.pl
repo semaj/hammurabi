@@ -36,6 +36,7 @@ getCertFields(Cert):-
   certs:rsaModulus(Cert, Mod),
   certs:keyAlgorithm(Cert, KeyAlgorithm),
   certs:extendedKeyUsage(Cert, ExtendedKeyUsage),
+  findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage).
 
 isCert(SerialNumber) :-
@@ -641,34 +642,38 @@ subCertEkuValuesNotAllowed(ExtendedKeyUsage) :-
 	\+allowed_EKU(ExtendedKeyUsage).
 
 % subscriber cert: Extended key usage values allowed
-subCertEkuValidFields(ExtKeyUsage) :-
-  member(serverAuth, ExtKeyUsage).
-  \+member(codeSigning, ExtKeyUsage),
-  \+member(emailProtection, ExtKeyUsage),
-  \+member(timeStamping, ExtKeyUsage),
-  \+member(oCSPSigning, ExtKeyUsage),
-  \+member(any, ExtKeyUsage),
-  \+member(hasOther, ExtKeyUsage).
+%subCertEkuValidFields(ExtKeyUsage) :-
+%  member(serverAuth, ExtKeyUsage),
+%  \+member(codeSigning, ExtKeyUsage),
+%  \+member(emailProtection, ExtKeyUsage),
+%  \+member(timeStamping, ExtKeyUsage),
+%  \+member(oCSPSigning, ExtKeyUsage),
+%  \+member(any, ExtKeyUsage),
+%  \+member(hasOther, ExtKeyUsage).
 
   %ExtendedKeyUsage = serverAuth,
 	%\+subCertEkuValuesNotAllowed(ExtendedKeyUsage).
 
-subCertEkuValidFields(ExtendedKeyUsage) :-
-	member(clientAuth, ExtKeyUsage),
+%subCertEkuValidFields(ExtKeyUsage) :-
+%	member(clientAuth, ExtKeyUsage),
+%  \+member(codeSigning, ExtKeyUsage),
+%  \+member(emailProtection, ExtKeyUsage),
+%  \+member(timeStamping, ExtKeyUsage),
+%  \+member(oCSPSigning, ExtKeyUsage),
+%  \+member(any, ExtKeyUsage),
+%  \+member(hasOther, ExtKeyUsage).
+
+subCertEkuValidFields(ExtKeyUsage) :-
+  (
+    member(serverAuth, ExtKeyUsage);
+	  member(clientAuth, ExtKeyUsage)
+  ),
   \+member(codeSigning, ExtKeyUsage),
-  \+member(emailProtection, ExtKeyUsage),
   \+member(timeStamping, ExtKeyUsage),
   \+member(oCSPSigning, ExtKeyUsage),
   \+member(any, ExtKeyUsage),
   \+member(hasOther, ExtKeyUsage).
 
-%subCertEkuValidFields(ExtendedKeyUsage) :-
-%  (
-%    member(serverAuth, ExtKeyUsage);
-%	  member(clientAuth, ExtKeyUsage)
-%  ).
-  %member(serverAuth, ExtKeyUsage),
-	%member(clientAuth, ExtKeyUsage).
 
 %subCertEkuValidFields(Cert) :-
 %	\+isSubCert(Cert).
@@ -685,17 +690,23 @@ subCaEkuPresent(Cert) :-
 
 %  Subordinate CA Certificate: extkeyUsage, either id-kp-serverAuth
 %  or id-kp-clientAuth or both values MUST be present.
-subCaEkuValidFields(Cert) :-
-	subCaEkuPresent(Cert),
-	certs:extendedKeyUsage(Cert, serverAuth).
+%subCaEkuValidFields(Cert) :-
+%	subCaEkuPresent(Cert),
+%	certs:extendedKeyUsage(Cert, serverAuth).
 
-subCaEkuValidFields(Cert) :-
-	subCaEkuPresent(Cert),
-	certs:extendedKeyUsage(Cert, clientAuth).
+%subCaEkuValidFields(Cert) :-
+%	subCaEkuPresent(Cert),
+%	certs:extendedKeyUsage(Cert, clientAuth).
 
 %subCaEkuValidFields(Cert) :-
 %	\+isSubCA(Cert).
 
+%can move over extKeyUsageVal and extKeyUsageList from type to add more values
+subCaEkuValidFields(ExtKeyUsage) :-
+  (
+    member(serverAuth, ExtKeyUsage);
+	  member(clientAuth, ExtKeyUsage)
+  ).
 
 %  Subscriber Certificate: certificatePolicies MUST be present
 %  and SHOULD NOT be marked critical.
@@ -1253,18 +1264,23 @@ caCrlSignSet(Cert) :-
   \+isSubCA(Cert).
 
 % sub_cert: keyUsage if present, bit positions for keyCertSign and cRLSign MUST NOT be set.
-subCertKeyUsageCertSignBitNotSet(Cert) :-
-  isSubCert(Cert),
-  certs:keyUsageExt(Cert, true),
-  \+certs:keyUsage(Cert, keyCertSign).
+%subCertKeyUsageCertSignBitNotSet(Cert) :-
+%  isSubCert(Cert),
+%  certs:keyUsageExt(Cert, true),
+%  \+certs:keyUsage(Cert, keyCertSign).
 
-subCertKeyUsageCrlSignBitNotSet(Cert) :-
-  isSubCert(Cert),
-  certs:keyUsageExt(Cert, true),
-  \+certs:keyUsage(Cert, cRLSign).
+%subCertKeyUsageCrlSignBitNotSet(Cert) :-
+%  isSubCert(Cert),
+%  certs:keyUsageExt(Cert, true),
+%  \+certs:keyUsage(Cert, cRLSign).
   
-subCertKeyUsageCrlSignBitNotSet(Cert) :-
-  \+isSubCert(Cert).
+subCertKeyUsageCertSignBitNotSet(KeyUsageExt, KeyUsage) :-
+  KeyUsageExt = true,
+  \+member(keyCertSign, KeyUsage).
+
+subCertKeyUsageCrlSignBitNotSet(KeyUsageExt, KeyUsage) :-
+  KeyUsageExt = true,
+  \+member(cRLSign, KeyUsage).
 
 
 % helper methods
