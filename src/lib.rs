@@ -143,6 +143,51 @@ pub fn get_chain_facts(
     }
     //println!("Translation time: {}ms", translation_time);
 
+    let mut hacks: Vec<String> = Vec::new();
+    hacks.push("basicConstraintsCritical(hack, hack).".to_string());
+    hacks.push("basicConstraintsExt(hack, hack).".to_string());
+    hacks.push("certificatePolicies(hack, hack).".to_string());
+    hacks.push("certificatePoliciesCritical(hack, hack).".to_string());
+    hacks.push("certificatePoliciesExt(hack, hack).".to_string());
+    hacks.push("commonName(hack, hack).".to_string());
+    hacks.push("extendedKeyUsage(hack, hack).".to_string());
+    hacks.push("extendedKeyUsageCritical(hack, hack).".to_string());
+    hacks.push("extendedKeyUsageExt(hack, hack).".to_string());
+    hacks.push("fingerprint(hack, hack).".to_string());
+    hacks.push("inhibitAnyPolicyExt(hack, hack).".to_string());
+    hacks.push("isCA(hack, hack).".to_string());
+    hacks.push("issuer(hack, hack).".to_string());
+    hacks.push("keyAlgorithm(hack, hack).".to_string());
+    hacks.push("keyLen(hack, hack).".to_string());
+    hacks.push("keyUsage(hack, hack).".to_string());
+    hacks.push("keyUsageCritical(hack, hack).".to_string());
+    hacks.push("keyUsageExt(hack, hack).".to_string());
+    hacks.push("nameConstraintsExt(hack, hack).".to_string());
+    hacks.push("nameConstraintsCritical(hack, hack).".to_string());
+    hacks.push("nameConstraintsPermitted(hack, hack, hack).".to_string());
+    hacks.push("nameConstraintsExcluded(hack, hack, hack).".to_string());
+    hacks.push("notAfter(hack, hack).".to_string());
+    hacks.push("notBefore(hack, hack).".to_string());
+    hacks.push("pathLimit(hack, hack).".to_string());
+    hacks.push("policyConstraintsExt(hack, hack).".to_string());
+    hacks.push("policyConstraintsCritical(hack, hack).".to_string());
+    hacks.push("requireExplicitPolicy(hack, hack).".to_string());
+    hacks.push("policyMappingsExt(hack, hack, hack).".to_string());
+    hacks.push("policyMappings(hack, hack, hack).".to_string());
+    hacks.push("san(hack, hack).".to_string());
+    hacks.push("sanCritical(hack, hack).".to_string());
+    hacks.push("sanExt(hack, hack).".to_string());
+    hacks.push("serialNumber(hack, hack).".to_string());
+    hacks.push("signatureAlgorithm(hack, hack, hack).".to_string());
+    hacks.push("signature(hack, hack, hack).".to_string());
+    hacks.push("subjectKeyIdentifier(hack, hack).".to_string());
+    hacks.push("subjectKeyIdentifierCritical(hack, hack).".to_string());
+    hacks.push("subjectKeyIdentifierExt(hack, hack).".to_string());
+    hacks.push("version(hack, hack).".to_string());
+    hacks.push("ocspResponse(hack, hack).".to_string());
+    hacks.push("stapledResponse(hack, hack).".to_string());
+    hacks.push("spkiDSAParameters(hack, hack, hack, hack).".to_string());
+    repr.push_str(&hacks.join("\n"));
     let mut facts = repr.split("\n").collect::<Vec<&str>>();
     facts.sort_by(|a, b| a.cmp(b));
     Ok(facts.join("\n"))
@@ -246,11 +291,16 @@ pub fn write_job_files(job_dir: &str, domain: &str, chain_facts: &str) -> io::Re
     keyUsageCritical/2,
     keyUsageExt/2,
     nameConstraintsExt/2,
+    nameConstraintsCritical/2,
+    nameConstraintsExcluded/3,
+    nameConstraintsPermitted/3,
     notAfter/2,
     notBefore/2,
     pathLimit/2,
     policyConstraintsExt/2,
     policyMappingsExt/3,
+    policyMappings/3,
+    requireExplicitPolicy/2,
     san/2,
     sanCritical/2,
     sanExt/2,

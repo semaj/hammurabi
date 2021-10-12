@@ -16,9 +16,9 @@ Verifies certificate at <path> for host <hostname> using policy for client <clie
 <path> should be an absolute path, because rustls has some silly behavior regarding paths.
 
 Usage:
-  localcheck [options] <client> <mappingpath> <intpath> <outpath> --start=<start> --end=<end> [--ocsp] 
-  localcheck (--version | -v)
-  localcheck (--help | -h)
+  scale [options] <client> <mappingpath> <intpath> <outpath> --start=<start> --end=<end> [--ocsp] 
+  scale (--version | -v)
+  scale (--help | -h)
 
 Options:
     --version, -v       Show tool version.

@@ -546,7 +546,7 @@ impl PrologCert<'_> {
                 }
             },
             None => {
-                answer.push(format!("policyMappingsExt({}, \"PolicyMappings\", false).", hash))
+                answer.push(format!("policyMappingsExt({}, false).", hash))
             }
         }
         return answer.join("\n");
