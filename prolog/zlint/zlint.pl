@@ -38,7 +38,9 @@ getCertFields(Cert):-
   certs:extendedKeyUsage(Cert, ExtendedKeyUsage),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
   findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
-  certs:signatureAlgorithm(Cert, Algo).
+  certs:signatureAlgorithm(Cert, Algo, _),
+  certs:nameConstraintsCritical(Cert, NameConstCrit),
+  certs:version(Cert, Ver).
 
 isCert(SerialNumber) :-
   SerialNumber \= "".
@@ -129,8 +131,8 @@ certPolicyIvRequiresLocalityOrProvinceName(LocalityName) :-
 certPolicyIvRequiresLocalityOrProvinceName(StOrProvName) :- 
   \+stateOrProvinceNameMissing(StOrProvName).
 
-certPolicyIvRequiresCountry(Cert) :- 
-  \+caCountryNameMissing(Cert). 
+certPolicyIvRequiresCountry(Country) :- 
+  \+caCountryNameMissing(Country). 
 
 % If certificate asserts policy identifier 
 % 2.23.140.1.2.2 then it MUST include
@@ -183,6 +185,11 @@ validTimeNotTooLong(Before, After) :-
   Max is Before + MaxDuration,
   between(Before, Max, After).
 
+bvalidTimeNotTooLong(Before, After) :- 
+  maxLifetime(MaxDuration),
+  Min is After - MaxDuration,
+  between(Min, After, Before).
+
 %validTimeNotTooLong(Cert) :- 
 %  \+validTimeTooLong(Cert).
 
@@ -212,17 +219,18 @@ rsaPublicExponentNotTooSmall(Exp) :-
   %certs:spkiRSAExponent(Cert, Exp),
   geq(Exp, 3).
 
-rsaPublicExponentInRange(Exp) :- 
+rsaPublicExponentInRangeAndOdd(Exp) :- 
   %certs:spkiRSAExponent(Cert, Exp),
-  geq(Exp, 65537). 
+  between(65537,115792089237316195423570985008687907853269984665640564039457584007913129639938, Exp),
+  modulus(1, Exp, 2). 
 
 rsaPublicExponentInRange(Exp) :- 
   %certs:spkiRSAExponent(Cert, Exp),
   \+geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
 
-rsaModOdd(Mod) :- 
+%rsaModOdd(Mod) :- 
   %certs:spkiRSAModulus(Cert, Mod), 
-  modulus(1, Mod, 2).
+%  modulus(1, Mod, 2).
 
 rsaModFactorsSmallerThan752(Modulus) :- 
   %certs:spkiRSAModulus(Cert, Modulus),
@@ -718,8 +726,9 @@ subCertCertPoliciesExtPresent(Cert) :-
 %subCertCertPoliciesExtPresent(Cert) :-
 %	\+isSubCert(Cert).
 
-subCertCertPoliciesNotMarkedCritical(Cert) :-
-	certs:certificatePoliciesCritical(Cert, false).
+subCertCertPoliciesNotMarkedCritical(CertPoliciesCrit) :-
+  CertPoliciesCrit = false.
+	%certs:certificatePoliciesCritical(Cert, false).
 
 subCertCertPoliciesNotMarkedCritical(Cert) :-
 	\+isSubCert(Cert).
@@ -733,16 +742,18 @@ subCaNameConstCritApplies(Cert) :-
 	isSubCA(Cert),
 	certs:nameConstraintsExt(Cert, true).
 
-subCaNameConstrainsCritical(Cert) :-
-	certs:nameConstraintsCritical(Cert, true).
+subCaNameConstrainsCritical(NameConstCrit) :-
+  NameConstCrit = true;
+	%certs:nameConstraintsCritical(Cert, true).
 
 subCaNameConstrainsCritical(Cert) :-
 	\+subCaNameConstCritApplies(Cert).
 
 
 %  Root CA: SHOULD NOT contain the certificatePolicies extension.
-rootCertPoliciesExtNotPresent(Cert) :-
-	certs:certificatePoliciesExt(Cert, false).
+rootCertPoliciesExtNotPresent(CertPoliciesExt) :-
+  CertPoliciesExt = false;
+	%certs:certificatePoliciesExt(Cert, false).
 
 rootCertPoliciesExtNotPresent(Cert) :-
 	\+isRoot(Cert).
@@ -781,7 +792,6 @@ subCertCommonNameFromSan(Cert) :-
 
 %  Subordinate CA Certificate: cRLDistributionPoints MUST be present 
 %  and MUST NOT be marked critical.
-% NEED TO CHANGE crlDistributionPoints to crlDistributionPointsExt LATER WHEN CARGO BUILD WORKS
 subCaCrlDistributionPointsPresent(Cert) :-
 	isSubCA(Cert),
 	certs:crlDistributionPointsExt(Cert, true),
@@ -816,7 +826,6 @@ subCaCrlDistPointContainsHttpUrl(Cert) :-
 
 %  Subscriber Certifcate: cRLDistributionPoints MAY be present.
 %  not considered in valid scope
-% NEED TO CHANGE crlDistributionPoints to crlDistributionPointsExt LATER WHEN CARGO BUILD WORKS
 subCertCrlDistributionPointsPresent(Cert) :-
 	isSubCert(Cert),
 	certs:crlDistributionPointsExt(Cert, true),
@@ -846,11 +855,11 @@ subCertCrlDistPointContainsHttpUrl(Cert) :-
 	s_occurrences(Url, "http://", N),
 	equal(N, 1).
 
-subCertCrlDistPointContainsHttpUrl(Cert) :-
-	certs:crlDistributionPoint(Cert, false).
+%subCertCrlDistPointContainsHttpUrl(Cert) :-
+%	certs:crlDistributionPoint(Cert, false).
 
-subCertCrlDistPointContainsHttpUrl(Cert) :-
-	\+isSubCert(Cert).
+%subCertCrlDistPointContainsHttpUrl(Cert) :-
+%	\+isSubCert(Cert).
 
 %  Subscriber Certificate: authorityInformationAccess MUST NOT be marked critical
 % helper function
@@ -968,9 +977,10 @@ subCertGivenOrSurnameApplies(Cert) :-
   isSubCert(Cert),
   surnameIsPresent(Cert).
 
-subCertGivenOrSurnameHasCorrectPolicy(Cert) :- 
-  certs:certificatePolicies(Cert, Oid),
-  equal(Oid, "2.23.140.1.2.3").
+subCertGivenOrSurnameHasCorrectPolicy(CertificatePolicies) :- 
+  CertificatePolicies = "2.23.140.1.2.3".
+  %certs:certificatePolicies(Cert, Oid),
+  %equal(Oid, "2.23.140.1.2.3").
 
 subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
   isSubCert(Cert),
@@ -1012,8 +1022,8 @@ subCertContainsCertPolicy(Cert) :-
   certs:certificatePoliciesExt(Cert, true),
   certs:certificatePolicies(Cert, _).
 
-subCertContainsCertPolicy(Cert) :- 
-  \+isSubCert(Cert).
+%subCertContainsCertPolicy(Cert) :- 
+%  \+isSubCert(Cert).
  
 % ca_cert: organizationName MUST appear.
 isCA(Cert) :-
@@ -1125,9 +1135,10 @@ ecProperCurves(Cert) :-
 
 
 % Certificates MUST be of type X.509 v3.
-validCertificateVersion(Cert) :-
-  certs:version(Cert, Ver),
-  equal(Ver, 2).
+validCertificateVersion(Ver) :-
+  Ver = 2.
+  %certs:version(Cert, Ver),
+  %equal(Ver, 2).
 
 
 % sub_ca: MUST NOT contain the anyPolicy identifier
