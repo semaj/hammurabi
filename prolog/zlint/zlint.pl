@@ -33,7 +33,7 @@ getCertFields(Cert):-
   certs:notAfter(Cert, After),
   %certs:spkiRSAExponent(Cert, Exp).
   certs:rsaExponent(Cert, Exp),
-  certs:rsaModulus(Cert, Mod),
+  certs:rsaModulus(Cert, Modulus),
   certs:keyAlgorithm(Cert, KeyAlgorithm),
   certs:extendedKeyUsage(Cert, ExtendedKeyUsage),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
@@ -137,7 +137,7 @@ certPolicyIvRequiresCountry(Cert) :-
 % organizationName, localityName,
 % stateOrProvinceName, and countryName
 
-certPolicyOvApplies(Cert) :- 
+certPolicyOvApplies(CertificatePolicies) :- 
   CertificatePolicies = "2.23.140.1.2.2".
 
 certPolicyRequiresOrg(OrgName) :- 
@@ -224,7 +224,7 @@ rsaModOdd(Mod) :-
   %certs:spkiRSAModulus(Cert, Mod), 
   modulus(1, Mod, 2).
 
-rsaModFactorsSmallerThan752(Mod) :- 
+rsaModFactorsSmallerThan752(Modulus) :- 
   %certs:spkiRSAModulus(Cert, Modulus),
   prime_num(Mod),
   modulus(0, Modulus, Mod).
@@ -443,10 +443,10 @@ stateOrProvinceNameMissing(StOrProvName) :-
 
 localityNameMissing(LocalityName) :- 
   LocalityName = "".
-  certs:localityName(Cert, "").
+  %certs:localityName(Cert, "").
 
 postalCodeMissing(PostalCode) :- 
-  PostalCode = ""/
+  PostalCode = "".
   %certs:postalCode(Cert, "").
 
 equal(X, Y):-
@@ -512,8 +512,8 @@ topLevelDomain(DNSName, TLD) :-
 
 % Start of zlintV2
 % check if Cert is a trusted root
-isRoot(Fingerprint):-
-    %certs:fingerprint(Cert, Fingerprint),
+isRoot(Cert):-
+    certs:fingerprint(Cert, Fingerprint),
     trusted_roots(Fingerprint).
 
 % Helper methods up here
@@ -524,15 +524,15 @@ rootApplies(Cert) :-
 	%certs:fingerprint(Cert, Fingerprint),
     %trusted_roots(Fingerprint).
 
-isSubCA(IsCA, Fingerprint) :-
-  IsCA = true.
-	\+isRoot(Fingerprint).
-  %certs:isCA(Cert, true),
+isSubCA(Cert) :-
+  %IsCA = true,
+  certs:isCA(Cert, true),
+	\+isRoot(Cert).
 
 % check for if it is a subscriber certificate
-isSubCert(IsCA) :-
-  IsCA = false.
-	%certs:isCA(Cert, false).
+isSubCert(Cert) :-
+  %IsCA = false.
+	certs:isCA(Cert, false).
 
  
 %  Root CA and Subordinate CA Certificate: 
