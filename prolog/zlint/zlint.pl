@@ -27,7 +27,14 @@ getCertFields(Cert):-
   certs:basicConstraintsExt(Cert, BasicConstraintsExt),
 	certs:basicConstraintsCritical(Cert, BasicConstraintsCrit),
   certs:pathLimit(Cert, PathLimit),
-  certs:extendedKeyUsageExt(Cert, ExtendedKeyUsageExt).
+  certs:extendedKeyUsageExt(Cert, ExtendedKeyUsageExt),
+  certs:certificatePolicies(Cert, CertificatePolicies),
+  certs:notBefore(Cert, Before),
+  certs:notAfter(Cert, After),
+  %certs:spkiRSAExponent(Cert, Exp).
+  certs:rsaExponent(Cert, Exp),
+  certs:rsaModulus(Cert, Mod),
+  certs:keyAlgorithm(Cert, KeyAlgorithm).
 
 isCert(SerialNumber) :-
   SerialNumber \= "".
@@ -92,8 +99,9 @@ countryNameMustAppear(OrgName, GivenName, Surname) :-
 % (3) stateOrProvinceName
 % (4) countryName
 
-certPolicyIvApplies(Cert) :- 
-  certs:certificatePolicies(Cert,  "2.23.140.1.2.3").
+certPolicyIvApplies(IsCA, CertificatePolicies) :- 
+  IsCA = false,
+  CertificatePolicies = "2.23.140.1.2.3".
 
 certPolicyIvRequiresOrgGivenOrSurname(OrgName) :- 
   \+organizationNameMissing(OrgName). 
@@ -101,20 +109,20 @@ certPolicyIvRequiresOrgGivenOrSurname(OrgName) :-
 certPolicyIvRequiresOrgGivenOrSurname(GivenName) :- 
   \+givenNameMissing(GivenName). 
 
-certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
-  \+surnameMissing(Cert).
+certPolicyIvRequiresOrgGivenOrSurname(Surname) :- 
+  \+surnameMissing(Surname).
 
-certPolicyIvRequireslocalityName(Cert) :- 
+certPolicyIvRequireslocalityName(LocalityName) :- 
   \+localityNameMissing(LocalityName).
 
-certPolicyIvRequiresStateOrProvinceName(Cert) :- 
+certPolicyIvRequiresStateOrProvinceName(StOrProvName) :- 
   \+stateOrProvinceNameMissing(StOrProvName).
 
 % Seems off but taken from zlint github
-certPolicyIvRequiresLocalityOrProvinceName(Cert) :- 
+certPolicyIvRequiresLocalityOrProvinceName(LocalityName) :- 
   \+localityNameMissing(LocalityName).
 
-certPolicyIvRequiresLocalityOrProvinceName(Cert) :- 
+certPolicyIvRequiresLocalityOrProvinceName(StOrProvName) :- 
   \+stateOrProvinceNameMissing(StOrProvName).
 
 certPolicyIvRequiresCountry(Cert) :- 
@@ -126,7 +134,7 @@ certPolicyIvRequiresCountry(Cert) :-
 % stateOrProvinceName, and countryName
 
 certPolicyOvApplies(Cert) :- 
-  certs:certificatePolicies(Cert, "2.23.140.1.2.2").
+  CertificatePolicies = "2.23.140.1.2.2".
 
 certPolicyRequiresOrg(OrgName) :- 
   \+organizationNameMissing(OrgName). 
@@ -147,11 +155,11 @@ postalCodeProhibtedApplies(OrgName) :-
 postalCodeProhibtedApplies(GivenName) :- 
   givenNameMissing(GivenName).
 
-postalCodeProhibtedApplies(Cert) :- 
-  surnameMissing(Cert).
+postalCodeProhibtedApplies(Surname) :- 
+  surnameMissing(Surname).
 
-postalCodeProhibted(Cert) :- 
-  postalCodeMissing(Cert).
+postalCodeProhibted(PostalCode) :- 
+  postalCodeMissing(PostalCode).
 
 % CAs must not issue certificates 
 % longer than 39 months under 
@@ -159,15 +167,20 @@ postalCodeProhibted(Cert) :-
 
 maxLifetime(102560094).
 
-validTimeTooLong(Cert) :- 
-  maxLifetime(MaxDuration),
-  certs:notBefore(Cert, NotBeforeTime),
-  certs:notAfter(Cert, NotAfterTime),
-  subtract(Duration, NotAfterTime, NotBeforeTime),
-  geq(Duration, MaxDuration).
+%validTimeTooLong(Before, After) :- 
+%  maxLifetime(MaxDuration),
+  %certs:notBefore(Cert, NotBeforeTime),
+  %certs:notAfter(Cert, NotAfterTime),
+%  subtract(Duration, NotAfterTime, NotBeforeTime),
+%  geq(Duration, MaxDuration).
 
-validTimeNotTooLong(Cert) :- 
-  \+validTimeTooLong(Cert).
+validTimeNotTooLong(Before, After) :- 
+  maxLifetime(MaxDuration),
+  Max is Before + MaxDuration,
+  between(Before, Max, After).
+
+%validTimeNotTooLong(Cert) :- 
+%  \+validTimeTooLong(Cert).
 
 % SAN must appear 
 extSanMissing(Cert) :- 
@@ -176,37 +189,39 @@ extSanMissing(Cert) :-
 extSanMissing(Cert) :- 
   certs:sanExt(Cert, false).
 
-extSanNotMissing(Cert) :- 
-  \+extSanMissing(Cert).
+extSanNotMissing(San) :- 
+  San \= "".
+  %\+extSanMissing(Cert).
 
 % The following lints relate to 
 % verifying the RSA if used
-rsaApplies(Cert) :- 
-  certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.1").
+rsaApplies(KeyAlgorithm) :- 
+  KeyAlgorithm = "1.2.840.113549.1.1.1".
+  %certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.1").
 
 % RSA: Public Exponent must be odd
-rsaPublicExponentOdd(Cert) :- 
-  certs:spkiRSAExponent(Cert, Exp), 
+rsaPublicExponentOdd(Exp) :- 
+  %certs:spkiRSAExponent(Cert, Exp), 
   modulus(1, Exp, 2).
 
-rsaPublicExponentNotTooSmall(Cert) :- 
-  certs:spkiRSAExponent(Cert, Exp),
+rsaPublicExponentNotTooSmall(Exp) :- 
+  %certs:spkiRSAExponent(Cert, Exp),
   geq(Exp, 3).
 
-rsaPublicExponentInRange(Cert) :- 
-  certs:spkiRSAExponent(Cert, Exp),
+rsaPublicExponentInRange(Exp) :- 
+  %certs:spkiRSAExponent(Cert, Exp),
   geq(Exp, 65537). 
 
-rsaPublicExponentInRange(Cert) :- 
-  certs:spkiRSAExponent(Cert, Exp),
+rsaPublicExponentInRange(Exp) :- 
+  %certs:spkiRSAExponent(Cert, Exp),
   \+geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
 
-rsaModOdd(Cert) :- 
-  certs:spkiRSAModulus(Cert, Mod), 
+rsaModOdd(Mod) :- 
+  %certs:spkiRSAModulus(Cert, Mod), 
   modulus(1, Mod, 2).
 
-rsaModFactorsSmallerThan752(Cert) :- 
-  certs:spkiRSAModulus(Cert, Modulus),
+rsaModFactorsSmallerThan752(Mod) :- 
+  %certs:spkiRSAModulus(Cert, Modulus),
   prime_num(Mod),
   modulus(0, Modulus, Mod).
 
@@ -226,10 +241,13 @@ rsaModMoreThan2048Bits(Cert) :-
 % CAs MUST NOT issue any new Subscriber 
 % certificates or Subordinate CA certificates 
 % using SHA-1 after 1 January 2016
-subCertOrSubCaNotUsingSha1(Cert) :- 
-  \+certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.5"),
-  \+certs:keyAlgorithm(Cert, "1.3.14.3.2.27"), 
-  \+certs:keyAlgorithm(Cert, "1.2.840.10045.4.1").
+subCertOrSubCaNotUsingSha1(KeyAlgorithm) :- 
+  KeyAlgorithm \= "1.2.840.113549.1.1.5",
+  KeyAlgorithm \= "1.3.14.3.2.27",
+  KeyAlgorithm \= "1.2.840.10045.4.1".
+  %\+certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.5"),
+  %\+certs:keyAlgorithm(Cert, "1.3.14.3.2.27"), 
+  %\+certs:keyAlgorithm(Cert, "1.2.840.10045.4.1").
 
 % The following are lints for the dnsName 
 % under subject alternative name 
@@ -257,15 +275,13 @@ dnsNameAllCharsAcceptable(Cert) :-
   \+dnsNameHasBadChar(Cert).
 
 % Wildcards in the left label of DNSName should only be *
-dnsNameLeftLabelWildcardIncorrect(Cert) :- 
-  certs:commonName(Cert, DNSName), 
-  split_string(DNSName, ".", "", [Left | _]), 
+dnsNameLeftLabelWildcardIncorrect(CommonName) :- 
+  split_string(CommonName, ".", "", [Left | _]), 
   substring("*", Left),
   \+Left = "*". 
 
-dnsNameLeftLabelWildcardIncorrect(Cert) :- 
-  certs:san(Cert, DNSName), 
-  split_string(DNSName, ".", "", [Left | _]), 
+dnsNameLeftLabelWildcardIncorrect(San) :- 
+  split_string(San, ".", "", [Left | _]), 
   substring("*", Left),
   \+Left = "*". 
 
@@ -273,18 +289,22 @@ dnsNameLeftLabelWildcardCorrect(Cert) :-
   \+dnsNameLeftLabelWildcardIncorrect(Cert).
 
 % DNSName labels MUST be less than or equal to 63 characters
-dnsNameTooLong(Cert) :- 
-  certs:commonName(Cert, Label), 
-  string_length(Label, Length), 
+dnsNameTooLong(CommonName) :- 
+  %certs:commonName(Cert, Label), 
+  string_length(CommonName, Length), 
   geq(Length, 64).
 
-dnsNameTooLong(Cert) :- 
-  certs:san(Cert, Label), 
-  string_length(Label, Length), 
+dnsNameTooLong(San) :- 
+  %certs:san(Cert, Label), 
+  string_length(San, Length), 
   geq(Length, 64).
 
-dnsNameNotTooLong(Cert) :- 
-  \+dnsNameTooLong(Cert).
+%dnsNameNotTooLong(Cert) :- 
+%  \+dnsNameTooLong(Cert).
+
+dnsNameNotTooLong(San) :- 
+  string_length(San, Length), 
+  \+geq(Length, 64).
 
 % DNSNames should not have an empty label.
 dnsNameIsEmptyLabel(Cert) :- 
@@ -293,8 +313,11 @@ dnsNameIsEmptyLabel(Cert) :-
 dnsNameIsEmptyLabel(Cert) :- 
   certs:san(Cert, ""). 
 
-dnsNameIsNotEmptyLabel(Cert) :- 
-  \+dnsNameIsEmptyLabel(Cert).
+%dnsNameIsNotEmptyLabel(Cert) :- 
+%  \+dnsNameIsEmptyLabel(Cert).
+
+dnsNameIsNotEmptyLabel(San) :- 
+  San \= "".
 
 % DNSNames should not contain a bare IANA suffix.
 dnsNameContainsBareIANASuffix(Cert) :- 
@@ -305,28 +328,31 @@ dnsNameContainsBareIANASuffix(Cert) :-
   certs:san(Cert, Label), 
   tld(Label).
 
-dnsNameDoesNotContainBareIANASuffix(Cert) :- 
-  \+dnsNameContainsBareIANASuffix(Cert).
+%dnsNameDoesNotContainBareIANASuffix(Cert) :- 
+%  \+dnsNameContainsBareIANASuffix(Cert).
+
+dnsNameDoesNotContainBareIANASuffix(San) :- 
+  \+tld(San).
 
 % DNSName should not have a hyphen beginning or ending the SLD
-dnsNameHyphenInSLD(Cert) :- 
-  certs:commonName(Cert, DNSName),
-  secondLevelDomain(DNSName, SLD), 
+dnsNameHyphenInSLD(CommonName) :- 
+  %certs:commonName(Cert, DNSName),
+  secondLevelDomain(CommonName, SLD), 
   s_startswith(SLD, "-").
 
-dnsNameHyphenInSLD(Cert) :- 
-  certs:san(Cert, DNSName),
-  secondLevelDomain(DNSName, SLD), 
+dnsNameHyphenInSLD(San) :- 
+  %certs:san(Cert, DNSName),
+  secondLevelDomain(San, SLD), 
   s_startswith(SLD, "-").
 
-dnsNameHyphenInSLD(Cert) :- 
-  certs:commonName(Cert, DNSName),
-  secondLevelDomain(DNSName, SLD), 
+dnsNameHyphenInSLD(CommonName) :- 
+  %certs:commonName(Cert, DNSName),
+  secondLevelDomain(CommonName, SLD), 
   s_endswith(SLD, "-").
 
-dnsNameHyphenInSLD(Cert) :- 
-  certs:san(Cert, DNSName),
-  secondLevelDomain(DNSName, SLD), 
+dnsNameHyphenInSLD(San) :- 
+  %certs:san(Cert, DNSName),
+  secondLevelDomain(San, SLD), 
   s_endswith(SLD, "-").
 
 dnsNameNoHyphenInSLD(Cert) :- 
@@ -500,8 +526,9 @@ isSubCA(IsCA, Fingerprint) :-
   %certs:isCA(Cert, true),
 
 % check for if it is a subscriber certificate
-isSubCert(Cert) :-
-	certs:isCA(Cert, false).
+isSubCert(IsCA) :-
+  IsCA = false.
+	%certs:isCA(Cert, false).
 
  
 %  Root CA and Subordinate CA Certificate: 
@@ -574,8 +601,9 @@ rootExtKeyUseNotPresent(ExtendedKeyUsageExt) :-
 
 
 %  Root CA Certificate: certificatePolicies SHOULD NOT be present.
-rootCertPoliciesNotPresent(Cert) :-
-	certs:certificatePoliciesExt(Cert, false).
+rootCertPoliciesNotPresent(CertPoliciesExt) :-
+  CertPoliciesExt = false.
+	%certs:certificatePoliciesExt(Cert, false).
 
 rootCertPoliciesNotPresent(Cert) :-
 	\+isRoot(Cert).
