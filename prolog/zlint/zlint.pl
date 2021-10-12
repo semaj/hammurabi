@@ -37,7 +37,8 @@ getCertFields(Cert):-
   certs:keyAlgorithm(Cert, KeyAlgorithm),
   certs:extendedKeyUsage(Cert, ExtendedKeyUsage),
   findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
-  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage).
+  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
+  certs:signatureAlgorithm(Cert, Algo).
 
 isCert(SerialNumber) :-
   SerialNumber \= "".
@@ -1075,8 +1076,7 @@ subCertProvinceMustNotAppear(Cert) :-
 
 % Certificates MUST meet the following algorithm requirements: 
 % SHA-1*, SHA-256, SHA-384, SHA-512
-signatureAlgorithmSupported(Cert) :-
-  certs:signatureAlgorithm(Cert, Algo),
+signatureAlgorithmSupported(Algo) :-
   val_sig_algo(Algo).
 
 
