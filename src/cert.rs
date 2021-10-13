@@ -29,6 +29,32 @@ pub struct PrologCert<'a> {
     pub serial: String,
 }
 
+fn oid_to_name(oid: String) -> String {
+    if oid == "2.5.4.6" {
+        return "country".to_string()
+    } else if oid == "2.5.4.10" {
+        return "organization".to_string()
+    } else if oid == "2.5.4.3" {
+        return "common name".to_string()
+    } else if oid == "2.5.4.4" {
+        return "surname".to_string()
+    } else if oid == "2.5.4.8" { 
+        return "state".to_string()
+    } else if oid == "2.5.4.9" {
+        return "street address".to_string()
+    } else if oid == "2.5.4.7" {
+        return "locality".to_string()
+    } else if oid == "2.5.4.17" {
+        return "postal code".to_string()
+    } else if oid == "2.5.4.42" {
+        return "given name".to_string()
+    } else if oid == "0.9.2342.19200300.100.1.25" {
+        return "domain component".to_string()
+    } else {
+        return "UNKNOWN".to_string()
+    }
+}
+
 impl PrologCert<'_> {
     pub fn from_der(cert_der: &'_ [u8]) -> Result<PrologCert, ()> {
         match parse_x509_certificate(cert_der) {
@@ -464,12 +490,14 @@ impl PrologCert<'_> {
                 answer.push(format!("nameConstraintsExt({}, true).", hash));
                 answer.push(format!("nameConstraintsCritical({}, {}).", hash, is_critical));
                 for permitted in constraints.permitted_subtrees.as_ref().unwrap_or(&vec![]) {
-                    let (title, name) = emit_general_name(&permitted.base);
-                    answer.push(format!("nameConstraintsPermitted({}, \"{}\", \"{}\").", hash, title, name));
+                    for (title, name) in emit_general_name(&permitted.base) {
+                        answer.push(format!("nameConstraintsPermitted({}, \"{}\", \"{}\").", hash, title, name));
+                    }
                 }
                 for excluded in constraints.excluded_subtrees.as_ref().unwrap_or(&vec![]) {
-                    let (title, name) = emit_general_name(&excluded.base);
-                    answer.push(format!("nameConstraintsExcluded({}, \"{}\", \"{}\").", hash, title, name));
+                    for (title, name) in emit_general_name(&excluded.base) {
+                        answer.push(format!("nameConstraintsExcluded({}, \"{}\", \"{}\").", hash, title, name));
+                    }
                 }
             },
             None => {
@@ -486,9 +514,10 @@ impl PrologCert<'_> {
                 answer.push(format!("sanExt({}, true).", hash));
                 answer.push(format!("sanCritical({}, {}).", hash, is_critical));
                 for general_name in &sans.general_names {
-                    let (_, name) = emit_general_name(general_name);
-                    answer.push(format!("san({}, \"{}\").",
-                    hash, name));
+                    for (_, name) in emit_general_name(general_name) {
+                        answer.push(format!("san({}, \"{}\").",
+                        hash, name));
+                    }
                 }
             },
             None => {
@@ -670,27 +699,33 @@ impl PrologCert<'_> {
     }
 }
 
-fn emit_general_name(name: &GeneralName) -> (String, String) {
+fn emit_general_name(name: &GeneralName) -> Vec<(String, String)> {
+    let mut v = Vec::new();
     match name {
         GeneralName::OtherName(_, bytes) => {
-            ("Other".to_string(), str::from_utf8(bytes).map_or(hex::encode(bytes), |x| x.to_string()))
+            v.push(("Other".to_string(), str::from_utf8(bytes).map_or(hex::encode(bytes), |x| x.to_string())))
         },
-        GeneralName::RFC822Name(s) => ("RFC822".to_string(), s.to_string()),
-        GeneralName::DNSName(s) => ("DNS".to_string(), s.to_string()),
+        GeneralName::RFC822Name(s) => v.push(("RFC822".to_string(), s.to_string())),
+        GeneralName::DNSName(s) => v.push(("DNS".to_string(), s.to_string())),
         GeneralName::DirectoryName(x509_name) => {
-            ("Directory".to_string(), hex::encode(x509_name.as_raw()))
+            for attr in x509_name.iter_attributes() {
+                //println!("{}, {}", , attr.as_str().unwrap());
+                v.push((format!("Directory/{}", oid_to_name(attr.attr_type.to_id_string())), attr.as_str().unwrap().to_string()));
+            }
+            //("Directory".to_string(), str::from_utf8(x509_name.as_raw()).unwrap_or("--INVALID--").to_string())
         },
-        GeneralName::URI(s) => ("URI".to_string(), s.to_string()),
+        GeneralName::URI(s) => v.push(("URI".to_string(), s.to_string())),
         GeneralName::IPAddress(bytes) => {
             if bytes.len() == 8 { // ip+netmask
                 let ip = Ipv4Addr::new(bytes[0], bytes[1], bytes[2], bytes[3]);
-                ("IPv4Address".to_string(), format!("{}", ip))
+                v.push(("IPv4Address".to_string(), format!("{}", ip)))
             } else {
-                ("IPv6Address".to_string(), "unsupported".to_string())
+                v.push(("IPv6Address".to_string(), "unsupported".to_string()))
             }
         },
-        GeneralName::RegisteredID(oid) => ("OID".to_string(), oid.to_string()),
+        GeneralName::RegisteredID(oid) => v.push(("OID".to_string(), oid.to_string())),
     }
+    return v
 }
 
 
