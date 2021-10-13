@@ -1,82 +1,48 @@
 % Master zlint file - has all the lints in it
 :- use_module("prolog/job/certs").
 :- include(const).
+:- discontiguous val_sig_algo/1.
 % The following functions are taken from zlint
 % specifically the cabf_br tests  
 % but reimplemented using Prolog 
 % See www.github.com/zmap/zlint for more information 
 
-getCertFields(Cert):-
-  certs:serialNumber(Cert, SerialNumber),
-  certs:commonName(Cert, CommonName),
-  certs:country(Cert, Country),
-  certs:basicConstraintsExt(Cert, BasicConstExt),
-  certs:isCA(Cert, IsCA),
-  certs:givenName(Cert, GivenName),
-  certs:surname(Cert, Surname),
-  certs:organizationName(Cert, OrgName),
-  certs:localityName(Cert, LocalityName),
-  certs:stateOrProvinceName(Cert, StOrProvName),
-  certs:fingerprint(Cert, Fingerprint),
-  certs:keyUsageExt(Cert, KeyUsageExt),
-  certs:postalCode(Cert, PostalCode),
-  certs:san(Cert, San),
-  certs:keyUsageCritical(Cert, KeyUsageCritical),
-  certs:certificatePoliciesExt(Cert, CertPoliciesExt),
-  certs:certificatePoliciesCritical(Cert, CertPoliciesCrit),
-  certs:basicConstraintsExt(Cert, BasicConstraintsExt),
-	certs:basicConstraintsCritical(Cert, BasicConstraintsCrit),
-  certs:pathLimit(Cert, PathLimit),
-  certs:extendedKeyUsageExt(Cert, ExtendedKeyUsageExt),
-  certs:certificatePolicies(Cert, CertificatePolicies),
-  certs:notBefore(Cert, Before),
-  certs:notAfter(Cert, After),
-  %certs:spkiRSAExponent(Cert, Exp).
-  certs:rsaExponent(Cert, Exp),
-  certs:rsaModulus(Cert, Modulus),
-  certs:keyAlgorithm(Cert, KeyAlgorithm),
-  certs:extendedKeyUsage(Cert, ExtendedKeyUsage),
-  findall(Usage, certs:keyUsage(Cert, Usage), KeyUsage),
-  findall(ExtUsage, certs:extendedKeyUsage(Cert, ExtUsage), ExtKeyUsage),
-  certs:signatureAlgorithm(Cert, Algo, _),
-  certs:nameConstraintsCritical(Cert, NameConstCrit),
-  certs:version(Cert, Ver).
-
-isCert(SerialNumber) :-
-  SerialNumber \= "".
+isCert(Cert) :-
+  \+certs:serialNumber(Cert, "").
 
 % Checks whether or not the common 
 % name is missing
-caCommonNameMissing(CommonName) :- 
-    CommonName = "".
+caCommonNameMissing(Cert) :- 
+    certs:commonName(Cert, "").
 
 % Checks whether the country name 
 % is invalid
-caCountryNameValidApplies(Country, BasicConstExt, IsCA) :-
-  isCa(BasicConstExt, IsCA), 
-  caCountryNamePresent(Country). 
+caCountryNameValidApplies(Cert) :-
+  isCa(Cert), 
+  caCountryNamePresent(Cert). 
 
-caCountryNameValid(Country) :- 
+caCountryNameValid(Cert) :- 
+  certs:country(Cert, Country), 
   val_country(Country).
 
 % Checks whether or not country name 
 % is missing 
-caCountryNameMissing(Country) :- 
-    Country = "".
+caCountryNameMissing(Cert) :- 
+    certs:country(Cert, "").
 
-caCountryNamePresent(Country) :- 
-  \+caCountryNameMissing(Country).
+caCountryNamePresent(Cert) :- 
+  \+caCountryNameMissing(Cert).
 
 % countryName must not appear if 
 % the organizationName, givenName, 
 % and surname are absent
-countryNameMustNotAppearApplies(GivenName, Surname, Country) :- 
-  givenNameMissing(GivenName), 
-  surnameMissing(Surname),
-  caCountryNameMissing(Country).
+countryNameMustNotAppearApplies(Cert) :- 
+  givenNameMissing(Cert), 
+  surnameMissing(Cert),
+  caCountryNameMissing(Cert).
 
-countryNameMustNotAppear(Country) :- 
-  caCountryNameMissing(Country).
+countryNameMustNotAppear(Cert) :- 
+  caCountryNameMissing(Cert).
 
 % Country Name must appear if 
 % organizationName, givenName 
@@ -90,13 +56,13 @@ countryNameMustNotAppear(Country) :-
 %countryNameMustAppearApplies(Cert) :- 
 %  \+surnameMissing(Cert).
 
-countryNameMustAppear(Country) :- 
-  \+caCountryNameMissing(Country).
+countryNameMustAppear(Cert) :- 
+  \+caCountryNameMissing(Cert).
 
-countryNameMustAppear(OrgName, GivenName, Surname) :- 
-  organizationNameMissing(OrgName), 
-  givenNameMissing(GivenName), 
-  surnameMissing(Surname).
+countryNameMustAppear(Cert) :- 
+  organizationNameMissing(Cert), 
+  givenNameMissing(Cert), 
+  surnameMissing(Cert).
 
 % If certificate asserts policy identifier 
 % 2.23.140.1.2.3 then it must include either 
@@ -105,67 +71,66 @@ countryNameMustAppear(OrgName, GivenName, Surname) :-
 % (3) stateOrProvinceName
 % (4) countryName
 
-certPolicyIvApplies(IsCA, CertificatePolicies) :- 
-  IsCA = false,
-  CertificatePolicies = "2.23.140.1.2.3".
+certPolicyIvApplies(Cert) :- 
+  certs:certificatePolicies(Cert,  "2.23.140.1.2.3").
 
-certPolicyIvRequiresOrgGivenOrSurname(OrgName) :- 
-  \+organizationNameMissing(OrgName). 
+certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
+  \+organizationNameMissing(Cert). 
 
-certPolicyIvRequiresOrgGivenOrSurname(GivenName) :- 
-  \+givenNameMissing(GivenName). 
+certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
+  \+givenNameMissing(Cert). 
 
-certPolicyIvRequiresOrgGivenOrSurname(Surname) :- 
-  \+surnameMissing(Surname).
+certPolicyIvRequiresOrgGivenOrSurname(Cert) :- 
+  \+surnameMissing(Cert).
 
-certPolicyIvRequireslocalityName(LocalityName) :- 
-  \+localityNameMissing(LocalityName).
+certPolicyIvRequireslocalityName(Cert) :- 
+  \+localityNameMissing(Cert).
 
-certPolicyIvRequiresStateOrProvinceName(StOrProvName) :- 
-  \+stateOrProvinceNameMissing(StOrProvName).
+certPolicyIvRequiresStateOrProvinceName(Cert) :- 
+  \+stateOrProvinceNameMissing(Cert).
 
 % Seems off but taken from zlint github
-certPolicyIvRequiresLocalityOrProvinceName(LocalityName) :- 
-  \+localityNameMissing(LocalityName).
+certPolicyIvRequiresLocalityOrProvinceName(Cert) :- 
+  \+localityNameMissing(Cert).
 
-certPolicyIvRequiresLocalityOrProvinceName(StOrProvName) :- 
-  \+stateOrProvinceNameMissing(StOrProvName).
+certPolicyIvRequiresLocalityOrProvinceName(Cert) :- 
+  \+stateOrProvinceNameMissing(Cert).
 
-certPolicyIvRequiresCountry(Country) :- 
-  \+caCountryNameMissing(Country). 
+certPolicyIvRequiresCountry(Cert) :- 
+  \+caCountryNameMissing(Cert). 
 
 % If certificate asserts policy identifier 
 % 2.23.140.1.2.2 then it MUST include
 % organizationName, localityName,
 % stateOrProvinceName, and countryName
 
-certPolicyOvApplies(CertificatePolicies) :- 
-  CertificatePolicies = "2.23.140.1.2.2".
+certPolicyOvApplies(Cert) :- 
+  certs:certificatePolicies(Cert, "2.23.140.1.2.2").
 
-certPolicyRequiresOrg(OrgName) :- 
-  \+organizationNameMissing(OrgName). 
+certPolicyRequiresOrg(Cert) :- 
+  \+organizationNameMissing(Cert). 
 
-certPolicyOvRequires(Orgname, LocalityName, StOrProvName, Country) :- 
-  \+organizationNameMissing(Orgname), 
-  \+localityNameMissing(LocalityName), 
-  \+stateOrProvinceNameMissing(StOrProvName), 
-  \+caCountryNameMissing(Country).
+certPolicyOvRequires(Cert) :- 
+  \+organizationNameMissing(Cert), 
+  \+localityNameMissing(Cert), 
+  \+stateOrProvinceNameMissing(Cert), 
+  \+caCountryNameMissing(Cert).
 
 % Postal Code must not appear if 
 % organizationName, givenName, or 
 % surname fields are absent 
 
-postalCodeProhibtedApplies(OrgName) :- 
-  organizationNameMissing(OrgName).
+postalCodeProhibtedApplies(Cert) :- 
+  organizationNameMissing(Cert).
 
-postalCodeProhibtedApplies(GivenName) :- 
-  givenNameMissing(GivenName).
+postalCodeProhibtedApplies(Cert) :- 
+  givenNameMissing(Cert).
 
-postalCodeProhibtedApplies(Surname) :- 
-  surnameMissing(Surname).
+postalCodeProhibtedApplies(Cert) :- 
+  surnameMissing(Cert).
 
-postalCodeProhibted(PostalCode) :- 
-  postalCodeMissing(PostalCode).
+postalCodeProhibted(Cert) :- 
+  postalCodeMissing(Cert).
 
 % CAs must not issue certificates 
 % longer than 39 months under 
@@ -173,25 +138,15 @@ postalCodeProhibted(PostalCode) :-
 
 maxLifetime(102560094).
 
-%validTimeTooLong(Before, After) :- 
-%  maxLifetime(MaxDuration),
-  %certs:notBefore(Cert, NotBeforeTime),
-  %certs:notAfter(Cert, NotAfterTime),
-%  subtract(Duration, NotAfterTime, NotBeforeTime),
-%  geq(Duration, MaxDuration).
-
-validTimeNotTooLong(Before, After) :- 
+validTimeTooLong(Cert) :- 
   maxLifetime(MaxDuration),
-  Max is Before + MaxDuration,
-  between(Before, Max, After).
+  certs:notBefore(Cert, NotBeforeTime),
+  certs:notAfter(Cert, NotAfterTime),
+  subtract(Duration, NotAfterTime, NotBeforeTime),
+  geq(Duration, MaxDuration).
 
-bvalidTimeNotTooLong(Before, After) :- 
-  maxLifetime(MaxDuration),
-  Min is After - MaxDuration,
-  between(Min, After, Before).
-
-%validTimeNotTooLong(Cert) :- 
-%  \+validTimeTooLong(Cert).
+validTimeNotTooLong(Cert) :- 
+  \+validTimeTooLong(Cert).
 
 % SAN must appear 
 extSanMissing(Cert) :- 
@@ -200,40 +155,37 @@ extSanMissing(Cert) :-
 extSanMissing(Cert) :- 
   certs:sanExt(Cert, false).
 
-extSanNotMissing(San) :- 
-  San \= "".
-  %\+extSanMissing(Cert).
+extSanNotMissing(Cert) :- 
+  \+extSanMissing(Cert).
 
 % The following lints relate to 
 % verifying the RSA if used
-rsaApplies(KeyAlgorithm) :- 
-  KeyAlgorithm = "1.2.840.113549.1.1.1".
-  %certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.1").
+rsaApplies(Cert) :- 
+  certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.1").
 
 % RSA: Public Exponent must be odd
-rsaPublicExponentOdd(Exp) :- 
-  %certs:spkiRSAExponent(Cert, Exp), 
+rsaPublicExponentOdd(Cert) :- 
+  certs:rsaExponent(Cert, Exp), 
   modulus(1, Exp, 2).
 
-rsaPublicExponentNotTooSmall(Exp) :- 
-  %certs:spkiRSAExponent(Cert, Exp),
+rsaPublicExponentNotTooSmall(Cert) :- 
+  certs:rsaExponent(Cert, Exp),
   geq(Exp, 3).
 
-rsaPublicExponentInRangeAndOdd(Exp) :- 
-  %certs:spkiRSAExponent(Cert, Exp),
-  between(65537,115792089237316195423570985008687907853269984665640564039457584007913129639938, Exp),
-  modulus(1, Exp, 2). 
+rsaPublicExponentInRange(Cert) :- 
+  certs:rsaExponent(Cert, Exp),
+  geq(Exp, 65537). 
 
-rsaPublicExponentInRange(Exp) :- 
-  %certs:spkiRSAExponent(Cert, Exp),
+rsaPublicExponentInRange(Cert) :- 
+  certs:rsaExponent(Cert, Exp),
   \+geq(Exp, 115792089237316195423570985008687907853269984665640564039457584007913129639938). 
 
-%rsaModOdd(Mod) :- 
-  %certs:spkiRSAModulus(Cert, Mod), 
-%  modulus(1, Mod, 2).
+rsaModOdd(Cert) :- 
+  certs:rsaModulus(Cert, Mod), 
+  modulus(1, Mod, 2).
 
-rsaModFactorsSmallerThan752(Modulus) :- 
-  %certs:spkiRSAModulus(Cert, Modulus),
+rsaModFactorsSmallerThan752(Cert) :- 
+  certs:rsaModulus(Cert, Modulus),
   prime_num(Mod),
   modulus(0, Modulus, Mod).
 
@@ -241,7 +193,7 @@ rsaModNoFactorsSmallerThan752(Cert) :-
   \+rsaModFactorsSmallerThan752(Cert).
 
 rsaModMoreThan2048Bits(Cert) :- 
-  certs:spkiRSA(Cert, Length), 
+  certs:rsaModLength(Cert, Length), 
   geq(Length, 2048).
 
 
@@ -253,13 +205,10 @@ rsaModMoreThan2048Bits(Cert) :-
 % CAs MUST NOT issue any new Subscriber 
 % certificates or Subordinate CA certificates 
 % using SHA-1 after 1 January 2016
-subCertOrSubCaNotUsingSha1(KeyAlgorithm) :- 
-  KeyAlgorithm \= "1.2.840.113549.1.1.5",
-  KeyAlgorithm \= "1.3.14.3.2.27",
-  KeyAlgorithm \= "1.2.840.10045.4.1".
-  %\+certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.5"),
-  %\+certs:keyAlgorithm(Cert, "1.3.14.3.2.27"), 
-  %\+certs:keyAlgorithm(Cert, "1.2.840.10045.4.1").
+subCertOrSubCaNotUsingSha1(Cert) :- 
+  \+certs:keyAlgorithm(Cert, "1.2.840.113549.1.1.5"),
+  \+certs:keyAlgorithm(Cert, "1.3.14.3.2.27"), 
+  \+certs:keyAlgorithm(Cert, "1.2.840.10045.4.1").
 
 % The following are lints for the dnsName 
 % under subject alternative name 
@@ -287,13 +236,15 @@ dnsNameAllCharsAcceptable(Cert) :-
   \+dnsNameHasBadChar(Cert).
 
 % Wildcards in the left label of DNSName should only be *
-dnsNameLeftLabelWildcardIncorrect(CommonName) :- 
-  split_string(CommonName, ".", "", [Left | _]), 
+dnsNameLeftLabelWildcardIncorrect(Cert) :- 
+  certs:commonName(Cert, DNSName), 
+  split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
   \+Left = "*". 
 
-dnsNameLeftLabelWildcardIncorrect(San) :- 
-  split_string(San, ".", "", [Left | _]), 
+dnsNameLeftLabelWildcardIncorrect(Cert) :- 
+  certs:san(Cert, DNSName), 
+  split_string(DNSName, ".", "", [Left | _]), 
   substring("*", Left),
   \+Left = "*". 
 
@@ -301,22 +252,18 @@ dnsNameLeftLabelWildcardCorrect(Cert) :-
   \+dnsNameLeftLabelWildcardIncorrect(Cert).
 
 % DNSName labels MUST be less than or equal to 63 characters
-dnsNameTooLong(CommonName) :- 
-  %certs:commonName(Cert, Label), 
-  string_length(CommonName, Length), 
+dnsNameTooLong(Cert) :- 
+  certs:commonName(Cert, Label), 
+  string_length(Label, Length), 
   geq(Length, 64).
 
-dnsNameTooLong(San) :- 
-  %certs:san(Cert, Label), 
-  string_length(San, Length), 
+dnsNameTooLong(Cert) :- 
+  certs:san(Cert, Label), 
+  string_length(Label, Length), 
   geq(Length, 64).
 
-%dnsNameNotTooLong(Cert) :- 
-%  \+dnsNameTooLong(Cert).
-
-dnsNameNotTooLong(San) :- 
-  string_length(San, Length), 
-  \+geq(Length, 64).
+dnsNameNotTooLong(Cert) :- 
+  \+dnsNameTooLong(Cert).
 
 % DNSNames should not have an empty label.
 dnsNameIsEmptyLabel(Cert) :- 
@@ -325,11 +272,8 @@ dnsNameIsEmptyLabel(Cert) :-
 dnsNameIsEmptyLabel(Cert) :- 
   certs:san(Cert, ""). 
 
-%dnsNameIsNotEmptyLabel(Cert) :- 
-%  \+dnsNameIsEmptyLabel(Cert).
-
-dnsNameIsNotEmptyLabel(San) :- 
-  San \= "".
+dnsNameIsNotEmptyLabel(Cert) :- 
+  \+dnsNameIsEmptyLabel(Cert).
 
 % DNSNames should not contain a bare IANA suffix.
 dnsNameContainsBareIANASuffix(Cert) :- 
@@ -340,31 +284,28 @@ dnsNameContainsBareIANASuffix(Cert) :-
   certs:san(Cert, Label), 
   tld(Label).
 
-%dnsNameDoesNotContainBareIANASuffix(Cert) :- 
-%  \+dnsNameContainsBareIANASuffix(Cert).
-
-dnsNameDoesNotContainBareIANASuffix(San) :- 
-  \+tld(San).
+dnsNameDoesNotContainBareIANASuffix(Cert) :- 
+  \+dnsNameContainsBareIANASuffix(Cert).
 
 % DNSName should not have a hyphen beginning or ending the SLD
-dnsNameHyphenInSLD(CommonName) :- 
-  %certs:commonName(Cert, DNSName),
-  secondLevelDomain(CommonName, SLD), 
+dnsNameHyphenInSLD(Cert) :- 
+  certs:commonName(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
   s_startswith(SLD, "-").
 
-dnsNameHyphenInSLD(San) :- 
-  %certs:san(Cert, DNSName),
-  secondLevelDomain(San, SLD), 
+dnsNameHyphenInSLD(Cert) :- 
+  certs:san(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
   s_startswith(SLD, "-").
 
-dnsNameHyphenInSLD(CommonName) :- 
-  %certs:commonName(Cert, DNSName),
-  secondLevelDomain(CommonName, SLD), 
+dnsNameHyphenInSLD(Cert) :- 
+  certs:commonName(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
   s_endswith(SLD, "-").
 
-dnsNameHyphenInSLD(San) :- 
-  %certs:san(Cert, DNSName),
-  secondLevelDomain(San, SLD), 
+dnsNameHyphenInSLD(Cert) :- 
+  certs:san(Cert, DNSName),
+  secondLevelDomain(DNSName, SLD), 
   s_endswith(SLD, "-").
 
 dnsNameNoHyphenInSLD(Cert) :- 
@@ -421,41 +362,31 @@ dnsNameWildCardOnlyInLeftLabel(Cert) :-
 
 % Basic Constraints checks
 % CA bit set
-isCa(BasicConstExt, IsCA) :-
-  BasicConstExt = true,
-  IsCA = true.
-  %equal(BasicConstExt, true),
-  %equal(IsCA, true).
-  %certs:basicConstraintsExt(Cert, true),
-  %certs:isCA(Cert, true).
+isCa(Cert) :-
+  certs:basicConstraintsExt(Cert, true),
+  certs:isCA(Cert, true).
 
 isNotCa(Cert) :- 
   \+isCa(Cert).
 
 % All of the helper methods will be posted below 
-organizationNameMissing(OrgName) :- 
-  OrgName = "".
-  %certs:organizationName(Cert, "").
+organizationNameMissing(Cert) :- 
+  certs:organizationName(Cert, "").
 
-givenNameMissing(GivenName) :- 
-  GivenName = "".
-  %certs:givenName(Cert, "").
+givenNameMissing(Cert) :- 
+  certs:givenName(Cert, "").
 
-surnameMissing(Surname) :- 
-  Surname = "".
-  %certs:surname(Cert, "").
+surnameMissing(Cert) :- 
+  certs:surname(Cert, "").
 
-stateOrProvinceNameMissing(StOrProvName) :- 
-  StOrProvName = "".
-  %certs:stateOrProvinceName(Cert, ""). 
+stateOrProvinceNameMissing(Cert) :- 
+  certs:stateOrProvinceName(Cert, ""). 
 
-localityNameMissing(LocalityName) :- 
-  LocalityName = "".
-  %certs:localityName(Cert, "").
+localityNameMissing(Cert) :- 
+  certs:localityName(Cert, "").
 
-postalCodeMissing(PostalCode) :- 
-  PostalCode = "".
-  %certs:postalCode(Cert, "").
+postalCodeMissing(Cert) :- 
+  certs:postalCode(Cert, "").
 
 equal(X, Y):-
     X == Y.
@@ -494,16 +425,15 @@ isIPv4(Addr):-
         number_string(NB, SNB), B = SNB /* to avoid leading zeroes */
     )).
 
-commonNameIsIPv4(CommonName) :- 
+commonNameIsIPv4(Cert) :- 
+  certs:commonName(Cert, CommonName), 
   isIPv4(CommonName). 
 
-notEmptyNamesExist(CommonName) :- 
-  CommonName \= "".
-  %\+certs:commonName(Cert, "").
+notEmptyNamesExist(Cert) :- 
+  \+certs:commonName(Cert, "").
 
-notEmptyNamesExist(San) :- 
-  San \= "".
-  %\+certs:san(Cert, "").
+notEmptyNamesExist(Cert) :- 
+  \+certs:san(Cert, "").
 
 secondToLast([SLD,_], SLD). 
 secondToLast([_|Rest], SLD) :- secondToLast(Rest, SLD).
@@ -533,13 +463,11 @@ rootApplies(Cert) :-
     %trusted_roots(Fingerprint).
 
 isSubCA(Cert) :-
-  %IsCA = true,
-  certs:isCA(Cert, true),
+	certs:isCA(Cert, true),
 	\+isRoot(Cert).
 
 % check for if it is a subscriber certificate
 isSubCert(Cert) :-
-  %IsCA = false.
 	certs:isCA(Cert, false).
 
  
@@ -548,74 +476,63 @@ isSubCert(Cert) :-
 caKeyUsagePresentAndCriticalApplies(Cert) :-
 	certs:isCA(Cert, true).
 
-caKeyUsagePresent(KeyUsageExt) :-
-  KeyUsageExt = true.
-	%certs:keyUsageExt(Cert, true).
+caKeyUsagePresent(Cert) :-
+	certs:keyUsageExt(Cert, true).
 
 %caKeyUsageCritical(Cert) :-
 %	\+caKeyUsagePresentAndCriticalApplies(Cert).
 
-caKeyUsageCritical(KeyUsageExt, KeyUsageCritical) :-
-  KeyUsageExt = true,
-  KeyUsageCritical = true.
-	%certs:keyUsageExt(Cert, true),
-	%certs:keyUsageCritical(Cert, true).
+caKeyUsageCritical(Cert) :-
+	certs:keyUsageExt(Cert, true),
+	certs:keyUsageCritical(Cert, true).
 
 
 %  Subordinate CA Certificate: certificatePolicies 
 %  MUST be present and SHOULD NOT be marked critical.
-subCaCertPoliciesExtPresent(CertPoliciesExt) :-
-  CertPoliciesExt = true.
-	%isSubCA(Cert),
-	%certs:certificatePoliciesExt(Cert, true).
+subCaCertPoliciesExtPresent(Cert) :-
+	isSubCA(Cert),
+	certs:certificatePoliciesExt(Cert, true).
 
 %subCaCertPoliciesExtPresent(Cert) :-
 %	\+isSubCA(Cert).
 
-subCaCertPoliciesNotMarkedCritical(CertPoliciesExt, CertPoliciesCrit) :-
-  CertPoliciesExt = true,
-  CertPoliciesCrit = false.
-	%subCaCertPoliciesExtPresent(Cert),
-	%certs:certificatePoliciesCritical(Cert, false).	
+subCaCertPoliciesNotMarkedCritical(Cert) :-
+	subCaCertPoliciesExtPresent(Cert),
+	certs:certificatePoliciesCritical(Cert, false).	
 
-%subCaCertPoliciesNotMarkedCritical(Cert) :-
-%	\+isSubCA(Cert).
+subCaCertPoliciesNotMarkedCritical(Cert) :-
+	\+isSubCA(Cert).
 
 
 %  Root CA Certificate: basicConstraints MUST appear as a critical extension
-rootBasicConstraintsCritical(BasicConstraintsExt, BasicConstraintsCrit) :-
-  BasicConstraintsExt = true,
-  BasicConstraintsCrit = true.
-	%certs:basicConstraintsExt(Cert, true),
-	%certs:basicConstraintsCritical(Cert, true).
+rootBasicConstraintsCritical(Cert) :-
+	certs:basicConstraintsExt(Cert, true),
+	certs:basicConstraintsCritical(Cert, true).
 
-%rootBasicConstraintsCritical(Cert) :-
-%	\+isRoot(Cert).
+rootBasicConstraintsCritical(Cert) :-
+	\+isRoot(Cert).
 
 
 %  Root CA Certificate: The pathLenConstraintField SHOULD NOT be present.
 % Checks root CA for no length constraint
-rootPathLenNotPresent(PathLimit) :-
-  PathLimit = none.
-	%certs:pathLimit(Cert, none).
+rootPathLenNotPresent(Cert) :-
+	certs:pathLimit(Cert, none).
 
-%rootPathLenNotPresent(Cert) :-
-%	\+isRoot(Cert).
+rootPathLenNotPresent(Cert) :-
+	\+isRoot(Cert).
 
 
 %  Root CA Certificate: extendedKeyUsage MUST NOT be present.
-rootExtKeyUseNotPresent(ExtendedKeyUsageExt) :-
-  ExtendedKeyUsageExt = false.
-	%certs:extendedKeyUsageExt(Cert, false).
+rootExtKeyUseNotPresent(Cert) :-
+	certs:extendedKeyUsageExt(Cert, false).
 
-%rootExtKeyUseNotPresent(Cert) :-
-%	\+isRoot(Cert).
+rootExtKeyUseNotPresent(Cert) :-
+	\+isRoot(Cert).
 
 
 %  Root CA Certificate: certificatePolicies SHOULD NOT be present.
-rootCertPoliciesNotPresent(CertPoliciesExt) :-
-  CertPoliciesExt = false.
-	%certs:certificatePoliciesExt(Cert, false).
+rootCertPoliciesNotPresent(Cert) :-
+	certs:certificatePoliciesExt(Cert, false).
 
 rootCertPoliciesNotPresent(Cert) :-
 	\+isRoot(Cert).
@@ -633,59 +550,21 @@ allowed_EKU(clientAuth).
 allowed_EKU(emailProtection).
 
 % helper function: checks for not allowed EKU
-%subCertEkuValuesNotAllowed(Cert) :-
-%	certs:extendedKeyUsage(Cert, Value),
-%	\+allowed_EKU(Value).
+subCertEkuValuesNotAllowed(Cert) :-
+	certs:extendedKeyUsage(Cert, Value),
+	\+allowed_EKU(Value).
 
 % subscriber cert: Extended key usage values allowed
-%subCertEkuValidFields(Cert) :-
-%	certs:extendedKeyUsage(Cert, serverAuth),
-%	\+subCertEkuValuesNotAllowed(Cert).
+subCertEkuValidFields(Cert) :-
+	certs:extendedKeyUsage(Cert, serverAuth),
+	\+subCertEkuValuesNotAllowed(Cert).
 
-%subCertEkuValidFields(Cert) :-
-%	certs:extendedKeyUsage(Cert, clientAuth),
-%	\+subCertEkuValuesNotAllowed(Cert).
+subCertEkuValidFields(Cert) :-
+	certs:extendedKeyUsage(Cert, clientAuth),
+	\+subCertEkuValuesNotAllowed(Cert).
 
-% helper function: checks for not allowed EKU
-subCertEkuValuesNotAllowed(ExtendedKeyUsage) :-
-	\+allowed_EKU(ExtendedKeyUsage).
-
-% subscriber cert: Extended key usage values allowed
-%subCertEkuValidFields(ExtKeyUsage) :-
-%  member(serverAuth, ExtKeyUsage),
-%  \+member(codeSigning, ExtKeyUsage),
-%  \+member(emailProtection, ExtKeyUsage),
-%  \+member(timeStamping, ExtKeyUsage),
-%  \+member(oCSPSigning, ExtKeyUsage),
-%  \+member(any, ExtKeyUsage),
-%  \+member(hasOther, ExtKeyUsage).
-
-  %ExtendedKeyUsage = serverAuth,
-	%\+subCertEkuValuesNotAllowed(ExtendedKeyUsage).
-
-%subCertEkuValidFields(ExtKeyUsage) :-
-%	member(clientAuth, ExtKeyUsage),
-%  \+member(codeSigning, ExtKeyUsage),
-%  \+member(emailProtection, ExtKeyUsage),
-%  \+member(timeStamping, ExtKeyUsage),
-%  \+member(oCSPSigning, ExtKeyUsage),
-%  \+member(any, ExtKeyUsage),
-%  \+member(hasOther, ExtKeyUsage).
-
-subCertEkuValidFields(ExtKeyUsage) :-
-  (
-    member(serverAuth, ExtKeyUsage);
-	  member(clientAuth, ExtKeyUsage)
-  ),
-  \+member(codeSigning, ExtKeyUsage),
-  \+member(timeStamping, ExtKeyUsage),
-  \+member(oCSPSigning, ExtKeyUsage),
-  \+member(any, ExtKeyUsage),
-  \+member(hasOther, ExtKeyUsage).
-
-
-%subCertEkuValidFields(Cert) :-
-%	\+isSubCert(Cert).
+subCertEkuValidFields(Cert) :-
+	\+isSubCert(Cert).
 
 %  To be considered Technically Constrained, the
 %  Subordinate CA: Must include an EKU extension.
@@ -699,23 +578,17 @@ subCaEkuPresent(Cert) :-
 
 %  Subordinate CA Certificate: extkeyUsage, either id-kp-serverAuth
 %  or id-kp-clientAuth or both values MUST be present.
-%subCaEkuValidFields(Cert) :-
-%	subCaEkuPresent(Cert),
-%	certs:extendedKeyUsage(Cert, serverAuth).
+subCaEkuValidFields(Cert) :-
+	subCaEkuPresent(Cert),
+	certs:extendedKeyUsage(Cert, serverAuth).
 
-%subCaEkuValidFields(Cert) :-
-%	subCaEkuPresent(Cert),
-%	certs:extendedKeyUsage(Cert, clientAuth).
+subCaEkuValidFields(Cert) :-
+	subCaEkuPresent(Cert),
+	certs:extendedKeyUsage(Cert, clientAuth).
 
 %subCaEkuValidFields(Cert) :-
 %	\+isSubCA(Cert).
 
-%can move over extKeyUsageVal and extKeyUsageList from type to add more values
-subCaEkuValidFields(ExtKeyUsage) :-
-  (
-    member(serverAuth, ExtKeyUsage);
-	  member(clientAuth, ExtKeyUsage)
-  ).
 
 %  Subscriber Certificate: certificatePolicies MUST be present
 %  and SHOULD NOT be marked critical.
@@ -726,9 +599,8 @@ subCertCertPoliciesExtPresent(Cert) :-
 %subCertCertPoliciesExtPresent(Cert) :-
 %	\+isSubCert(Cert).
 
-subCertCertPoliciesNotMarkedCritical(CertPoliciesCrit) :-
-  CertPoliciesCrit = false.
-	%certs:certificatePoliciesCritical(Cert, false).
+subCertCertPoliciesNotMarkedCritical(Cert) :-
+	certs:certificatePoliciesCritical(Cert, false).
 
 subCertCertPoliciesNotMarkedCritical(Cert) :-
 	\+isSubCert(Cert).
@@ -742,18 +614,16 @@ subCaNameConstCritApplies(Cert) :-
 	isSubCA(Cert),
 	certs:nameConstraintsExt(Cert, true).
 
-subCaNameConstrainsCritical(NameConstCrit) :-
-  NameConstCrit = true;
-	%certs:nameConstraintsCritical(Cert, true).
+subCaNameConstrainsCritical(Cert) :-
+	certs:nameConstraintsCritical(Cert, true).
 
 subCaNameConstrainsCritical(Cert) :-
 	\+subCaNameConstCritApplies(Cert).
 
 
 %  Root CA: SHOULD NOT contain the certificatePolicies extension.
-rootCertPoliciesExtNotPresent(CertPoliciesExt) :-
-  CertPoliciesExt = false;
-	%certs:certificatePoliciesExt(Cert, false).
+rootCertPoliciesExtNotPresent(Cert) :-
+	certs:certificatePoliciesExt(Cert, false).
 
 rootCertPoliciesExtNotPresent(Cert) :-
 	\+isRoot(Cert).
@@ -792,6 +662,7 @@ subCertCommonNameFromSan(Cert) :-
 
 %  Subordinate CA Certificate: cRLDistributionPoints MUST be present 
 %  and MUST NOT be marked critical.
+% NEED TO CHANGE crlDistributionPoints to crlDistributionPointsExt LATER WHEN CARGO BUILD WORKS
 subCaCrlDistributionPointsPresent(Cert) :-
 	isSubCA(Cert),
 	certs:crlDistributionPointsExt(Cert, true),
@@ -826,6 +697,7 @@ subCaCrlDistPointContainsHttpUrl(Cert) :-
 
 %  Subscriber Certifcate: cRLDistributionPoints MAY be present.
 %  not considered in valid scope
+% NEED TO CHANGE crlDistributionPoints to crlDistributionPointsExt LATER WHEN CARGO BUILD WORKS
 subCertCrlDistributionPointsPresent(Cert) :-
 	isSubCert(Cert),
 	certs:crlDistributionPointsExt(Cert, true),
@@ -855,11 +727,11 @@ subCertCrlDistPointContainsHttpUrl(Cert) :-
 	s_occurrences(Url, "http://", N),
 	equal(N, 1).
 
-%subCertCrlDistPointContainsHttpUrl(Cert) :-
-%	certs:crlDistributionPoint(Cert, false).
+subCertCrlDistPointContainsHttpUrl(Cert) :-
+	certs:crlDistributionPoint(Cert, false).
 
-%subCertCrlDistPointContainsHttpUrl(Cert) :-
-%	\+isSubCert(Cert).
+subCertCrlDistPointContainsHttpUrl(Cert) :-
+	\+isSubCert(Cert).
 
 %  Subscriber Certificate: authorityInformationAccess MUST NOT be marked critical
 % helper function
@@ -977,10 +849,9 @@ subCertGivenOrSurnameApplies(Cert) :-
   isSubCert(Cert),
   surnameIsPresent(Cert).
 
-subCertGivenOrSurnameHasCorrectPolicy(CertificatePolicies) :- 
-  CertificatePolicies = "2.23.140.1.2.3".
-  %certs:certificatePolicies(Cert, Oid),
-  %equal(Oid, "2.23.140.1.2.3").
+subCertGivenOrSurnameHasCorrectPolicy(Cert) :- 
+  certs:certificatePolicies(Cert, Oid),
+  equal(Oid, "2.23.140.1.2.3").
 
 subCertGivenOrSurnameHasCorrectPolicy(Cert) :-
   isSubCert(Cert),
@@ -1022,8 +893,8 @@ subCertContainsCertPolicy(Cert) :-
   certs:certificatePoliciesExt(Cert, true),
   certs:certificatePolicies(Cert, _).
 
-%subCertContainsCertPolicy(Cert) :- 
-%  \+isSubCert(Cert).
+subCertContainsCertPolicy(Cert) :- 
+  \+isSubCert(Cert).
  
 % ca_cert: organizationName MUST appear.
 isCA(Cert) :-
@@ -1084,9 +955,29 @@ subCertProvinceMustNotAppear(Cert) :-
 
 % Any of the following x509.SignatureAlgorithms are acceptable per BRs §6.1.5
 
+% SHA-1*
+val_sig_algo("1.2.840.113549.1.1.5"). % sha-1WithRSAEncryption
+val_sig_algo("1.2.840.10040.4.3"). % id-dsa-with-sha1
+val_sig_algo("1.2.840.10045.4.1"). % ecdsa-with-sha1
+
+% SHA-256
+val_sig_algo("1.2.840.113549.1.1.11"). % sha-256WithRSAEncryption
+val_sig_algo("2.16.840.1.101.3.4.3.2"). % id-dsa-with-sha256
+val_sig_algo("1.2.840.10045.4.3.2"). % ecdsa-with-sha256
+
+% SHA-384
+val_sig_algo("1.2.840.113549.1.1.12"). % sha-384WithRSAEncryption
+val_sig_algo("1.2.840.10045.4.3.3"). % ecdsa-with-sha384
+
+% SHA-512
+val_sig_algo("1.2.840.113549.1.1.13"). % sha-512WithRSAEncryption
+val_sig_algo("1.2.840.10045.4.3.4"). % ecdsa-with-sha512
+
+
 % Certificates MUST meet the following algorithm requirements: 
 % SHA-1*, SHA-256, SHA-384, SHA-512
-signatureAlgorithmSupported(Algo) :-
+signatureAlgorithmSupported(Cert) :-
+  certs:signatureAlgorithm(Cert, Algo),
   val_sig_algo(Algo).
 
 
@@ -1135,10 +1026,9 @@ ecProperCurves(Cert) :-
 
 
 % Certificates MUST be of type X.509 v3.
-validCertificateVersion(Ver) :-
-  Ver = 2.
-  %certs:version(Cert, Ver),
-  %equal(Ver, 2).
+validCertificateVersion(Cert) :-
+  certs:version(Cert, Ver),
+  equal(Ver, 2).
 
 
 % sub_ca: MUST NOT contain the anyPolicy identifier
@@ -1275,23 +1165,18 @@ caCrlSignSet(Cert) :-
   \+isSubCA(Cert).
 
 % sub_cert: keyUsage if present, bit positions for keyCertSign and cRLSign MUST NOT be set.
-%subCertKeyUsageCertSignBitNotSet(Cert) :-
-%  isSubCert(Cert),
-%  certs:keyUsageExt(Cert, true),
-%  \+certs:keyUsage(Cert, keyCertSign).
+subCertKeyUsageCertSignBitNotSet(Cert) :-
+  isSubCert(Cert),
+  certs:keyUsageExt(Cert, true),
+  \+certs:keyUsage(Cert, keyCertSign).
 
-%subCertKeyUsageCrlSignBitNotSet(Cert) :-
-%  isSubCert(Cert),
-%  certs:keyUsageExt(Cert, true),
-%  \+certs:keyUsage(Cert, cRLSign).
+subCertKeyUsageCrlSignBitNotSet(Cert) :-
+  isSubCert(Cert),
+  certs:keyUsageExt(Cert, true),
+  \+certs:keyUsage(Cert, cRLSign).
   
-subCertKeyUsageCertSignBitNotSet(KeyUsageExt, KeyUsage) :-
-  KeyUsageExt = true,
-  \+member(keyCertSign, KeyUsage).
-
-subCertKeyUsageCrlSignBitNotSet(KeyUsageExt, KeyUsage) :-
-  KeyUsageExt = true,
-  \+member(cRLSign, KeyUsage).
+subCertKeyUsageCrlSignBitNotSet(Cert) :-
+  \+isSubCert(Cert).
 
 
 % helper methods
