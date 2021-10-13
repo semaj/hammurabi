@@ -237,11 +237,12 @@ symantecUntrusted(Lower):-
 % symantec enforcement on OR untrusted symantec
 % legacy: if it's a symantec root and not an exception/managed
 % untrusted: issued after 01 dec 2017 or before 01 jun 2016
-badSymantec(Fingerprint, Lower):-
+badSymantec(Fingerprint, IntermediateFingerprint, Lower):-
   chrome_env:trusted(Fingerprint),
   chrome_env:symantecRoot(Fingerprint),
-  \+chrome_env:symantecException(Fingerprint),
-  \+chrome_env:symantecManagedCA(Fingerprint),
+  %\+chrome_env:symantecException(Fingerprint),
+  %\+chrome_env:symantecManagedCA(Fingerprint),
+  \+chrome_env:symantecException(IntermediateFingerprint),
   symantecUntrusted(Lower).
 
 isChromeRoot(Fingerprint):-
@@ -277,12 +278,12 @@ pathLengthValid(CertsSoFar, BasicConstraints):-
   BasicConstraints = [_, Limit],
   Limit \= none, CertsSoFar =< Limit.
 
-verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage):-
+verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage, ChildFingerprint):-
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage),
   std:isTimeValid(Lower, Upper),
   isChromeRoot(Fingerprint),
-  \+badSymantec(Fingerprint, Lower),
+  \+badSymantec(Fingerprint, ChildFingerprint, Lower),
   std:isCA(BasicConstraints),
   % Trust anchor WITH CONSTRAINTS
   extKeyUsageValid(ExtKeyUsage).
@@ -290,7 +291,7 @@ verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage)
 verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
   std:isCA(BasicConstraints),
   notCrlSet(Fingerprint),
-  \+badSymantec(Fingerprint, Lower),
+  %\+badSymantec(Fingerprint, Lower),
   std:isTimeValid(Lower, Upper),
   strongSignature(Algorithm),
   keyUsageValid(BasicConstraints, KeyUsage),
@@ -412,7 +413,9 @@ certVerifiedNonLeaf(Cert, LeafSANList, CertsSoFar, Leaf):-
         certs:nameConstraintsExt(Cert, false)
       )
     );
-    verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage)
+    certs:issuer(Child, Cert),
+    certs:fingerprint(Child, ChildFingerprint),
+    verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage, ChildFingerprint)
   ).
 
 % TODO

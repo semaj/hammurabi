@@ -326,9 +326,15 @@ pathLengthValid(CertsSoFar, BasicConstraints):-
   Limit \= none, 
   CertsSoFar =< Limit.
 
-verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage):-
+verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ChildFingerprint):-
   firefox_env:trustedRoots(Fingerprint),
-  \+firefox_env:symantecFingerprint(Fingerprint),
+  (
+    \+firefox_env:symantecFingerprint(Fingerprint);
+    (
+      firefox_env:symantecFingerprint(Fingerprint),
+      firefox_env:symantecException(ChildFingerprint)
+    )
+  ),
   std:isTimeValid(Lower, Upper),
   internationalValid(LeafSANList, Fingerprint),
   std:isCA(BasicConstraints),
@@ -467,7 +473,9 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus, CertsSoFar, Lea
         certs:nameConstraintsExt(Cert, false)
       )
     );
-    verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage)
+    certs:issuer(Child, Cert),
+    certs:fingerprint(Child, ChildFingerprint),
+    verifiedRoot(LeafSANList, Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ChildFingerprint)
   ).
 
 certVerifiedLeaf(Cert, SANList, EVStatus):-
