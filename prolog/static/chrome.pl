@@ -119,9 +119,9 @@ cleanName(Name, Cleaned) :-
 % Name-constrained name (any)
 dnsNameValid(Name, PermittedNames, ExcludedNames) :-
   length(PermittedNames, PermittedNamesLength),
-  length(ExcludedNames, ExcludedNamesLength),
+  %length(ExcludedNames, ExcludedNamesLength),
   % RFC 5280 says both cannot be empty
-  ( PermittedNamesLength > 0; ExcludedNamesLength > 0),
+  %( PermittedNamesLength > 0; ExcludedNamesLength > 0),
   (
     (
       PermittedNamesLength > 0,
@@ -237,11 +237,12 @@ symantecUntrusted(Lower):-
 % symantec enforcement on OR untrusted symantec
 % legacy: if it's a symantec root and not an exception/managed
 % untrusted: issued after 01 dec 2017 or before 01 jun 2016
-badSymantec(Fingerprint, Lower):-
+badSymantec(Fingerprint, IntermediateFingerprint, Lower):-
   chrome_env:trusted(Fingerprint),
   chrome_env:symantecRoot(Fingerprint),
-  \+chrome_env:symantecException(Fingerprint),
-  \+chrome_env:symantecManagedCA(Fingerprint),
+  %\+chrome_env:symantecException(Fingerprint),
+  %\+chrome_env:symantecManagedCA(Fingerprint),
+  \+chrome_env:symantecException(IntermediateFingerprint),
   symantecUntrusted(Lower).
 
 isChromeRoot(Fingerprint):-
@@ -277,12 +278,12 @@ pathLengthValid(CertsSoFar, BasicConstraints):-
   BasicConstraints = [_, Limit],
   Limit \= none, CertsSoFar =< Limit.
 
-verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage):-
+verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage, ChildFingerprint):-
   std:isCA(BasicConstraints),
   checkKeyCertSign(KeyUsage),
   std:isTimeValid(Lower, Upper),
   isChromeRoot(Fingerprint),
-  \+badSymantec(Fingerprint, Lower),
+  \+badSymantec(Fingerprint, ChildFingerprint, Lower),
   std:isCA(BasicConstraints),
   % Trust anchor WITH CONSTRAINTS
   extKeyUsageValid(ExtKeyUsage).
@@ -290,7 +291,7 @@ verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage)
 verifiedIntermediate(Fingerprint, Lower, Upper, Algorithm, BasicConstraints, KeyUsage, ExtKeyUsage):-
   std:isCA(BasicConstraints),
   notCrlSet(Fingerprint),
-  \+badSymantec(Fingerprint, Lower),
+  %\+badSymantec(Fingerprint, Lower),
   std:isTimeValid(Lower, Upper),
   strongSignature(Algorithm),
   keyUsageValid(BasicConstraints, KeyUsage),
@@ -306,7 +307,7 @@ verifiedLeaf(Fingerprint, SANList, Lower, Upper, Algorithm, BasicConstraints, Ke
   keyUsageValid(BasicConstraints, KeyUsage),
   extKeyUsageValid(ExtKeyUsage).
 
-certVerifiedNonLeaf(Cert, LeafSANList, CertsSoFar):-
+certVerifiedNonLeaf(Cert, LeafSANList, CertsSoFar, Leaf):-
   isValidPKI(Cert),
   % Firefox does not have this restriction
   certs:version(Cert, 2),
@@ -326,18 +327,95 @@ certVerifiedNonLeaf(Cert, LeafSANList, CertsSoFar):-
       verifiedIntermediate(Fingerprint, Lower, Upper, InnerAlgorithm, BasicConstraints, KeyUsage, ExtKeyUsage),
       certs:issuer(Cert, Parent),
       Cert \= Parent,
-      certVerifiedNonLeaf(Parent, LeafSANList, CertsSoFar + 1),
+      certVerifiedNonLeaf(Parent, LeafSANList, CertsSoFar + 1, Leaf),
       (
         (
           certs:nameConstraintsExt(Cert, true),
-          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), Permitted),
-          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), Excluded),
-          dnsNameConstrained(_, LeafSANList, Permitted, Excluded)
+          findall(PermittedT, certs:nameConstraintsPermitted(Cert, _, PermittedT), Permitted),
+          findall(ExcludedT, certs:nameConstraintsExcluded(Cert, _, ExcludedT), Excluded),
+          ( Permitted \= []; Excluded \= []),
+          findall(PermittedName, certs:nameConstraintsPermitted(Cert, "DNS", PermittedName), PermittedNames),
+          findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), ExcludedNames),
+          dnsNameConstrained(_, LeafSANList, PermittedNames, ExcludedNames),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/country", _),
+              forall(certs:country(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/country", X))),
+              forall(certs:country(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/country", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/country", _)
+          ),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/organization", _),
+              forall(certs:organizationName(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/organization", X))),
+              forall(certs:organizationName(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/organization", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/organization", _)
+          ),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/given name", _),
+              forall(certs:givenName(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/given name", X))),
+              forall(certs:givenName(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/given name", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/given name", _)
+          ),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/surname", _),
+              forall(certs:surname(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/surname", X))),
+              forall(certs:surname(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/surname", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/surname", _)
+          ),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/state", _),
+              forall(certs:stateOrProvinceName(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/state", X))),
+              forall(certs:stateOrProvinceName(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/state", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/state", _)
+          ),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/street address", _),
+              forall(certs:streetAddress(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/street address", X))),
+              forall(certs:streetAddress(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/street address", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/street address", _)
+          ),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/locality", _),
+              forall(certs:localityName(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/locality", X))),
+              forall(certs:localityName(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/locality", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/locality", _)
+          ),
+
+          (
+            (
+              certs:nameConstraintsPermitted(Cert, "Directory/postal code", _),
+              forall(certs:postalCode(Leaf, X), (\+certs:nameConstraintsExcluded(Cert, "Directory/postal code", X))),
+              forall(certs:postalCode(Leaf, X), (certs:nameConstraintsPermitted(Cert, "Directory/postal code", X)))
+            );
+            \+certs:nameConstraintsPermitted(Cert, "Directory/postal code", _)
+          )
         );
         certs:nameConstraintsExt(Cert, false)
       )
     );
-    verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage)
+    certs:issuer(Child, Cert),
+    certs:fingerprint(Child, ChildFingerprint),
+    verifiedRoot(Fingerprint, Lower, Upper, BasicConstraints, KeyUsage, ExtKeyUsage, ChildFingerprint)
   ).
 
 % TODO
@@ -376,7 +454,7 @@ certVerifiedChain(Cert):-
   maplist(cleanName, SANList, CleanSANList),
   certVerifiedLeaf(Cert, CleanSANList),
   certs:issuer(Cert, Parent),
-  certVerifiedNonLeaf(Parent, CleanSANList, 0).
+  certVerifiedNonLeaf(Parent, CleanSANList, 0, Cert).
 
 main([CertsFile, Cert]):-
   %statistics(walltime, _),
