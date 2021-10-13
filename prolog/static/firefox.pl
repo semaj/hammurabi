@@ -393,7 +393,7 @@ certVerifiedNonLeaf(Cert, LeafCommonName, LeafSANList, EVStatus, CertsSoFar, Lea
           findall(ExcludedName, certs:nameConstraintsExcluded(Cert, "DNS", ExcludedName), ExcludedNames),
           dnsNameConstrained(LeafCommonName, LeafSANList, PermittedNames, ExcludedNames),
 
-          \+certs:nameConstraintsExcluded(Cert, "IPv4Address", "0.0.0.0"),
+          %\+certs:nameConstraintsExcluded(Cert, "IPv4Address", "0.0.0.0"),
 
           (
             (
