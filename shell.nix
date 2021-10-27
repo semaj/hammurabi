@@ -5,5 +5,5 @@ let
 in
 { nixpkgs ? import <nixpkgs> {} }:
 with nixpkgs; mkShell {
-  buildInputs = with pkgs; [ unstable.cargo unstable.rustc unstable.carnix unstable.ruby];
+  buildInputs = with pkgs; [ unstable.cargo unstable.rustc unstable.carnix unstable.ruby swiPrologWithGui ];
 }
