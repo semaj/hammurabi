@@ -5,11 +5,11 @@ all: bin/firefox bin/chrome
 
 bin/firefox: $(DEPS)
 	@mkdir -p bin
-	$(CC) -o $@ -c static/firefox.pl
+	$(CC) -O -o $@ -c static/firefox.pl
 
 bin/chrome: $(DEPS)
 	@mkdir -p bin
-	$(CC) -o $@ -c static/chrome.pl
+	$(CC) -O -o $@ -c static/chrome.pl
 
 clean:
 	rm -f bin/*
