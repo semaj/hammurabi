@@ -36,6 +36,8 @@ fn oid_to_name(oid: String) -> String {
         return "organization".to_string()
     } else if oid == "2.5.4.11" {
         return "organizational unit".to_string()
+    } else if oid == "2.5.4.97" {
+        return "organizational identifier".to_string()
     } else if oid == "2.5.4.3" {
         return "common name".to_string()
     } else if oid == "2.5.4.4" {
@@ -85,6 +87,7 @@ impl PrologCert<'_> {
                 self.emit_country(&hash),
                 self.emit_organization(&hash),
                 self.emit_organizational_unit(&hash),
+                self.emit_organizational_identifier(&hash),
                 self.emit_given_name(&hash), 
                 self.emit_surname(&hash),
                 self.emit_state_or_prov(&hash), 
@@ -192,6 +195,18 @@ impl PrologCert<'_> {
             }
         });
         format!("organizationalUnitName({}, \"{}\").", hash, org)
+    }
+    fn emit_organizational_identifier(&self, hash: &String) -> String {
+       let mut org: String = String::from("");
+       self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
+          match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.97" => {
+                   org = PrologCert::str_from_rdn(f)
+                }
+                _ => (),
+          }
+       });
+       format!("organizationalIdentifier({}, \"{}\").", hash, org)
     }
     fn emit_given_name(&self, hash: &String) -> String { 
         let mut given: String = String::from("");
