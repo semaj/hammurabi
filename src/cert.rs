@@ -474,6 +474,7 @@ impl PrologCert<'_> {
         let mut crl_distribution_points: bool = false;
         let mut authority_info_access: bool = false;
         let mut acc_assertions: bool = false;
+        let mut cabf_org_identifier: bool = false;
 
         let mut exts = self
             .cert
@@ -486,6 +487,7 @@ impl PrologCert<'_> {
                 "2.5.29.32" => { certificate_policies = true; Some(extensions::emit_certificate_policies(hash, &ext)) },
                 "2.5.29.31" => { crl_distribution_points = true; Some(extensions::emit_crl_distribution_points(hash, &ext)) },
                 "1.3.6.1.5.5.7.1.1" => { authority_info_access = true; Some(extensions::emit_authority_info_access(hash, &ext)) },
+                "2.23.140.3.1" => { cabf_org_identifier = true; None },
                 "1.3.3.7" => {
                     fs::write("prolog/static/tmp.pl", extensions::emit_acc_assertions(hash, &ext)).unwrap();
                     acc_assertions = true;
@@ -506,6 +508,7 @@ impl PrologCert<'_> {
         if !crl_distribution_points { exts.push(format!("crlDistributionPointsExt({}, false).", hash)) }
         if !authority_info_access { exts.push(format!("authorityInfoAccessExt({}, false).", hash)) }
         if !acc_assertions { exts.push(format!("assertionCarryingCertificateExt({}, false).", hash)) }
+        if !cabf_org_identifier { exts.push(format!("cabfOrganizationIdentifierExt({}, false).", hash)) }
         exts.push(self.emit_name_constraints(hash));
         exts.push(self.emit_policy_extras(hash));
 
