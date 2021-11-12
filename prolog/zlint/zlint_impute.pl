@@ -194,8 +194,9 @@ bvalidTimeNotTooLong(Before, After) :-
 %  \+validTimeTooLong(Cert).
 
 % SAN must appear 
-extSanMissing(Cert) :- 
-  certs:san(Cert, "").
+extSanMissing(San) :- 
+    San = "".
+  %certs:san(Cert, "").
 
 extSanMissing(Cert) :- 
   certs:sanExt(Cert, false).
