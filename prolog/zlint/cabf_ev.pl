@@ -1,3 +1,5 @@
+:- use_module(ev).
+:- use_module(ext).
 
 % EV certificates must include serialNumber in subject
 evSerialNumberPresent(SerialNumber) :-
@@ -32,3 +34,29 @@ evBusinessCategoryPresent(BusinessCategory) :-
 % EV certificates must include countryName in subject
 evCountryNamePresent(CountryName) :-
     CountryName \= "".
+    
+% check a subscriber certificate
+isSubCert(Cert) :-
+	certs:isCA(Cert, false).
+
+evOrganizationIdPresent(Cert) :-
+   % check applies
+   certs:certificatePoliciesExt(Cert, true),
+   certs:certificatePolicies(Cert, Oid), 
+   ev:evPolicyOid(Oid, _, _, _, _, _),
+   certs:organizationalIdentifier(Cert, Orgid), 
+   certs:notBefore(Cert, Lower),
+   Jan312020 = 1580446800,
+   Lower >= Jan312020,
+   % body
+   \+certs:cabfOrganizationIdentifierExt({}, false).
+   
+evOrganizationNamePresent(Cert) :-   
+   % check applies
+   certs:certificatePoliciesExt(Cert, true),
+   certs:certificatePolicies(Cert, Oid), 
+   ev:evPolicyOid(Oid, _, _, _, _, _),
+   isSubCert(Cert),
+   % body
+   certs:organizationName(Cert, OrgName),
+   OrgName \= "".
