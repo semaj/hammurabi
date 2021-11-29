@@ -24,3 +24,11 @@ onionValidTimeNotTooLong(NotBefore, NotAfter) :-
     maxLifetimeOnion(MaxDuration),
     ext:subtract(Duration, NotBefore, NotAfter),
     ext:geq(MaxDuration, Duration).
+
+% EV certificates must include businessCategory in subject
+evBusinessCategoryPresent(BusinessCategory) :-
+    BusinessCategory \= "".
+
+% EV certificates must include countryName in subject
+evCountryNamePresent(CountryName) :-
+    CountryName \= "".
