@@ -1,5 +1,4 @@
-:- use_module(ev).
-:- use_module(ext).
+:- use_module("../static/ev").
 
 % EV certificates must include serialNumber in subject
 evSerialNumberPresent(SerialNumber) :-
