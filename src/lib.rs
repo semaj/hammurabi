@@ -31,6 +31,7 @@ pub fn get_chain_facts(
     let cert = match cert::PrologCert::from_der(&leaf_der) {
         Ok(p) => p,
         Err(_) => {
+            //println!("Failed on leaf der");
             return Err(Error::X509ParsingError);
         }
     };
@@ -69,6 +70,7 @@ pub fn get_chain_facts(
         //println!("ROOT: {:?}", root_x509.subject_name());
         let mut intermediate_counter = 0;
         for intermediate_x509 in chain.iter() {
+            //println!("Made it into for loop");
             intermediate_counter += 1;
             //let ifp = hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase();
             //if ifp == "F55F9FFCB83C73453261601C7E044DB15A0F034B93C05830F28635EF889CF670" && 
@@ -76,6 +78,7 @@ pub fn get_chain_facts(
                 //println!("hello! {:?}", root_x509.issued(&intermediate_x509));
             //}
             if root_x509.issued(&intermediate_x509) == X509VerifyResult::OK {
+                //println!("Verified is OK");
                 found_root = true;
                 has_issued_one = true;
                 //found_issuer = true;
@@ -90,6 +93,7 @@ pub fn get_chain_facts(
                 let v = match cert::PrologCert::from_der(&temp) {
                     Ok(p) => p,
                     Err(_) => {
+                        p//rintln!("Failed on temp der");
                         return Err(Error::X509ParsingError);
                     }
                 };
@@ -112,9 +116,10 @@ pub fn get_chain_facts(
 
         store_builder.add_cert(root_x509).unwrap();
     }
-    if !found_root {
-        return Err(Error::ROOTSKIPPED);
-    }
+    // if !found_root {
+    //     println!("Failed because root not found");
+    //     return Err(Error::ROOTSKIPPED);
+    // }
     //if !found_issuer {
         //repr.push_str(&format!("ocspResponse(cert_{}, []).\nstapledResponse(cert_{}, []).\n", counter, counter));
         //repr.push_str(&format!("issuer(cert_{}, cert_{}).\n", counter, counter));
