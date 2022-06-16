@@ -29,12 +29,12 @@ directory to build policy executables.
 # Usage
 
 Consider the certificate chain in
-`certs/79c40d605e887f46b6cf9089cfadbb76881314ba3fd05ee7b67fe0894503ef2c.pem`.
+`certs/141c7a18a5a00ef35ef43f89288f80405b358ea407c2deee933fa7d07a52559f.pem`.
 You can execute the Chrome verification logic on this chain like so:
 
 `./target/debug/single chrome
-certs/79c40d605e887f46b6cf9089cfadbb76881314ba3fd05ee7b67fe0894503ef2c.pem
-jameslarisch.com`. `jameslarisch.com` is the domain you're validating against.
+certs/141c7a18a5a00ef35ef43f89288f80405b358ea407c2deee933fa7d07a52559f.pem
+hrm.auth.gr`. `hrm.auth.gr` is the domain you're validating against.
 
 `OK` means the constraints were satisfied, an error means they were not.
 
@@ -42,6 +42,12 @@ After running, you can examine `prolog/job/certs.pl` to examine the facts
 you can operate over. You can also look at the other facts and rules in
 `prolog/job/*` (for instance `prolog/job/std.pl` contains some
 convenience rules).
+
+**NOTE: we hardcode the current time as Friday, October 2, 2020 1:53:44 AM GMT.
+Look at `prolog/std.pl`, `isTimeValid`.** The above certificate is currently
+expired, but is valid if you consider today's date Oct 2 :). You can change the
+Unix timestamp in `std.pl`
+if you want to check current certificates.
 
 For now, the `Cert` in `verifiedChain(Cert)` is the leaf certificate. You can also
 operate over the parent of the leaf---to see an example of this (and other
