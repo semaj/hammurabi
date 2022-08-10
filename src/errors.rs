@@ -17,8 +17,8 @@ pub enum Error {
     OpenSSLFailed,
     /// Certificate either expired or not yet valid
     CertNotTimeValid,
-    /// ACC Checks included in one or more certs failed
-    ACCFailure,
+    /// Hammurabi Checks included in one or more certs failed
+    HammurabiFailure,
     /// Certificate Revoked
     CertRevoked,
     /// Leaf validity period checks, mostly for Chrome

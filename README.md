@@ -1,6 +1,6 @@
-This repository contains the prototype ACC engine. The engine is responsible for
+This repository contains the prototype Hammurabi engine. The engine is responsible for
 parsing certificates, emitting Prolog facts, aggregating those facts with
-rules, and executing additional ACCs to determine certificate validity.
+rules, and executing additional policies to determine certificate validity.
 
 It's designed almost entirely (as of now) for testing chrome.pl and firefox.pl,
 which are Prolog implementations of Chrome and Firefox's TLS certificate
@@ -80,8 +80,7 @@ which the Rust binaries will call as shell commands.
 
 # Scale
 
-This section can (probably) be ignored unless you are running experiments for
-the ACCs paper.
+This section can (probably) be ignored unless you are running experiments.
 
 Running the experiments "at scale" is slightly more involved. After building,
 you'll execute `./target/debug/scale <client> <mapping-file> <ints-directory>

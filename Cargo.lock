@@ -3,26 +3,6 @@
 version = 3
 
 [[package]]
-name = "acc-engine"
-version = "0.1.0"
-dependencies = [
- "csv",
- "der-parser",
- "docopt",
- "hex",
- "ipaddress",
- "num-bigint-dig",
- "openssl",
- "rayon",
- "reqwest",
- "rsa",
- "rsa-der",
- "serde",
- "simple_asn1 0.5.4",
- "x509-parser",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "0.6.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -436,6 +416,26 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-futures",
+]
+
+[[package]]
+name = "hammurabi-engine"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "der-parser",
+ "docopt",
+ "hex",
+ "ipaddress",
+ "num-bigint-dig",
+ "openssl",
+ "rayon",
+ "reqwest",
+ "rsa",
+ "rsa-der",
+ "serde",
+ "simple_asn1 0.5.4",
+ "x509-parser",
 ]
 
 [[package]]

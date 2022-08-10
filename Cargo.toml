@@ -1,14 +1,12 @@
 [package]
-name = "acc-engine"
+name = "hammurabi-engine"
 version = "0.1.0"
 authors = ["James Larisch <5074906+semaj@users.noreply.github.com>"]
 edition = "2018"
 
 [lib]
-name = "acclib"
+name = "hammurabi"
 path = "src/lib.rs"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 rayon = "1.5.1"

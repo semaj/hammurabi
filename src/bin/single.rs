@@ -1,10 +1,9 @@
-use openssl::x509::X509;
-use std::{env, fs};
-use serde::Deserialize;
 use docopt::Docopt;
+use openssl::x509::X509;
+use serde::Deserialize;
+use std::{env, fs};
 
-use acclib;
-
+use hammurabi;
 
 const USAGE: &'static str = "
 Verifies certificate at <path> for host <hostname> using policy for client <client>.
@@ -41,17 +40,15 @@ fn main() {
     let jobindex = env::var("JOBINDEX").unwrap_or("".to_string());
     let job_dir = format!("prolog/job{}", jobindex);
 
-
     let chain_raw = fs::read(&args.arg_path).unwrap();
     let mut chain = X509::stack_from_pem(&chain_raw).unwrap();
     let domain = &args.arg_hostname.to_lowercase();
 
-    let facts = acclib::get_chain_facts(&mut chain, None, args.flag_ocsp, args.flag_staple).unwrap();
-    acclib::write_job_files(&job_dir, domain, &facts).unwrap();
-    match acclib::verify_chain(&job_dir, &args.arg_client) {
+    let facts =
+        hammurabi::get_chain_facts(&mut chain, None, args.flag_ocsp, args.flag_staple).unwrap();
+    hammurabi::write_job_files(&job_dir, domain, &facts).unwrap();
+    match hammurabi::verify_chain(&job_dir, &args.arg_client) {
         Ok(_) => println!("OK"),
         Err(e) => println!("Error: {:?}", e),
     }
 }
-
-

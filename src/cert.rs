@@ -1,11 +1,11 @@
-use std::str;
 use hex;
-use x509_parser;
-use x509_parser::x509::X509Version;
-use x509_parser::parse_x509_certificate;
-use x509_parser::extensions::GeneralName;
-use std::net::Ipv4Addr;
 use std::fs;
+use std::net::Ipv4Addr;
+use std::str;
+use x509_parser;
+use x509_parser::extensions::GeneralName;
+use x509_parser::parse_x509_certificate;
+use x509_parser::x509::X509Version;
 // use der_parser::{
 //     ber::BerObjectContent,
 //     der::{parse_der_integer, DerObject},
@@ -15,8 +15,8 @@ use std::fs;
 // use nom::{combinator, IResult};
 // use rsa::{BigUint, RSAPublicKey};
 
-use der_parser::ber::BerObjectContent::Sequence;
 use der_parser::ber::BerObjectContent::Integer;
+use der_parser::ber::BerObjectContent::Sequence;
 
 use simple_asn1::{ASN1Block, BigUint};
 use std::fmt;
@@ -31,31 +31,31 @@ pub struct PrologCert<'a> {
 
 fn oid_to_name(oid: String) -> String {
     if oid == "2.5.4.6" {
-        return "country".to_string()
+        return "country".to_string();
     } else if oid == "2.5.4.10" {
-        return "organization".to_string()
+        return "organization".to_string();
     } else if oid == "2.5.4.11" {
-        return "organizational unit".to_string()
+        return "organizational unit".to_string();
     } else if oid == "2.5.4.97" {
-        return "organizational identifier".to_string()
+        return "organizational identifier".to_string();
     } else if oid == "2.5.4.3" {
-        return "common name".to_string()
+        return "common name".to_string();
     } else if oid == "2.5.4.4" {
-        return "surname".to_string()
-    } else if oid == "2.5.4.8" { 
-        return "state".to_string()
+        return "surname".to_string();
+    } else if oid == "2.5.4.8" {
+        return "state".to_string();
     } else if oid == "2.5.4.9" {
-        return "street address".to_string()
+        return "street address".to_string();
     } else if oid == "2.5.4.7" {
-        return "locality".to_string()
+        return "locality".to_string();
     } else if oid == "2.5.4.17" {
-        return "postal code".to_string()
+        return "postal code".to_string();
     } else if oid == "2.5.4.42" {
-        return "given name".to_string()
+        return "given name".to_string();
     } else if oid == "0.9.2342.19200300.100.1.25" {
-        return "domain component".to_string()
+        return "domain component".to_string();
     } else {
-        return "UNKNOWN".to_string()
+        return "UNKNOWN".to_string();
     }
 }
 
@@ -88,10 +88,10 @@ impl PrologCert<'_> {
                 self.emit_organization(&hash),
                 self.emit_organizational_unit(&hash),
                 self.emit_organizational_identifier(&hash),
-                self.emit_given_name(&hash), 
+                self.emit_given_name(&hash),
                 self.emit_surname(&hash),
-                self.emit_state_or_prov(&hash), 
-                self.emit_street_address(&hash), 
+                self.emit_state_or_prov(&hash),
+                self.emit_street_address(&hash),
                 self.emit_locality(&hash),
                 self.emit_postal_code(&hash),
                 self.emit_version(&hash),
@@ -110,12 +110,9 @@ impl PrologCert<'_> {
     }
 
     fn str_from_rdn(name: &x509_parser::x509::RelativeDistinguishedName) -> String {
-        String::from(
-            str::from_utf8(
-                name.set[0].attr_value.content.as_slice().
-                unwrap()
-            ).unwrap(),
-        ).replace("\"", "'").replace("\\", "\\\\")
+        String::from(str::from_utf8(name.set[0].attr_value.content.as_slice().unwrap()).unwrap())
+            .replace("\"", "'")
+            .replace("\\", "\\\\")
     }
 
     fn name_from_rdn(name: &x509_parser::x509::X509Name) -> String {
@@ -124,160 +121,164 @@ impl PrologCert<'_> {
         let mut ln: String = String::from("");
         let mut spn: String = String::from("");
         let mut on: String = String::from("");
-        name.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.3" => {
-                    cn = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.6" => {
-                    cnt_n = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.7" => {
-                    ln = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.8" => {
-                    spn = PrologCert::str_from_rdn(f)
-                }
-                "2.5.4.10" => {
-                    on = PrologCert::str_from_rdn(f)
-                }
+        name.rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.3" => cn = PrologCert::str_from_rdn(f),
+                "2.5.4.6" => cnt_n = PrologCert::str_from_rdn(f),
+                "2.5.4.7" => ln = PrologCert::str_from_rdn(f),
+                "2.5.4.8" => spn = PrologCert::str_from_rdn(f),
+                "2.5.4.10" => on = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
-        format!("\"{}\", \"{}\", \"{}\", \"{}\", \"{}\"", cn, cnt_n, ln, spn, on)
+            });
+        format!(
+            "\"{}\", \"{}\", \"{}\", \"{}\", \"{}\"",
+            cn, cnt_n, ln, spn, on
+        )
     }
 
     fn emit_common_name(&self, hash: &String) -> String {
         let mut cn: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.3" => {
-                    cn = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.3" => cn = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("commonName({}, \"{}\").", hash, cn)
     }
 
-    fn emit_country(&self, hash: &String) -> String { 
+    fn emit_country(&self, hash: &String) -> String {
         let mut country: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.6" => {
-                    country = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.6" => country = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("country({}, \"{}\").", hash, country)
     }
-    fn emit_organization(&self, hash: &String) -> String { 
+    fn emit_organization(&self, hash: &String) -> String {
         let mut org: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.10" => {
-                    org = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.10" => org = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("organizationName({}, \"{}\").", hash, org)
     }
     fn emit_organizational_unit(&self, hash: &String) -> String {
         let mut org: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.11" => {
-                    org = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.11" => org = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("organizationalUnitName({}, \"{}\").", hash, org)
     }
     fn emit_organizational_identifier(&self, hash: &String) -> String {
-       let mut org: String = String::from("");
-       self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-          match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.97" => {
-                   org = PrologCert::str_from_rdn(f)
-                }
+        let mut org: String = String::from("");
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.97" => org = PrologCert::str_from_rdn(f),
                 _ => (),
-          }
-       });
-       format!("organizationalIdentifier({}, \"{}\").", hash, org)
+            });
+        format!("organizationalIdentifier({}, \"{}\").", hash, org)
     }
-    fn emit_given_name(&self, hash: &String) -> String { 
+    fn emit_given_name(&self, hash: &String) -> String {
         let mut given: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.42" => {
-                    given = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.42" => given = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("givenName({}, \"{}\").", hash, given)
     }
-    fn emit_surname(&self, hash: &String) -> String { 
+    fn emit_surname(&self, hash: &String) -> String {
         let mut surname: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.4" => {
-                    surname = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.4" => surname = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("surname({}, \"{}\").", hash, surname)
     }
-    fn emit_state_or_prov(&self, hash: &String) -> String { 
+    fn emit_state_or_prov(&self, hash: &String) -> String {
         let mut loc: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.8" => {
-                    loc = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.8" => loc = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("stateOrProvinceName({}, \"{}\").", hash, loc)
     }
-    fn emit_street_address(&self, hash: &String) -> String { 
+    fn emit_street_address(&self, hash: &String) -> String {
         let mut loc: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.9" => {
-                    loc = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.9" => loc = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("streetAddress({}, \"{}\").", hash, loc)
     }
-    fn emit_locality(&self, hash: &String) -> String { 
+    fn emit_locality(&self, hash: &String) -> String {
         let mut loc: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.7" => {
-                    loc = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.7" => loc = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("localityName({}, \"{}\").", hash, loc)
     }
-    fn emit_postal_code(&self, hash: &String) -> String { 
+    fn emit_postal_code(&self, hash: &String) -> String {
         let mut code: String = String::from("");
-        self.cert.tbs_certificate.subject.rdn_seq.iter().for_each(|f| {
-            match f.set[0].attr_type.to_string().as_str() {
-                "2.5.4.17" => {
-                    code = PrologCert::str_from_rdn(f)
-                }
+        self.cert
+            .tbs_certificate
+            .subject
+            .rdn_seq
+            .iter()
+            .for_each(|f| match f.set[0].attr_type.to_string().as_str() {
+                "2.5.4.17" => code = PrologCert::str_from_rdn(f),
                 _ => (),
-            }
-        });
+            });
         format!("postalCode({}, \"{}\").", hash, code)
     }
 
@@ -315,11 +316,9 @@ impl PrologCert<'_> {
 
     pub fn emit_sign_alg(&self, hash: &String) -> String {
         let parameters = match &self.cert.signature_algorithm.parameters {
-            Some(params) => {
-                match params.as_slice() {
-                    Ok(bytes) => hex::encode(bytes),
-                    Err(_) => "none".to_string(),
-                }
+            Some(params) => match params.as_slice() {
+                Ok(bytes) => hex::encode(bytes),
+                Err(_) => "none".to_string(),
             },
             None => "none".to_string(),
         };
@@ -333,11 +332,9 @@ impl PrologCert<'_> {
 
     pub fn emit_signature(&self, hash: &String) -> String {
         let parameters = match &self.cert.tbs_certificate.signature.parameters {
-            Some(params) => {
-                match params.as_slice() {
-                    Ok(bytes) => hex::encode(bytes),
-                    Err(_) => "none".to_string(),
-                }
+            Some(params) => match params.as_slice() {
+                Ok(bytes) => hex::encode(bytes),
+                Err(_) => "none".to_string(),
             },
             None => "none".to_string(),
         };
@@ -348,81 +345,89 @@ impl PrologCert<'_> {
             parameters,
         );
     }
-    pub fn emit_spki_rsa(&self, hash: &String) -> String { 
-        if self.cert.tbs_certificate.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
-           let bytes = &self.cert.tbs_certificate.subject_pki.subject_public_key.data;
-           let (n, e) = public_key_from_der(&bytes).unwrap();
-            return format!( 
-                "spkiRSAModulus({}, {:?}).\nspkiRSAExponent({}, {:?}).\nspkiRSAModLength({}, {:?}).", 
-                    hash, 
+    pub fn emit_spki_rsa(&self, hash: &String) -> String {
+        if self
+            .cert
+            .tbs_certificate
+            .subject_pki
+            .algorithm
+            .algorithm
+            .to_id_string()
+            .eq("1.2.840.113549.1.1.1")
+        {
+            let bytes = &self
+                .cert
+                .tbs_certificate
+                .subject_pki
+                .subject_public_key
+                .data;
+            let (n, e) = public_key_from_der(&bytes).unwrap();
+            return format!(
+                "spkiRSAModulus({}, {:?}).\nspkiRSAExponent({}, {:?}).\nspkiRSAModLength({}, {:?}).",
+                    hash,
                     BigUint::from_bytes_be(&n),
-                    hash, 
+                    hash,
                     BigUint::from_bytes_be(&e),
-                    hash, 
+                    hash,
                     BigUint::from_bytes_be(&n).bits()
                 );
         }
-        return format!( 
-            "spkiRSAModulus({}, {}).\nspkiRSAExponent({}, {}).\nspkiRSAModLength({}, {}).", 
-                hash,
-                "na",
-                hash,
-                "na",
-                hash,
-                "na"
-            );
+        return format!(
+            "spkiRSAModulus({}, {}).\nspkiRSAExponent({}, {}).\nspkiRSAModLength({}, {}).",
+            hash, "na", hash, "na", hash, "na"
+        );
     }
 
-    //pub fn emit_signature_rsa(&self, hash: &String) -> String { 
-        //if self.cert.tbs_certificate.signature.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
-           //let bytes = &self.cert.tbs_certificate.signature.algorithm.bytes();
-           //let (n, e) = public_key_from_der(&bytes).unwrap();
-            //return format!( 
-                //"signatureRSAModulus({}, {:?}).\nsignatureRSAExponent({}, {:?}).\nsignatureRSAModLength({}, {:?}).", 
-                    //hash, 
-                    //BigUint::from_bytes_be(&n),
-                    //hash, 
-                    //BigUint::from_bytes_be(&e),
-                    //hash, 
-                    //BigUint::from_bytes_be(&n).bits()
-                //);
-        //}
-        //return format!( 
-            //"signatureRSAModulus({}, {}).\nsignatureRSAExponent({}, {}).\nsignatureRSAModLength({}, {}).", 
-                //hash, 
-                //"na",
-                //hash, 
-                //"na",
-                //hash,
-                //"na"
-            //);
-         
+    //pub fn emit_signature_rsa(&self, hash: &String) -> String {
+    //if self.cert.tbs_certificate.signature.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
+    //let bytes = &self.cert.tbs_certificate.signature.algorithm.bytes();
+    //let (n, e) = public_key_from_der(&bytes).unwrap();
+    //return format!(
+    //"signatureRSAModulus({}, {:?}).\nsignatureRSAExponent({}, {:?}).\nsignatureRSAModLength({}, {:?}).",
+    //hash,
+    //BigUint::from_bytes_be(&n),
+    //hash,
+    //BigUint::from_bytes_be(&e),
+    //hash,
+    //BigUint::from_bytes_be(&n).bits()
+    //);
+    //}
+    //return format!(
+    //"signatureRSAModulus({}, {}).\nsignatureRSAExponent({}, {}).\nsignatureRSAModLength({}, {}).",
+    //hash,
+    //"na",
+    //hash,
+    //"na",
+    //hash,
+    //"na"
+    //);
+
     //}
 
-    //pub fn emit_signature_algorithm_rsa(&self, hash: &String) -> String { 
-        //if self.cert.signature_algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
-           //let bytes = &self.cert.tbs_certificate.subject_pki.subject_public_key.data;
-           //let (n, e) = public_key_from_der(&bytes).unwrap();
-            //return format!( 
-                //"signatureAlgorithmRSAModulus({}, {:?}).\nsignatureAlgorithmRSAExponent({}, {:?}).\nsignatureRSAModLength({}, {:?}).", 
-                    //hash, 
-                    //BigUint::from_bytes_be(&n),
-                    //hash, 
-                    //BigUint::from_bytes_be(&e),
-                    //hash, 
-                    //BigUint::from_bytes_be(&n).bits()
-                //);
-        //}
-        //return format!( 
-            //"signatureAlgorithmRSAModulus({}, {}).\nsignatureAlgorithmRSAExponent({}, {}).\nsignatureAlgorithmRSAModLength({}, {}).", 
-                //hash, 
-                //"na",
-                //hash, 
-                //"na",
-                //hash,
-                //"na"
-            //);
-         
+    //pub fn emit_signature_algorithm_rsa(&self, hash: &String) -> String {
+    //if self.cert.signature_algorithm.algorithm.to_id_string().eq("1.2.840.113549.1.1.1") {
+    //let bytes = &self.cert.tbs_certificate.subject_pki.subject_public_key.data;
+    //let (n, e) = public_key_from_der(&bytes).unwrap();
+    //return format!(
+    //"signatureAlgorithmRSAModulus({}, {:?}).\nsignatureAlgorithmRSAExponent({}, {:?}).\nsignatureRSAModLength({}, {:?}).",
+    //hash,
+    //BigUint::from_bytes_be(&n),
+    //hash,
+    //BigUint::from_bytes_be(&e),
+    //hash,
+    //BigUint::from_bytes_be(&n).bits()
+    //);
+    //}
+    //return format!(
+    //"signatureAlgorithmRSAModulus({}, {}).\nsignatureAlgorithmRSAExponent({}, {}).\nsignatureAlgorithmRSAModLength({}, {}).",
+    //hash,
+    //"na",
+    //hash,
+    //"na",
+    //hash,
+    //"na"
+    //);
+
     //}
 
     pub fn emit_dsa_pub_key(&self, hash: &String) -> String {
@@ -430,41 +435,60 @@ impl PrologCert<'_> {
         let mut p = 0;
         let mut q = 0;
         let mut g = 0;
-        if self.cert.tbs_certificate.subject_pki.algorithm.algorithm.to_id_string().eq("1.2.840.10040.4.1") {
-            match self.cert.tbs_certificate.subject_pki.algorithm.parameters.as_ref() {
-                    Some(outer_bo) => {
-                        match &outer_bo.content {
-                            Sequence(paras) => {
-                                match paras[0].content {
-                                    Integer(v) => { p = (v.len()-1)*8 }
-                                    _ => ()
-                                }
-                                match paras[1].content {
-                                    Integer(v) => { q = (v.len()-1)*8 }
-                                    _ => ()
-                                }
-                                match paras[2].content {
-                                    Integer(v) => { g = (v.len()-1)*8 }
-                                    _ => ()
-                                }
-                                answer.push(format!("spkiDSAParameters({}, {}, {}, {}).", hash, p, q, g));
-                            }
-                            _ => ()
+        if self
+            .cert
+            .tbs_certificate
+            .subject_pki
+            .algorithm
+            .algorithm
+            .to_id_string()
+            .eq("1.2.840.10040.4.1")
+        {
+            match self
+                .cert
+                .tbs_certificate
+                .subject_pki
+                .algorithm
+                .parameters
+                .as_ref()
+            {
+                Some(outer_bo) => match &outer_bo.content {
+                    Sequence(paras) => {
+                        match paras[0].content {
+                            Integer(v) => p = (v.len() - 1) * 8,
+                            _ => (),
                         }
+                        match paras[1].content {
+                            Integer(v) => q = (v.len() - 1) * 8,
+                            _ => (),
+                        }
+                        match paras[2].content {
+                            Integer(v) => g = (v.len() - 1) * 8,
+                            _ => (),
+                        }
+                        answer.push(format!("spkiDSAParameters({}, {}, {}, {}).", hash, p, q, g));
                     }
-                    None => answer.push(format!("spkiDSAParameters({}, na, na, na).", hash)),
-                }
+                    _ => (),
+                },
+                None => answer.push(format!("spkiDSAParameters({}, na, na, na).", hash)),
+            }
         } else {
             answer.push(format!("spkiDSAParameters({}, na, na, na).", hash));
         }
         return answer.join("");
     }
-    
+
     pub fn emit_key_len(&self, hash: &String) -> String {
         return format!(
             "keyLen({}, {}).",
             hash,
-            &self.cert.tbs_certificate.subject_pki.subject_public_key.data.len()
+            &self
+                .cert
+                .tbs_certificate
+                .subject_pki
+                .subject_public_key
+                .data
+                .len()
         );
     }
 
@@ -473,7 +497,7 @@ impl PrologCert<'_> {
         let mut certificate_policies: bool = false;
         let mut crl_distribution_points: bool = false;
         let mut authority_info_access: bool = false;
-        let mut acc_assertions: bool = false;
+        let mut hammurabi_assertions: bool = false;
         let mut cabf_org_identifier: bool = false;
 
         let mut exts = self
@@ -481,21 +505,37 @@ impl PrologCert<'_> {
             .tbs_certificate
             .extensions
             .iter()
-            .filter_map(|(oid, ext)|
-                match oid.to_id_string().as_str() {
-                "2.5.29.14" => { subject_key_identifier = true; Some(extensions::emit_subject_key_identifier(hash, &ext)) },
-                "2.5.29.32" => { certificate_policies = true; Some(extensions::emit_certificate_policies(hash, &ext)) },
-                "2.5.29.31" => { crl_distribution_points = true; Some(extensions::emit_crl_distribution_points(hash, &ext)) },
-                "1.3.6.1.5.5.7.1.1" => { authority_info_access = true; Some(extensions::emit_authority_info_access(hash, &ext)) },
-                "2.23.140.3.1" => { cabf_org_identifier = true; None },
-                "1.3.3.7" => {
-                    fs::write("prolog/static/tmp.pl", extensions::emit_acc_assertions(hash, &ext)).unwrap();
-                    acc_assertions = true;
-                    None
-                },
-                _ => {
+            .filter_map(|(oid, ext)| match oid.to_id_string().as_str() {
+                "2.5.29.14" => {
+                    subject_key_identifier = true;
+                    Some(extensions::emit_subject_key_identifier(hash, &ext))
+                }
+                "2.5.29.32" => {
+                    certificate_policies = true;
+                    Some(extensions::emit_certificate_policies(hash, &ext))
+                }
+                "2.5.29.31" => {
+                    crl_distribution_points = true;
+                    Some(extensions::emit_crl_distribution_points(hash, &ext))
+                }
+                "1.3.6.1.5.5.7.1.1" => {
+                    authority_info_access = true;
+                    Some(extensions::emit_authority_info_access(hash, &ext))
+                }
+                "2.23.140.3.1" => {
+                    cabf_org_identifier = true;
                     None
                 }
+                "1.3.3.7" => {
+                    fs::write(
+                        "prolog/static/tmp.pl",
+                        extensions::emit_hammurabi_assertions(hash, &ext),
+                    )
+                    .unwrap();
+                    hammurabi_assertions = true;
+                    None
+                }
+                _ => None,
             })
             .collect::<Vec<String>>();
 
@@ -503,15 +543,26 @@ impl PrologCert<'_> {
         exts.push(self.emit_basic_constraints(hash));
         exts.push(self.emit_extended_key_usage(hash));
         exts.push(self.emit_subject_alternative_names(hash));
-        if !subject_key_identifier { exts.push(format!("subjectKeyIdentifierExt({}, false).", hash)) }
-        if !certificate_policies { exts.push(format!("certificatePoliciesExt({}, false).", hash)) }
-        if !crl_distribution_points { exts.push(format!("crlDistributionPointsExt({}, false).", hash)) }
-        if !authority_info_access { exts.push(format!("authorityInfoAccessExt({}, false).", hash)) }
-        if !acc_assertions { exts.push(format!("assertionCarryingCertificateExt({}, false).", hash)) }
-        if !cabf_org_identifier { exts.push(format!("cabfOrganizationIdentifierExt({}, false).", hash)) }
+        if !subject_key_identifier {
+            exts.push(format!("subjectKeyIdentifierExt({}, false).", hash))
+        }
+        if !certificate_policies {
+            exts.push(format!("certificatePoliciesExt({}, false).", hash))
+        }
+        if !crl_distribution_points {
+            exts.push(format!("crlDistributionPointsExt({}, false).", hash))
+        }
+        if !authority_info_access {
+            exts.push(format!("authorityInfoAccessExt({}, false).", hash))
+        }
+        if !hammurabi_assertions {
+            exts.push(format!("assertionCarryingCertificateExt({}, false).", hash))
+        }
+        if !cabf_org_identifier {
+            exts.push(format!("cabfOrganizationIdentifierExt({}, false).", hash))
+        }
         exts.push(self.emit_name_constraints(hash));
         exts.push(self.emit_policy_extras(hash));
-
 
         format!("{}\n", exts.join("\n"))
     }
@@ -521,21 +572,28 @@ impl PrologCert<'_> {
         match self.cert.tbs_certificate.name_constraints() {
             Some((is_critical, constraints)) => {
                 answer.push(format!("nameConstraintsExt({}, true).", hash));
-                answer.push(format!("nameConstraintsCritical({}, {}).", hash, is_critical));
+                answer.push(format!(
+                    "nameConstraintsCritical({}, {}).",
+                    hash, is_critical
+                ));
                 for permitted in constraints.permitted_subtrees.as_ref().unwrap_or(&vec![]) {
                     for (title, name) in emit_general_name(&permitted.base) {
-                        answer.push(format!("nameConstraintsPermitted({}, \"{}\", \"{}\").", hash, title, name));
+                        answer.push(format!(
+                            "nameConstraintsPermitted({}, \"{}\", \"{}\").",
+                            hash, title, name
+                        ));
                     }
                 }
                 for excluded in constraints.excluded_subtrees.as_ref().unwrap_or(&vec![]) {
                     for (title, name) in emit_general_name(&excluded.base) {
-                        answer.push(format!("nameConstraintsExcluded({}, \"{}\", \"{}\").", hash, title, name));
+                        answer.push(format!(
+                            "nameConstraintsExcluded({}, \"{}\", \"{}\").",
+                            hash, title, name
+                        ));
                     }
                 }
-            },
-            None => {
-                answer.push(format!("nameConstraintsExt({}, false).", hash))
             }
+            None => answer.push(format!("nameConstraintsExt({}, false).", hash)),
         }
         return answer.join("\n");
     }
@@ -548,14 +606,11 @@ impl PrologCert<'_> {
                 answer.push(format!("sanCritical({}, {}).", hash, is_critical));
                 for general_name in &sans.general_names {
                     for (_, name) in emit_general_name(general_name) {
-                        answer.push(format!("san({}, \"{}\").",
-                        hash, name));
+                        answer.push(format!("san({}, \"{}\").", hash, name));
                     }
                 }
-            },
-            None => {
-                answer.push(format!("sanExt({}, false).", hash))
             }
+            None => answer.push(format!("sanExt({}, false).", hash)),
         }
         return answer.join("\n");
     }
@@ -565,37 +620,42 @@ impl PrologCert<'_> {
         match self.cert.tbs_certificate.policy_constraints() {
             Some((is_critical, policies)) => {
                 answer.push(format!("policyConstraintsExt({}, true).", hash));
-                answer.push(format!("policyConstraintsCritical({}, {}).", hash, is_critical));
+                answer.push(format!(
+                    "policyConstraintsCritical({}, {}).",
+                    hash, is_critical
+                ));
                 match policies.require_explicit_policy {
                     Some(u) => {
-                    answer.push(format!("requireExplicitPolicy({}, {}).", hash, u));
-                    },
+                        answer.push(format!("requireExplicitPolicy({}, {}).", hash, u));
+                    }
                     None => {
-                    answer.push(format!("requireExplicitPolicy({}, none).", hash));
+                        answer.push(format!("requireExplicitPolicy({}, none).", hash));
                     }
                 }
                 match policies.inhibit_policy_mapping {
                     Some(u) => {
-                    answer.push(format!("inhibitPolicyMapping({}, {}).", hash, u));
-                    },
+                        answer.push(format!("inhibitPolicyMapping({}, {}).", hash, u));
+                    }
                     None => {
-                    answer.push(format!("inhibitPolicyMapping({}, none).", hash));
+                        answer.push(format!("inhibitPolicyMapping({}, none).", hash));
                     }
                 }
-            },
-            None => {
-                answer.push(format!("policyConstraintsExt({}, false).", hash))
             }
+            None => answer.push(format!("policyConstraintsExt({}, false).", hash)),
         }
         match self.cert.tbs_certificate.inhibit_anypolicy() {
             Some((is_critical, policies)) => {
                 answer.push(format!("inhibitAnyPolicyExt({}, true).", hash));
-                answer.push(format!("inhibitAnyPolicyCritical({}, {}).", hash, is_critical));
-                answer.push(format!("inhibitAnyPolicy({}, {}).", hash, policies.skip_certs));
-            },
-            None => {
-                answer.push(format!("inhibitAnyPolicyExt({}, false).", hash))
+                answer.push(format!(
+                    "inhibitAnyPolicyCritical({}, {}).",
+                    hash, is_critical
+                ));
+                answer.push(format!(
+                    "inhibitAnyPolicy({}, {}).",
+                    hash, policies.skip_certs
+                ));
             }
+            None => answer.push(format!("inhibitAnyPolicyExt({}, false).", hash)),
         }
         match self.cert.tbs_certificate.policy_mappings() {
             Some((is_critical, policies)) => {
@@ -603,13 +663,16 @@ impl PrologCert<'_> {
                 answer.push(format!("policyMappingsCritial({}, {}).", hash, is_critical));
                 for (oid, value_oids) in &policies.mappings {
                     for value_oid in value_oids {
-                        answer.push(format!("policyMappings({}, \"{}\", \"{}\").", hash, oid.to_id_string(), value_oid.to_id_string()));
+                        answer.push(format!(
+                            "policyMappings({}, \"{}\", \"{}\").",
+                            hash,
+                            oid.to_id_string(),
+                            value_oid.to_id_string()
+                        ));
                     }
                 }
-            },
-            None => {
-                answer.push(format!("policyMappingsExt({}, false).", hash))
             }
+            None => answer.push(format!("policyMappingsExt({}, false).", hash)),
         }
         return answer.join("\n");
     }
@@ -618,15 +681,17 @@ impl PrologCert<'_> {
         let mut answer: Vec<String> = Vec::new();
         match self.cert.tbs_certificate.basic_constraints() {
             Some((is_critical, basic_constraints)) => {
-            answer.push(format!("basicConstraintsExt({}, true).", hash));
-            answer.push(format!("basicConstraintsCritical({}, {}).", hash, is_critical));
-            let path_constraint: String = basic_constraints.path_len_constraint.map_or(
-                "none".to_string(),
-                |x| x.to_string()
-            );
-            answer.push(format!("isCA({}, {}).", hash, basic_constraints.ca));
-            answer.push(format!("pathLimit({}, {}).", hash, path_constraint));
-            },
+                answer.push(format!("basicConstraintsExt({}, true).", hash));
+                answer.push(format!(
+                    "basicConstraintsCritical({}, {}).",
+                    hash, is_critical
+                ));
+                let path_constraint: String = basic_constraints
+                    .path_len_constraint
+                    .map_or("none".to_string(), |x| x.to_string());
+                answer.push(format!("isCA({}, {}).", hash, basic_constraints.ca));
+                answer.push(format!("pathLimit({}, {}).", hash, path_constraint));
+            }
             None => {
                 answer.push(format!("basicConstraintsExt({}, false).", hash));
             }
@@ -634,20 +699,20 @@ impl PrologCert<'_> {
         return answer.join("\n");
     }
 
-//     pub fn emit_authority_info_access(&self, hash: &String) -> String {
-//         let mut answer: Vec<String> = Vec::new();
-//         match self.inner.authority_info_access() {
-//             Some((is_critical, aia)) => {
-//                 answer.push(format!("authorityInfoAccessExt({}, true).", hash));
-//                 answer.push(format!("authorityInfoAccessCritical({}, {}).", hash, is_critical));
-//             },
-//             None => {
-//                 answer.push(format!("authorityInfoAccessExt({}, false).", hash));
-//             }
-//         }
-//         return answer.join("\n");
-//     }
-    
+    //     pub fn emit_authority_info_access(&self, hash: &String) -> String {
+    //         let mut answer: Vec<String> = Vec::new();
+    //         match self.inner.authority_info_access() {
+    //             Some((is_critical, aia)) => {
+    //                 answer.push(format!("authorityInfoAccessExt({}, true).", hash));
+    //                 answer.push(format!("authorityInfoAccessCritical({}, {}).", hash, is_critical));
+    //             },
+    //             None => {
+    //                 answer.push(format!("authorityInfoAccessExt({}, false).", hash));
+    //             }
+    //         }
+    //         return answer.join("\n");
+    //     }
+
     pub fn emit_key_usage(&self, hash: &String) -> String {
         let mut answer: Vec<String> = Vec::new();
         match self.cert.tbs_certificate.key_usage() {
@@ -683,7 +748,7 @@ impl PrologCert<'_> {
                     answer.push(format!("{} decipherOnly).", prefix));
                 }
             }
-            None => answer.push(format!("keyUsageExt({}, false).", hash))
+            None => answer.push(format!("keyUsageExt({}, false).", hash)),
         }
         return answer.join("\n");
     }
@@ -693,10 +758,13 @@ impl PrologCert<'_> {
         match self.cert.tbs_certificate.extended_key_usage() {
             Some((is_critical, eku)) => {
                 answer.push(format!("extendedKeyUsageExt({}, true).", hash));
-                answer.push(format!("extendedKeyUsageCritical({}, {}).", hash, is_critical));
+                answer.push(format!(
+                    "extendedKeyUsageCritical({}, {}).",
+                    hash, is_critical
+                ));
                 let prefix: String = format!("extendedKeyUsage({},", hash);
                 if eku.server_auth {
-                answer.push(format!("{} serverAuth).", prefix));
+                    answer.push(format!("{} serverAuth).", prefix));
                 }
                 if eku.client_auth {
                     answer.push(format!("{} clientAuth).", prefix));
@@ -720,14 +788,19 @@ impl PrologCert<'_> {
                     answer.push(format!("{} hasOther).", prefix));
                 }
             }
-            None => answer.push(format!("extendedKeyUsageExt({}, false).", hash))
+            None => answer.push(format!("extendedKeyUsageExt({}, false).", hash)),
         }
         return answer.join("\n");
     }
 
-
     pub fn emit_subject_public_key_algorithm(&self, hash: &String) -> String {
-        let algorithm = self.cert.tbs_certificate.subject_pki.algorithm.algorithm.to_string();
+        let algorithm = self
+            .cert
+            .tbs_certificate
+            .subject_pki
+            .algorithm
+            .algorithm
+            .to_string();
         format!("keyAlgorithm({}, {:?}).", hash, algorithm)
     }
 }
@@ -735,36 +808,40 @@ impl PrologCert<'_> {
 fn emit_general_name(name: &GeneralName) -> Vec<(String, String)> {
     let mut v = Vec::new();
     match name {
-        GeneralName::OtherName(_, bytes) => {
-            v.push(("Other".to_string(), str::from_utf8(bytes).map_or(hex::encode(bytes), |x| x.to_string())))
-        },
+        GeneralName::OtherName(_, bytes) => v.push((
+            "Other".to_string(),
+            str::from_utf8(bytes).map_or(hex::encode(bytes), |x| x.to_string()),
+        )),
         GeneralName::RFC822Name(s) => v.push(("RFC822".to_string(), s.to_string())),
         GeneralName::DNSName(s) => v.push(("DNS".to_string(), s.to_string())),
         GeneralName::DirectoryName(x509_name) => {
             for attr in x509_name.iter_attributes() {
                 //println!("{}, {}", , attr.as_str().unwrap());
-                v.push((format!("Directory/{}", oid_to_name(attr.attr_type.to_id_string())), attr.as_str().unwrap().to_string()));
+                v.push((
+                    format!("Directory/{}", oid_to_name(attr.attr_type.to_id_string())),
+                    attr.as_str().unwrap().to_string(),
+                ));
             }
             //("Directory".to_string(), str::from_utf8(x509_name.as_raw()).unwrap_or("--INVALID--").to_string())
-        },
+        }
         GeneralName::URI(s) => v.push(("URI".to_string(), s.to_string())),
         GeneralName::IPAddress(bytes) => {
-            if bytes.len() == 8 { // ip+netmask
+            if bytes.len() == 8 {
+                // ip+netmask
                 let ip = Ipv4Addr::new(bytes[0], bytes[1], bytes[2], bytes[3]);
                 v.push(("IPv4Address".to_string(), format!("{}", ip)))
             } else {
                 v.push(("IPv6Address".to_string(), "unsupported".to_string()))
             }
-        },
+        }
         GeneralName::RegisteredID(oid) => v.push(("OID".to_string(), oid.to_string())),
     }
-    return v
+    return v;
 }
 
-
 /* The following code was taken from https://github.com/caelunshun/rsa-der
-    but modified slightly to work with BitStringObjects as returned by the parser */
-    
+but modified slightly to work with BitStringObjects as returned by the parser */
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     /// Indicates that a DER decoding error occurred.
@@ -811,7 +888,6 @@ impl std::error::Error for Error {
     }
 }
 pub fn public_key_from_der(bit_string: &[u8]) -> RsaResult<(Vec<u8>, Vec<u8>)> {
-
     let inner_asn = simple_asn1::from_der(bit_string).map_err(Error::InvalidDer)?;
 
     let (n, e) = match &inner_asn[0] {

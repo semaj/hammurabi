@@ -16,7 +16,7 @@ Verifies certificate at <path> for host <hostname> using policy for client <clie
 <path> should be an absolute path, because rustls has some silly behavior regarding paths.
 
 Usage:
-  scale [options] <client> <mappingpath> <intpath> <outpath> --start=<start> --end=<end> [--ocsp] 
+  scale [options] <client> <mappingpath> <intpath> <outpath> --start=<start> --end=<end> [--ocsp]
   scale (--version | -v)
   scale (--help | -h)
 
@@ -100,10 +100,10 @@ fn main() {
                 let domain = &row.domain.to_lowercase();
                 let job_dir = format!("prolog/job/{}-{}-{}", &arc.arg_client, n, index);
 
-                match acclib::get_chain_facts(&mut chain, None, arc.flag_ocsp, false) {
+                match hammurabi::get_chain_facts(&mut chain, None, arc.flag_ocsp, false) {
                     Ok(facts) => {
-                        acclib::write_job_files(&job_dir, domain, &facts).unwrap();
-                        let result = acclib::verify_chain(&job_dir, &arc.arg_client);
+                        hammurabi::write_job_files(&job_dir, domain, &facts).unwrap();
+                        let result = hammurabi::verify_chain(&job_dir, &arc.arg_client);
                         let result_str = match result {
                             Ok(_) => "OK".to_string(),
                             Err(e) =>{

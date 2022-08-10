@@ -71,7 +71,7 @@ pub fn get_chain_facts(
         for intermediate_x509 in chain.iter() {
             intermediate_counter += 1;
             //let ifp = hex::encode(intermediate_x509.digest(MessageDigest::sha256()).unwrap()).to_uppercase();
-            //if ifp == "F55F9FFCB83C73453261601C7E044DB15A0F034B93C05830F28635EF889CF670" && 
+            //if ifp == "F55F9FFCB83C73453261601C7E044DB15A0F034B93C05830F28635EF889CF670" &&
                 //fp == "8ECDE6884F3D87B1125BA31AC3FCB13D7016DE7F57CC904FE1CB97C6AE98196E" {
                 //println!("hello! {:?}", root_x509.issued(&intermediate_x509));
             //}
@@ -213,7 +213,7 @@ pub fn verify_chain(job_dir: &str, client: &str) -> Result<(), Error> {
         40 => Err(Error::CertRevoked),
         50 => Err(Error::PathLenConstraintViolated),
         60 => Err(Error::UnknownIssuer),
-        70 => Err(Error::ACCFailure),
+        70 => Err(Error::HammurabiFailure),
         80 => Err(Error::LeafValidForTooLong),
         _ => Err(Error::UnknownError),
     }

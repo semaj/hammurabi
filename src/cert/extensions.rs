@@ -75,7 +75,7 @@ pub fn emit_crl_distribution_points(hash: &String, extension: &X509Extension) ->
                             _ => String::from("")
                         }
                     ),
-                    _ => None 
+                    _ => None
                 })
             .collect::<Vec<String>>()
                 .join("");
@@ -105,14 +105,14 @@ pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> S
                 .enumerate()
                 .filter_map(|(_, point_syntax): (usize, &BerObject<'_>)| match &point_syntax.content {
                     BerObjectContent::Sequence(access_description) => Some(
-                        
+
                         match &access_description[0].content {
                             BerObjectContent::OID(_something_to_match) => {
                                 match &access_description[0].content {
                                     // OCSP 1.3.6.1.5.5.7.48.1
                                     // CA Issuer 1.3.6.1.5.5.7.48.2
-                                    BerObjectContent::OID(policy_oid) => { pid = policy_oid.to_owned().to_string(); 
-                                        if pid == "1.3.6.1.5.5.7.48.2" {access_method = "CA Issuers".to_string();} 
+                                    BerObjectContent::OID(policy_oid) => { pid = policy_oid.to_owned().to_string();
+                                        if pid == "1.3.6.1.5.5.7.48.2" {access_method = "CA Issuers".to_string();}
                                         else if pid == "1.3.6.1.5.5.7.48.1" {access_method = "OCSP".to_string();}
                                     },
                                     _ => ()
@@ -126,7 +126,7 @@ pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> S
                             _ => String::from("Content didn't match")
                         }
                     ),
-                    _ => Some(String::from("Doesn't match the sequence")) //None 
+                    _ => Some(String::from("Doesn't match the sequence")) //None
                 })
             .collect::<Vec<String>>()
                 .join("");
@@ -141,7 +141,7 @@ pub fn emit_authority_info_access(hash: &String, extension: &X509Extension) -> S
 }
 
 
-pub fn emit_acc_assertions(hash: &String, extension: &X509Extension) -> String {
+pub fn emit_hammurabi_assertions(hash: &String, extension: &X509Extension) -> String {
     let mut assertions = std::str::from_utf8(extension.value).unwrap().to_string();
     assertions = str::replace(&assertions, "!!!", hash);
     return assertions

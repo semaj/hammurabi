@@ -5,7 +5,7 @@
   chainLengthCheckEnabled/1,
   parentNotCACheckEnabled/1,
   domainMatchCheckEnabled/1,
-  aCCCheckEnabled/1,
+  hammurabiCheckEnabled/1,
   leafValidityCheckEnabled/1
 ]).
 timeValidCheckEnabled(true).
@@ -14,5 +14,5 @@ revokedCheckEnabled(true).
 chainLengthCheckEnabled(true).
 parentNotCACheckEnabled(true).
 domainMatchCheckEnabled(true).
-aCCCheckEnabled(true).
+hammurabiCheckEnabled(true).
 leafValidityCheckEnabled(true).
